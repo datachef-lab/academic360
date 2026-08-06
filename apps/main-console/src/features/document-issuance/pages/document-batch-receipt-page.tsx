@@ -58,6 +58,7 @@ import {
 import { getAllCourseLevels } from "@/services/course-level.api";
 import { getAllStreams } from "@/services/stream.api";
 import { getAffiliations, getRegulationTypes } from "@/services/course-design.api";
+import { useDocumentsRealtime } from "@/features/document-issuance/hooks/useDocumentsRealtime";
 
 const ALL = "__all__";
 const BATCH_RECEIPTS_QUERY_KEY = ["document-batch-receipts"] as const;
@@ -131,6 +132,13 @@ export default function DocumentBatchReceiptPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<BatchReceipt | null>(null);
+
+  // Live sync: any batch write (create/update/mode/generate) or any ledger
+  // write (collect/upload) on any backend node invalidates the batch-list
+  // query, so the counters reflect the change without a page reload. When
+  // the edit dialog is open we also join the batch-scoped room, tightening
+  // the trigger for that row's per-course counts.
+  useDocumentsRealtime({ batchId: editingRow?.id ?? null });
   const [form, setForm] = useState<FormState>(emptyForm());
   const [filters, setFilters] = useState<FilterState>(emptyFilters());
   const [examLinkedEnabled, setExamLinkedEnabled] = useState(true);
@@ -344,7 +352,7 @@ export default function DocumentBatchReceiptPage() {
   };
 
   /**
-   * Program courses shown in the grid. Every filter with at least one chip
+   * Programme courses shown in the grid. Every filter with at least one chip
    * narrows; an empty filter leaves the dimension open. `null` FKs on a course
    * mean it is unclassified and therefore only appears when no filter for that
    * dimension is set.
@@ -439,7 +447,7 @@ export default function DocumentBatchReceiptPage() {
    * Program-course list renders once the narrowing scope is set: academic
    * year, document type, affiliation, regulation, course level, and at least
    * one stream. Semester is NOT part of this gate — a batch can be a full
-   * course of study, and users should be able to pick program courses before
+   * course of study, and users should be able to pick programme courses before
    * committing to a semester. Semester is still required at save time.
    */
   const scopeComplete = Boolean(
@@ -473,7 +481,7 @@ export default function DocumentBatchReceiptPage() {
    * Auto-composed batch name — derived, not entered. Format:
    *   `<streams> <semester> <affiliation> <document type> (<regulation>) Distribution - <academic year>`
    *
-   * Stream labels come from the SELECTED program courses (unique streams),
+   * Stream labels come from the SELECTED programme courses (unique streams),
    * using the ug/pgPrefix logic. Two streams are joined with " & "; three or
    * more fall back to commas with " & " before the last, so the name still
    * reads as English. Affiliation uses shortName if present. Regulation is
@@ -624,7 +632,7 @@ export default function DocumentBatchReceiptPage() {
     if (!form.academicYearId) return toast.error("Pick the academic year");
     if (!form.classId) return toast.error("Pick the class");
     if (form.programCourseIds.length === 0) {
-      return toast.error("Pick at least one program course");
+      return toast.error("Pick at least one programme course");
     }
     if (examLinkedEnabled && !form.expectedArrivalDate) {
       return toast.error("Expected arrival is required when Exam-linked is on");
@@ -705,7 +713,7 @@ export default function DocumentBatchReceiptPage() {
         <CardContent className="px-0">
           <div className="mb-3 bg-background px-2 py-3 sm:px-4">
             <Input
-              placeholder="Search by name, document type, class or program course..."
+              placeholder="Search by name, document type, class or programme course..."
               className="w-full max-w-md"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
@@ -737,18 +745,8 @@ export default function DocumentBatchReceiptPage() {
                       <TableHead className={STICKY_HEAD}>#</TableHead>
                       <TableHead className={`${STICKY_HEAD} w-[24%]`}>Batch</TableHead>
                       <TableHead className={STICKY_HEAD}>Scope</TableHead>
-                      <TableHead className={`${STICKY_HEAD} text-center`}>
-                        Arrival
-                        <span className="block text-[10px] font-normal text-muted-foreground">
-                          exam linked
-                        </span>
-                      </TableHead>
-                      <TableHead className={`${STICKY_HEAD} text-center`}>
-                        Distribution
-                        <span className="block text-[10px] font-normal text-muted-foreground">
-                          administrative
-                        </span>
-                      </TableHead>
+                      <TableHead className={`${STICKY_HEAD} text-center`}>Arrival</TableHead>
+                      <TableHead className={`${STICKY_HEAD} text-center`}>Distribution</TableHead>
                       <TableHead className={`${STICKY_HEAD} text-center`}>Ledger</TableHead>
                       <TableHead className={`${STICKY_HEAD} text-right`}>Actions</TableHead>
                     </TableRow>
@@ -758,8 +756,8 @@ export default function DocumentBatchReceiptPage() {
                       const distributionOn = modeOf(row, "ADMINISTRATIVE");
                       return (
                         <TableRow key={row.id}>
-                          <TableCell className="whitespace-nowrap align-top">{i + 1}</TableCell>
-                          <TableCell className="align-top">
+                          <TableCell className="whitespace-nowrap align-middle">{i + 1}</TableCell>
+                          <TableCell className="align-middle">
                             <div className="flex flex-col items-start gap-1">
                               <span className="break-words font-medium">{row.name}</span>
                               <Badge
@@ -776,21 +774,21 @@ export default function DocumentBatchReceiptPage() {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="align-top text-sm">
+                          <TableCell className="align-middle text-sm">
                             <div className="flex flex-col gap-1">
                               <span>
                                 {row.academicYear} · {row.className}
                               </span>
                               <span className="text-[11px] text-muted-foreground">
                                 {row.programCourses.length === 0
-                                  ? "No program course"
+                                  ? "No programme course"
                                   : row.programCourses.length <= 2
                                     ? row.programCourses.join(", ")
-                                    : `${row.programCourses.length} program courses`}
+                                    : `${row.programCourses.length} programme courses`}
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell className="text-center align-top">
+                          <TableCell className="text-center align-middle">
                             <Switch
                               className={SWITCH_ON}
                               checked={modeOf(row, "EXAM_LINKED")}
@@ -804,7 +802,7 @@ export default function DocumentBatchReceiptPage() {
                               }
                             />
                           </TableCell>
-                          <TableCell className="text-center align-top">
+                          <TableCell className="text-center align-middle">
                             <Switch
                               className={SWITCH_ON}
                               checked={distributionOn}
@@ -818,23 +816,50 @@ export default function DocumentBatchReceiptPage() {
                               }
                             />
                           </TableCell>
-                          <TableCell className="whitespace-nowrap text-center align-top">
-                            {row.ledger.total === 0 ? (
+                          <TableCell className="whitespace-nowrap text-center align-middle">
+                            {row.ledger.eligible === 0 && row.ledger.total === 0 ? (
                               <span className="text-xs text-muted-foreground">—</span>
                             ) : (
                               <div className="flex flex-col items-center gap-0.5">
-                                <span className="flex items-center gap-1 text-xs">
+                                <span className="flex items-center gap-1 text-xs font-medium">
                                   <Users className="h-3 w-3 text-slate-500" />
-                                  {row.ledger.total}
+                                  <span className="tabular-nums">
+                                    {row.ledger.eligible.toLocaleString()}
+                                  </span>
+                                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                    total
+                                  </span>
                                 </span>
                                 <span className="flex items-center gap-1 text-[11px] text-emerald-700">
                                   <CheckCircle2 className="h-3 w-3" />
-                                  {row.ledger.collected} collected
+                                  <span className="tabular-nums">
+                                    {row.ledger.collected.toLocaleString()}
+                                  </span>{" "}
+                                  collected
                                 </span>
+                                {row.ledger.pending > 0 && (
+                                  <span className="flex items-center gap-1 text-[11px] text-amber-700">
+                                    <span className="tabular-nums">
+                                      {row.ledger.pending.toLocaleString()}
+                                    </span>{" "}
+                                    pending
+                                  </span>
+                                )}
+                                {/* Drift indicator: live scope exceeds what the ledger
+                                    has materialised → a top-up would add those rows. */}
+                                {row.ledger.eligible > row.ledger.total && (
+                                  <span
+                                    className="flex items-center gap-1 text-[10px] text-indigo-700"
+                                    title="Live scope exceeds materialised rows. Use the refresh action to top up."
+                                  >
+                                    +{(row.ledger.eligible - row.ledger.total).toLocaleString()} to
+                                    top up
+                                  </span>
+                                )}
                               </div>
                             )}
                           </TableCell>
-                          <TableCell className="whitespace-nowrap text-right align-top">
+                          <TableCell className="whitespace-nowrap text-right align-middle">
                             {distributionOn && (
                               <Button
                                 type="button"
@@ -885,15 +910,7 @@ export default function DocumentBatchReceiptPage() {
 
           {/* Scrollable body — header and footer stay put. */}
           <div className="flex-1 overflow-y-auto px-6 pb-5 pt-5">
-            {editingRow && editingRow.ledger.total > 0 && (
-              <p className="mb-5 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
-                {scopeLocked
-                  ? `This batch has ${editingRow.ledger.recorded} recorded document${editingRow.ledger.recorded === 1 ? "" : "s"} — the scope (document type, academic year, class, course level, streams, semester, affiliation, regulation) and the exam-linked toggle are fixed. Courses with recorded handovers can't be unchecked.`
-                  : `This batch already has ${editingRow.ledger.total} ledger entries, so the document type, academic year and class are fixed — they define which students those entries belong to.`}
-              </p>
-            )}
-
-            {/* Three columns: Scope | Narrowing + program courses | Dates + modes.
+            {/* Three columns: Scope | Narrowing + programme courses | Dates + modes.
                 Fixed outer widths keep the middle flexible without leaving right-side
                 whitespace when the program-course rows are short. */}
             <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)_400px] lg:divide-x lg:divide-slate-200">
@@ -1026,7 +1043,7 @@ export default function DocumentBatchReceiptPage() {
                 </div>
               </div>
 
-              {/* COLUMN 2 — NARROWING + PROGRAM COURSES ------------------- */}
+              {/* COLUMN 2 — NARROWING + PROGRAMME COURSES ------------------- */}
               <div className="flex min-w-0 flex-col gap-4 lg:px-6">
                 <SectionEyebrow>Narrow &amp; choose courses</SectionEyebrow>
                 <div className="grid gap-3 sm:grid-cols-3">
@@ -1091,7 +1108,7 @@ export default function DocumentBatchReceiptPage() {
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                      Program courses
+                      Programme courses
                     </Label>
                     {scopeComplete && (
                       <span className="text-[11px] text-muted-foreground tabular-nums">
@@ -1113,13 +1130,13 @@ export default function DocumentBatchReceiptPage() {
                           Pick the scope first
                         </span>
                         <span className="text-[11px] text-muted-foreground">
-                          Program courses appear once academic year, document type, affiliation,
+                          Programme courses appear once academic year, document type, affiliation,
                           regulation, course level and at least one stream are set.
                         </span>
                       </div>
                     ) : filteredProgramCourses.length === 0 ? (
                       <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                        No program courses match these filters.
+                        No programme courses match these filters.
                       </div>
                     ) : (
                       filteredProgramCourses.map((p) => {
@@ -1148,7 +1165,7 @@ export default function DocumentBatchReceiptPage() {
                             />
                             <span className="break-words">{p.shortName ?? p.name}</span>
                             {isLocked && (
-                              <span className="ml-auto rounded-full border border-amber-300 bg-amber-50 px-1.5 py-[1px] text-[10px] font-medium text-amber-700">
+                              <span className="ml-auto inline-flex w-[90px] shrink-0 items-center justify-center rounded-full border border-amber-300 bg-amber-50 px-1.5 py-[1px] text-[10px] font-medium tabular-nums text-amber-700">
                                 {recordedForCourse} recorded
                               </span>
                             )}
@@ -1295,7 +1312,7 @@ export default function DocumentBatchReceiptPage() {
                 title={
                   canSave
                     ? undefined
-                    : "Pick academic year, document type, semester and at least one program course."
+                    : "Pick academic year, document type, semester and at least one programme course."
                 }
                 onClick={handleSave}
               >
