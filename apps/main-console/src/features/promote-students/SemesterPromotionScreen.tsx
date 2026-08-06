@@ -148,7 +148,7 @@ function PromotionShiftBreakdownTable({
                 Sr.
               </th>
               <th className="whitespace-nowrap border border-[hsl(var(--border))] px-3 py-2">
-                Program Course
+                Programme Course
               </th>
               {breakdown.shiftColumns.map((sh) => (
                 <th
@@ -1568,7 +1568,7 @@ export function SemesterPromotionScreen() {
                   </div>
                   <div className="sp-pro-filter">
                     <MultiFilterSelect
-                      placeholder="Program course"
+                      placeholder="Programme course"
                       options={filteredProgramCourses.map((pc) => ({
                         value: pc.id as number,
                         label: pc.name ?? pc.shortName ?? `#${pc.id}`,
@@ -1855,7 +1855,7 @@ export function SemesterPromotionScreen() {
                         <div className="leading-snug">UId / Roll Number</div>
                         <div>Affiliation</div>
                         <div className="leading-snug">Regulation</div>
-                        <div className="leading-snug">Program course</div>
+                        <div className="leading-snug">Programme course</div>
                         <div>Shift</div>
                         <div className="leading-snug">Current → Next</div>
                         <div className="text-[var(--sp-navy)]">Status</div>
@@ -2228,7 +2228,7 @@ export function SemesterPromotionScreen() {
                   : promoteConfirmBreakdownLoading || promoteBreakdownView.rows.length > 0) && (
                   <div className="space-y-1.5">
                     <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      Breakdown by program course and shift
+                      Breakdown by programme course and shift
                     </div>
                     <PromotionShiftBreakdownTable
                       breakdown={

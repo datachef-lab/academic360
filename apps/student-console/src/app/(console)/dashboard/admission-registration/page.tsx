@@ -118,7 +118,7 @@ export default function CURegistrationPage() {
     console.info("[CU-REG FRONTEND] activeTab changed to:", activeTab);
   }, [activeTab]);
 
-  // Check if student's program course is MA or MCOM (redirect if so)
+  // Check if student's programme course is MA or MCOM (redirect if so)
   const isBlockedProgram = React.useMemo(() => {
     if (!student?.programCourse?.name) return false;
 
@@ -147,7 +147,7 @@ export default function CURegistrationPage() {
     return isMA || isMCOM;
   }, [student?.programCourse?.name]);
 
-  // Check if student's program course is BCOM (for MDC subjects)
+  // Check if student's programme course is BCOM (for MDC subjects)
   const isBcomProgram = React.useMemo(() => {
     if (!student?.programCourse?.name) return false;
 
@@ -160,7 +160,7 @@ export default function CURegistrationPage() {
     return normalizedName.startsWith("BCOM");
   }, [student?.programCourse?.name]);
 
-  // Check if student's program course is BBA (also uses MDC display like BCOM)
+  // Check if student's programme course is BBA (also uses MDC display like BCOM)
   const isBbaProgram = React.useMemo(() => {
     if (!student?.programCourse?.name) return false;
 
@@ -379,7 +379,7 @@ export default function CURegistrationPage() {
       try {
         if (!student?.id) return;
 
-        // Check if student's program course is BBA (bypass subject selection requirement)
+        // Check if student's programme course is BBA (bypass subject selection requirement)
         const programName = student?.programCourse?.name || "";
         const normalizedProgramName = programName
           .normalize("NFKD")
@@ -572,7 +572,7 @@ export default function CURegistrationPage() {
         // console.log("🔍 studentRows.studentSubjectsSelection:", studentRows?.studentSubjectsSelection);
         // console.log("🔍 studentRows.hasFormSubmissions:", studentRows?.hasFormSubmissions);
         // console.log("🔍 isBcomProgram:", isBcomProgram);
-        // console.log("🔍 student program course:", student?.programCourse?.name);
+        // console.log("🔍 student programme course:", student?.programCourse?.name);
 
         const actualSelections = studentRows?.actualStudentSelections || [];
         // console.log("🔍 Processing actual student selections:", actualSelections);

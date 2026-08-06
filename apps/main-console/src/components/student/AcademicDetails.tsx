@@ -1674,7 +1674,7 @@ export default function AcademicDetails({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-xs text-gray-600">Previously Registered Program Course</Label>
+            <Label className="text-xs text-gray-600">Previously Registered Programme Course</Label>
             <SearchableSelect
               className="h-10"
               value={resolveRefId(
@@ -1691,7 +1691,7 @@ export default function AcademicDetails({
                 );
               }}
               options={programCourses.map((p) => ({ value: String(p.id), label: p.name ?? "" }))}
-              placeholder="Select program course"
+              placeholder="Select programme course"
             />
           </div>
           <div className="flex flex-col gap-1">

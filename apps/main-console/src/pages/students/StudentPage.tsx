@@ -335,7 +335,7 @@ export default function StudentPage() {
             <div>{data?.rollNumber ?? "-"}</div>
             <div className="font-semibold text-gray-500">Reg. No.:</div>
             <div>{data?.registrationNumber ?? "-"}</div>
-            <div className="font-semibold text-gray-500">Program Course:</div>
+            <div className="font-semibold text-gray-500">Programme Course:</div>
             <div>{data?.programCourse?.name || "-"}</div>
             <div className="font-semibold text-gray-500">Section:</div>
             <div>{data?.currentPromotion?.section?.name || "-"}</div>

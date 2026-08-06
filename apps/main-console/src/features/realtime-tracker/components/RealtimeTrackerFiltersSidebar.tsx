@@ -184,9 +184,9 @@ function RealtimeTrackerFiltersSidebarInner({
             onChange={(s) => updateForm("streamIds", s)}
           />
         </FilterField>
-        <FilterField label="Program course">
+        <FilterField label="Programme course">
           <MultiSelectDropdown
-            placeholder="All program courses"
+            placeholder="All programme courses"
             options={programCourseOptions}
             selectedOptions={form.programCourseIds}
             onChange={(s) => updateForm("programCourseIds", s)}

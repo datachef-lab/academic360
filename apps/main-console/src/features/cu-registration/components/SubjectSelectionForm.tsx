@@ -21,7 +21,7 @@ interface SubjectSelectionFormProps {
 
 /**
  * One dropdown, derived from one subject-selection meta. The server decides
- * which metas apply to this student (stream / program course / academic year)
+ * which metas apply to this student (stream / programme course / academic year)
  * and which subjects each one offers, so the form no longer hardcodes
  * minor1/minor2/idc1/... slots.
  */

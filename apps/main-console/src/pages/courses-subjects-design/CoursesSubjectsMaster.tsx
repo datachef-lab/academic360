@@ -18,7 +18,7 @@ import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 const nestedHomeLinks = [
   {
-    title: "Program Courses",
+    title: "Programme Courses",
     url: "/dashboard/academic-setup/course-design",
     icon: Library,
   },

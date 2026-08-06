@@ -621,9 +621,9 @@ const FeesStructurePage: React.FC = () => {
                     </Select>
                   </div>
 
-                  {/* Course (Program Course) Filter */}
+                  {/* Course (Programme Course) Filter */}
                   <div className="grid gap-2 col-span-2">
-                    <Label htmlFor="program-course">Program Course</Label>
+                    <Label htmlFor="program-course">Programme Course</Label>
                     <Select
                       value={localFilters.programCourseId?.toString() || "all"}
                       onValueChange={(value) =>
@@ -781,7 +781,7 @@ const FeesStructurePage: React.FC = () => {
                 <TableRow className="border-b">
                   <TableHead className="w-[70px] border-r text-center">Sr. No.</TableHead>
                   <TableHead className="border-r">Fee Receipt</TableHead>
-                  <TableHead className="w-[200px] border-r">Program Course</TableHead>
+                  <TableHead className="w-[200px] border-r">Programme Course</TableHead>
                   <TableHead className="border-r">Semester</TableHead>
                   <TableHead className="border-r">Shift</TableHead>
                   <TableHead className="border-r">Preview</TableHead>
@@ -1153,7 +1153,7 @@ const FeesStructurePage: React.FC = () => {
                           Amount
                         </TableHead>
                         <TableHead className="w-[250px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap">
-                          Program Course
+                          Programme Course
                         </TableHead>
                         <TableHead className="w-[200px] p-2 text-center text-base font-semibold whitespace-nowrap">
                           Shift

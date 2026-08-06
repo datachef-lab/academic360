@@ -486,13 +486,13 @@ export default function DocumentIssuanceReportsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-slate-800">Program course</Label>
+                  <Label className="text-xs font-semibold text-slate-800">Programme course</Label>
                   <p className="text-[11px] text-slate-500">
                     List follows affiliation and regulation above (leave those empty for all
                     courses).
                   </p>
                   <DialogMultiSelect
-                    placeholder="All program courses"
+                    placeholder="All programme courses"
                     options={programCourseFilterOptions}
                     selectedOptions={filterProgramCourseIds.map(String)}
                     onChange={(s) => setFilterProgramCourseIds(parseIdStrings(s))}

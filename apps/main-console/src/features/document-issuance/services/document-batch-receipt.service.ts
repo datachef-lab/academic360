@@ -28,6 +28,15 @@ export type BatchReceipt = {
   isArchived: boolean;
   modes: BatchReceiptModeRow[];
   ledger: {
+    /**
+     * Live count of active promotions this batch currently covers —
+     * the denominator staff reason about ("how many students the bundle
+     * is for"). May exceed `total` when new students moved into scope
+     * after generation (top-up needed) or fall short when some rows are
+     * for promotions no longer in scope.
+     */
+    eligible: number;
+    /** Ledger rows materialised for this batch, all statuses. */
     total: number;
     pending: number;
     collected: number;

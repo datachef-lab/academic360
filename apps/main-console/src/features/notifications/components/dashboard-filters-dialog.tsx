@@ -288,9 +288,9 @@ export function DashboardFiltersDialog({ open, onOpenChange, value, onApply }: P
                 contentClassName="min-w-[240px]"
               />
             </FilterField>
-            <FilterField label="Program courses">
+            <FilterField label="Programme courses">
               <MultiSelectDropdown
-                placeholder="All program courses"
+                placeholder="All programme courses"
                 options={programCourseOptions}
                 selectedOptions={draft.programCourseIds}
                 onChange={(s) => update("programCourseIds", s)}

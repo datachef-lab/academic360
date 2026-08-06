@@ -250,7 +250,7 @@ export default function AddAcademicYearDialog({ open, onOpenChange, onCreated }:
                       <Table containerClassName="h-[46vh] overflow-auto rounded-md">
                         <TableHeader className="sticky top-0 z-10 bg-gray-50">
                           <TableRow>
-                            <TableHead>Program course</TableHead>
+                            <TableHead>Programme course</TableHead>
                             <TableHead>Subject type</TableHead>
                             <TableHead>Board subject</TableHead>
                             <TableHead>Related</TableHead>
@@ -290,7 +290,7 @@ export default function AddAcademicYearDialog({ open, onOpenChange, onCreated }:
                             <TableHead>Subject type</TableHead>
                             <TableHead>Subject</TableHead>
                             <TableHead>Classes</TableHead>
-                            <TableHead>Program courses</TableHead>
+                            <TableHead>Programme courses</TableHead>
                             <TableHead>Cannot combine with</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -330,7 +330,7 @@ export default function AddAcademicYearDialog({ open, onOpenChange, onCreated }:
                             <TableHead>Code</TableHead>
                             <TableHead>Subject type</TableHead>
                             <TableHead>Subjects</TableHead>
-                            <TableHead>Program courses</TableHead>
+                            <TableHead>Programme courses</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>

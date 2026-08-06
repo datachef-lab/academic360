@@ -145,7 +145,7 @@ export default function PhysicalCURegMarkingPage() {
               createdAt?: string;
             };
 
-            // Check if program course is MA or MCOM (case insensitive)
+            // Check if programme course is MA or MCOM (case insensitive)
             const programCourseName = rec.student?.programCourseName || "Unknown";
             const normalizedProgramName = programCourseName
               .normalize("NFKD")

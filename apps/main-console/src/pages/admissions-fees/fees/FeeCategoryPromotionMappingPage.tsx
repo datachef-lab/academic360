@@ -409,7 +409,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
           );
         }
 
-        // Program courses
+        // Programme courses
         const programCourses = await getProgramCourses();
         if (Array.isArray(programCourses)) {
           setProgramCourseOptions(
@@ -697,7 +697,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       {
         UID: "",
         "Student Name": "",
-        "Program Course Name": "",
+        "Programme Course Name": "",
         "Academic Year": "",
         Semester: "",
         Shift: "",
@@ -716,7 +716,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     const colWidths = [
       { wch: 15 }, // UID
       { wch: 25 }, // Student Name
-      { wch: 25 }, // Program Course Name
+      { wch: 25 }, // Programme Course Name
       { wch: 15 }, // Academic Year
       { wch: 15 }, // Semester
       { wch: 15 }, // Shift
@@ -735,7 +735,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
   const REQUIRED_BULK_UPLOAD_COLUMNS = [
     "UID",
     "Student Name",
-    "Program Course Name",
+    "Programme Course Name",
     "Academic Year",
     "Semester",
     "Shift",
@@ -802,7 +802,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         const rowNumber = index + 2;
         const uid = getVal(row, "UID");
         const studentName = getVal(row, "Student Name");
-        const programCourseName = getVal(row, "Program Course Name");
+        const programCourseName = getVal(row, "Programme Course Name");
         const academicYear = getVal(row, "Academic Year");
         const semester = getVal(row, "Semester");
         const shift = getVal(row, "Shift");
@@ -815,7 +815,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         const missing: string[] = [];
         if (!uid) missing.push("UID");
         if (!studentName) missing.push("Student Name");
-        if (!programCourseName) missing.push("Program Course Name");
+        if (!programCourseName) missing.push("Programme Course Name");
         if (!academicYear) missing.push("Academic Year");
         if (!semester) missing.push("Semester");
         if (!shift) missing.push("Shift");
@@ -830,7 +830,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
             data: {
               UID: uid,
               "Student Name": studentName,
-              "Program Course Name": programCourseName,
+              "Programme Course Name": programCourseName,
               "Academic Year": academicYear,
               Semester: semester,
               Shift: shift,
@@ -848,7 +848,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         data.push({
           UID: uid,
           "Student Name": studentName,
-          "Program Course Name": programCourseName,
+          "Programme Course Name": programCourseName,
           "Academic Year": academicYear,
           Semester: semester,
           Shift: shift,
@@ -1499,8 +1499,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
               </div>
             </div>
             <Input
-              placeholder="Search: Student Name / UID / Program Course / Semester / Shift / Pay Status / Slab / Fee Category"
-              title="Search by Student Name, UID, Program Course, Semester, Shift, Pay Status, Slab, Fee Category"
+              placeholder="Search: Student Name / UID / Programme Course / Semester / Shift / Pay Status / Slab / Fee Category"
+              title="Search by Student Name, UID, Programme Course, Semester, Shift, Pay Status, Slab, Fee Category"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               className="w-full md:ml-3 md:flex-1 md:max-w-none"
@@ -1828,7 +1828,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Program Course</Label>
+                <Label>Programme Course</Label>
                 <Select
                   value={filters.programCourse}
                   onValueChange={(value) =>
@@ -1839,7 +1839,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="All program courses" />
+                    <SelectValue placeholder="All programme courses" />
                   </SelectTrigger>
                   <SelectContent>
                     {filterOptions.programCourses.map((name) => (
@@ -2223,7 +2223,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
               <>
                 <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-md text-sm">
                   <div>
-                    <span className="text-muted-foreground">Program Course:</span>
+                    <span className="text-muted-foreground">Programme Course:</span>
                     <p className="font-medium">
                       {editingItem?.promotion?.programCourse?.name ?? "—"}
                     </p>
@@ -2279,7 +2279,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
               <>
                 <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-md text-sm">
                   <div>
-                    <span className="text-muted-foreground">Program Course:</span>
+                    <span className="text-muted-foreground">Programme Course:</span>
                     <p className="font-medium">
                       {editingItem?.promotion?.programCourse?.name ?? "—"}
                     </p>

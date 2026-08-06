@@ -147,7 +147,7 @@ function EntryExitUserCard({
         </div>
 
         <div className="flex flex-col items-center justify-center gap-1 p-4">
-          <div className="text-xs uppercase tracking-wide text-slate-500">Program Course</div>
+          <div className="text-xs uppercase tracking-wide text-slate-500">Programme Course</div>
           <div className="text-lg font-semibold text-slate-900">{programLabel}</div>
         </div>
         <div className="flex flex-col items-center justify-center gap-1 p-4">

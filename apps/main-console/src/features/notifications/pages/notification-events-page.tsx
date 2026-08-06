@@ -594,7 +594,7 @@ function EventWizard({
   const pcLabel = (pc: ProgramCourseDto) =>
     [pc.course?.name, pc.stream?.name, pc.affiliation?.shortName ?? pc.affiliation?.name]
       .filter(Boolean)
-      .join(" · ") || `Program course #${pc.id}`;
+      .join(" · ") || `Programme course #${pc.id}`;
 
   const scope: EventScope = {
     academicYearId: academicYearId ? Number(academicYearId) : null,
@@ -1032,7 +1032,9 @@ function EventWizard({
                     </div>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-gray-600">Program course</label>
+                        <label className="text-xs font-medium text-gray-600">
+                          Programme course
+                        </label>
                         <Combobox
                           dataArr={[
                             { value: "", label: "Any" },
@@ -1043,7 +1045,7 @@ function EventWizard({
                           ]}
                           value={programCourseId}
                           onChange={setProgramCourseId}
-                          placeholder="Any program course"
+                          placeholder="Any programme course"
                           showOptionsHint={false}
                           contentClassName="w-[min(420px,calc(100vw-2rem))]"
                         />

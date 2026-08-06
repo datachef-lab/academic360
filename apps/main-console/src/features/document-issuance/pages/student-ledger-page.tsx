@@ -40,6 +40,7 @@ import {
   markLedgerEntryCollected,
   type StudentLedgerRow,
 } from "@/features/document-issuance/services/document-batch-receipt.service";
+import { useDocumentsRealtime } from "@/features/document-issuance/hooks/useDocumentsRealtime";
 
 const ALL = "__all__";
 
@@ -174,6 +175,10 @@ export default function StudentLedgerPage() {
   const [typeFilter, setTypeFilter] = useState<string>(ALL);
   const [yearFilter, setYearFilter] = useState<string>(ALL);
   const [originFilter, setOriginFilter] = useState<string>(ALL);
+  // Passbook opens focused on university-issued documents — that's the
+  // day-to-day handover surface. Staff can switch to COLLEGE or ALL from
+  // the filter dialog.
+  const [issuingAuthorityFilter, setIssuingAuthorityFilter] = useState<string>("UNIVERSITY");
   const [includeArchived, setIncludeArchived] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   /** Row currently awaiting a "Collect" confirmation in the dialog. */
@@ -187,6 +192,7 @@ export default function StudentLedgerPage() {
     typeFilter !== ALL,
     yearFilter !== ALL,
     originFilter !== ALL,
+    issuingAuthorityFilter !== ALL,
     includeArchived,
   ].filter(Boolean).length;
 
@@ -195,6 +201,7 @@ export default function StudentLedgerPage() {
     setTypeFilter(ALL);
     setYearFilter(ALL);
     setOriginFilter(ALL);
+    setIssuingAuthorityFilter("UNIVERSITY");
     setIncludeArchived(false);
   };
 
@@ -211,6 +218,13 @@ export default function StudentLedgerPage() {
     enabled: Boolean(student?.id),
     queryFn: () => getStudentLedger(student!.id!),
   });
+
+  // Live sync: any ledger write for this student (collect / upload / issue /
+  // top-up generation) on any backend node invalidates the passbook query,
+  // so a hand-over made by staff-B appears on staff-A's screen without a
+  // reload. Global documents events also invalidate — they carry hints that
+  // could touch this student without knowing it upfront.
+  useDocumentsRealtime({ studentId: student?.id ?? null });
 
   const queryClient = useQueryClient();
   const collectMutation = useMutation({
@@ -268,10 +282,20 @@ export default function StudentLedgerPage() {
       if (yearFilter !== ALL && r.academicYear !== yearFilter) return false;
       if (originFilter === "SELF" && !r.isSelfSourced) return false;
       if (originFilter === "COLLEGE" && r.isSelfSourced) return false;
+      if (issuingAuthorityFilter !== ALL && r.issuingAuthority !== issuingAuthorityFilter)
+        return false;
       if (!includeArchived && r.isBatchArchived) return false;
       return true;
     });
-  }, [rawRows, statusFilter, typeFilter, yearFilter, originFilter, includeArchived]);
+  }, [
+    rawRows,
+    statusFilter,
+    typeFilter,
+    yearFilter,
+    originFilter,
+    issuingAuthorityFilter,
+    includeArchived,
+  ]);
 
   const totals = useMemo(() => {
     const t = { total: 0, collected: 0, pending: 0 };
@@ -440,8 +464,23 @@ export default function StudentLedgerPage() {
               </div>
             </div>
           ) : filteredRows.length === 0 ? (
-            <div className="py-10 text-center text-sm text-muted-foreground">
-              No entries match the current filters.
+            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center text-sm text-muted-foreground">
+              <div>No entries match the current filters.</div>
+              {issuingAuthorityFilter === "UNIVERSITY" && (
+                <div className="flex flex-col items-center gap-1.5">
+                  <div className="text-xs">
+                    Passbook opens on <strong>university-issued</strong> documents by default.
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIssuingAuthorityFilter(ALL)}
+                  >
+                    Show all documents
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -619,6 +658,20 @@ export default function StudentLedgerPage() {
                   <SelectItem value={ALL}>Any origin</SelectItem>
                   <SelectItem value="COLLEGE">College-issued</SelectItem>
                   <SelectItem value="SELF">Self-sourced</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-1.5">
+              <Label>Issuing authority</Label>
+              <Select value={issuingAuthorityFilter} onValueChange={setIssuingAuthorityFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Any issuing authority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>Any issuing authority</SelectItem>
+                  <SelectItem value="UNIVERSITY">University</SelectItem>
+                  <SelectItem value="COLLEGE">College</SelectItem>
                 </SelectContent>
               </Select>
             </div>

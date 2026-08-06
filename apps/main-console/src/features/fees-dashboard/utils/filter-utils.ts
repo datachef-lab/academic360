@@ -44,7 +44,7 @@ export type FeesDashboardFilterLabels = {
 export const DEFAULT_FILTER_LABELS: FeesDashboardFilterLabels = {
   academicYear: "All academic years",
   program: "All course levels",
-  programCourse: "All program courses",
+  programCourse: "All programme courses",
   semester: "All semesters",
   shift: "All shifts",
   regulation: "All regulations",
@@ -62,7 +62,7 @@ export const DEFAULT_FILTER_LABELS: FeesDashboardFilterLabels = {
 export const FILTER_DIMENSION_LABELS: Record<keyof FeesDashboardFilterLabels, string> = {
   academicYear: "Academic year",
   program: "Course level",
-  programCourse: "Program course",
+  programCourse: "Programme course",
   semester: "Semester",
   shift: "Shift",
   regulation: "Regulation",
@@ -247,7 +247,7 @@ export function programCourseOptionsFromList(
 ): { value: string; label: string }[] {
   return programCourses.map((pc) => ({
     value: String(pc.id),
-    label: pc.shortName?.trim() ? `${pc.shortName} · ${pc.name}` : (pc.name ?? "Program course"),
+    label: pc.shortName?.trim() ? `${pc.shortName} · ${pc.name}` : (pc.name ?? "Programme course"),
   }));
 }
 

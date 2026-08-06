@@ -287,9 +287,9 @@ export default function AcademicArchivePage() {
               onChange={(e) => setFilters({ ...filters, archiveType: e.target.value })}
             />
             <Combobox
-              placeholder="Program course"
+              placeholder="Programme course"
               value={filters.programCourseId}
-              dataArr={[{ value: "", label: "Any program course" }, ...programCourseOptions]}
+              dataArr={[{ value: "", label: "Any programme course" }, ...programCourseOptions]}
               onChange={(v) => setFilters({ ...filters, programCourseId: v })}
             />
             <Input
@@ -485,9 +485,9 @@ export default function AcademicArchivePage() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label>Program Course</Label>
+                <Label>Programme Course</Label>
                 <Combobox
-                  placeholder="Select program course"
+                  placeholder="Select programme course"
                   value={form.programCourseId}
                   dataArr={programCourseOptions}
                   onChange={(v) => setForm({ ...form, programCourseId: v })}

@@ -141,8 +141,8 @@ export default function ScheduleExamPage() {
       return Array.isArray(data) ? data.filter((pc) => pc.isActive !== false) : [];
     },
     onError: (error) => {
-      console.error("Error fetching program courses:", error);
-      toast.error("Failed to load program courses");
+      console.error("Error fetching programme courses:", error);
+      toast.error("Failed to load programme courses");
     },
   });
 
@@ -267,7 +267,7 @@ export default function ScheduleExamPage() {
 
   // New flow state variables
   const [currentSubjectIds, setCurrentSubjectIds] = useState<number[]>([]); // Multi-select subjects
-  const [currentProgramCourseIds, setCurrentProgramCourseIds] = useState<number[]>([]); // Multi-select program courses
+  const [currentProgramCourseIds, setCurrentProgramCourseIds] = useState<number[]>([]); // Multi-select programme courses
   const [currentPaperIds, setCurrentPaperIds] = useState<number[]>([]); // Multi-select papers
   const [currentDate, setCurrentDate] = useState<string>("");
   const [currentStartTime, setCurrentStartTime] = useState<string>("");
@@ -342,19 +342,19 @@ export default function ScheduleExamPage() {
       const classObj = classes.find((c) => c.id?.toString() === semester);
       const classId = classObj?.id;
       // Since API only accepts single values, we need to make multiple calls
-      // for each combination of program course and subject type
+      // for each combination of programme course and subject type
       const allPapers: PaperDto[] = [];
       const seenPaperIds = new Set<number>();
-      // If no subject categories selected, fetch for all program courses
+      // If no subject categories selected, fetch for all programme courses
       const subjectTypesToUse =
         selectedSubjectCategories.length > 0 ? selectedSubjectCategories : [];
 
       // Build all API call promises
       const apiCalls: Promise<{ content?: PaperDto[] }>[] = [];
 
-      // If no subject types selected, fetch papers for all program courses with class filter
+      // If no subject types selected, fetch papers for all programme courses with class filter
       if (subjectTypesToUse.length === 0) {
-        // Create API calls for each program course
+        // Create API calls for each programme course
         for (const programCourseId of selectedProgramCourses) {
           apiCalls.push(
             getPapersPaginated(1, 1000, {
@@ -365,13 +365,16 @@ export default function ScheduleExamPage() {
               classIds: classId ? [classId] : [],
               subjectTypeId: null,
             }).catch((error) => {
-              console.error(`Error fetching papers for program course ${programCourseId}:`, error);
+              console.error(
+                `Error fetching papers for programme course ${programCourseId}:`,
+                error,
+              );
               return { content: [] };
             }),
           );
         }
       } else {
-        // Fetch papers for each combination of program course and subject type
+        // Fetch papers for each combination of programme course and subject type
         for (const programCourseId of selectedProgramCourses) {
           for (const subjectTypeId of subjectTypesToUse) {
             apiCalls.push(
@@ -384,7 +387,7 @@ export default function ScheduleExamPage() {
                 subjectTypeId: subjectTypeId,
               }).catch((error) => {
                 console.error(
-                  `Error fetching papers for program course ${programCourseId} and subject type ${subjectTypeId}:`,
+                  `Error fetching papers for programme course ${programCourseId} and subject type ${subjectTypeId}:`,
                   error,
                 );
                 return { content: [] };
@@ -459,14 +462,14 @@ export default function ScheduleExamPage() {
   //       const classId = classObj?.id;
 
   //       // Since API only accepts single values, we need to make multiple calls
-  //       // for each combination of program course and subject type
+  //       // for each combination of programme course and subject type
   //       const allPapers: PaperDto[] = [];
   //       const seenPaperIds = new Set<number>();
 
-  //       // If no subject categories selected, fetch for all program courses
+  //       // If no subject categories selected, fetch for all programme courses
   //       const subjectTypesToUse = selectedSubjectCategories.length > 0 ? selectedSubjectCategories : [];
 
-  //       // If no subject types selected, fetch papers for all program courses with class filter
+  //       // If no subject types selected, fetch papers for all programme courses with class filter
   //       if (subjectTypesToUse.length === 0) {
   //         for (const programCourseId of selectedProgramCourses) {
   //           try {
@@ -488,11 +491,11 @@ export default function ScheduleExamPage() {
   //               }
   //             }
   //           } catch (error) {
-  //             console.error(`Error fetching papers for program course ${programCourseId}:`, error);
+  //             console.error(`Error fetching papers for programme course ${programCourseId}:`, error);
   //           }
   //         }
   //       } else {
-  //         // Fetch papers for each combination of program course and subject type
+  //         // Fetch papers for each combination of programme course and subject type
   //         for (const programCourseId of selectedProgramCourses) {
   //           for (const subjectTypeId of subjectTypesToUse) {
   //             try {
@@ -515,7 +518,7 @@ export default function ScheduleExamPage() {
   //               }
   //             } catch (error) {
   //               console.error(
-  //                 `Error fetching papers for program course ${programCourseId} and subject type ${subjectTypeId}:`,
+  //                 `Error fetching papers for programme course ${programCourseId} and subject type ${subjectTypeId}:`,
   //                 error,
   //               );
   //             }
@@ -677,7 +680,7 @@ export default function ScheduleExamPage() {
     );
   };
 
-  // Filter program courses based on affiliation and regulation
+  // Filter programme courses based on affiliation and regulation
   const getFilteredProgramCourses = useCallback(() => {
     let filtered = programCourses.filter((pc) => pc.isActive !== false);
 
@@ -704,8 +707,8 @@ export default function ScheduleExamPage() {
 
   // NEW FLOW HELPERS
 
-  // Get available program courses for selected subjects (from their papers)
-  // Only returns program courses that still have papers (with selected component) that haven't been added
+  // Get available programme courses for selected subjects (from their papers)
+  // Only returns programme courses that still have papers (with selected component) that haven't been added
   const getAvailableProgramCoursesForSubjects = useCallback(
     (subjectIds: number[]): Array<{ id: number; name: string }> => {
       if (subjectIds.length === 0 || selectedExamComponent === null) return [];
@@ -728,7 +731,7 @@ export default function ScheduleExamPage() {
       return Array.from(programCourseIds)
         .map((pcId) => {
           const pc = programCourses.find((p) => p.id === pcId);
-          return pc ? { id: pcId, name: pc.name || `Program Course ${pcId}` } : null;
+          return pc ? { id: pcId, name: pc.name || `Programme Course ${pcId}` } : null;
         })
         .filter((pc): pc is { id: number; name: string } => pc !== null)
         .sort((a, b) => a.name.localeCompare(b.name));
@@ -736,7 +739,7 @@ export default function ScheduleExamPage() {
     [getPapersForSubject, programCourses, selectedSubjectPapers, selectedExamComponent],
   );
 
-  // Get available papers based on current filters (subjects + component + program courses)
+  // Get available papers based on current filters (subjects + component + programme courses)
   // Component is required - papers must have the selected exam component
   const getFilteredPapersForCurrentSelection = useCallback((): PaperDto[] => {
     if (currentSubjectIds.length === 0 || selectedExamComponent === null) return [];
@@ -756,7 +759,7 @@ export default function ScheduleExamPage() {
       );
     });
 
-    // Filter by selected program courses if any are selected
+    // Filter by selected programme courses if any are selected
     if (currentProgramCourseIds.length > 0) {
       filtered = filtered.filter(
         (paper) => paper.programCourseId && currentProgramCourseIds.includes(paper.programCourseId),
@@ -1037,16 +1040,16 @@ export default function ScheduleExamPage() {
     }
   }, [currentAcademicYear, selectedAcademicYearId]);
 
-  // Reset selected program courses when affiliation or regulation changes
+  // Reset selected programme courses when affiliation or regulation changes
   useEffect(() => {
-    // Clear program courses that don't match the new affiliation/regulation filters
+    // Clear programme courses that don't match the new affiliation/regulation filters
     const filteredIds = getFilteredProgramCourses()
       .map((pc) => pc.id)
       .filter((id): id is number => id !== undefined);
     setSelectedProgramCourses((prev) => prev.filter((id) => filteredIds.includes(id)));
   }, [selectedAffiliationId, selectedRegulationTypeId, getFilteredProgramCourses]);
 
-  // Reset selected subjects when program courses, subject categories, or semester change
+  // Reset selected subjects when programme courses, subject categories, or semester change
   useEffect(() => {
     setSelectedSubjectIds([]);
     setSelectedSubjectPapers([]);
@@ -1082,20 +1085,20 @@ export default function ScheduleExamPage() {
     }
   }, [selectedSubjectPapers, currentSubjectIds, subjectHasAvailablePapers]);
 
-  // Auto-reset currentProgramCourseIds when program courses run out of available papers
+  // Auto-reset currentProgramCourseIds when programme courses run out of available papers
   useEffect(() => {
     if (currentProgramCourseIds.length === 0 || currentSubjectIds.length === 0) return;
 
-    // Get program courses that still have available papers for current subjects
+    // Get programme courses that still have available papers for current subjects
     const availableProgramCourses = getAvailableProgramCoursesForSubjects(currentSubjectIds);
     const availableProgramCourseIds = new Set(availableProgramCourses.map((pc) => pc.id));
 
-    // Check which currently selected program courses still have available papers
+    // Check which currently selected programme courses still have available papers
     const validProgramCourseIds = currentProgramCourseIds.filter((pcId) =>
       availableProgramCourseIds.has(pcId),
     );
 
-    // If some program courses no longer have available papers, remove them
+    // If some programme courses no longer have available papers, remove them
     if (validProgramCourseIds.length !== currentProgramCourseIds.length) {
       setCurrentProgramCourseIds(validProgramCourseIds);
       setCurrentPaperIds([]); // Reset paper selection
@@ -1267,7 +1270,7 @@ export default function ScheduleExamPage() {
   ]);
 
   // Student count query - fetch count based on selected filters
-  // Show breakdown as soon as class, program courses, and shifts are selected
+  // Show breakdown as soon as class, programme courses, and shifts are selected
   // Papers are still needed for the count, but schedules don't need to be complete
   const selectedExamCommencementDate =
     examGroupMode === "new" ? formatDateWithoutTimezone(newGroupCommencementDate) : undefined;
@@ -1279,7 +1282,7 @@ export default function ScheduleExamPage() {
     selectedShifts.length > 0 &&
     selectedSubjectPapers.length > 0; // Just need papers selected, schedules can be incomplete
 
-  // Fetch student count breakdown by program course and shift (single API call)
+  // Fetch student count breakdown by programme course and shift (single API call)
   const { data: studentCountData, isLoading: loadingStudentCount } = useQuery(
     [
       "studentCountBreakdown",
@@ -1291,7 +1294,7 @@ export default function ScheduleExamPage() {
       selectedExamCommencementDate,
     ],
     async () => {
-      // Enable query as soon as class, program courses, and shifts are selected
+      // Enable query as soon as class, programme courses, and shifts are selected
       if (
         !selectedAcademicYearId ||
         !semester ||
@@ -1343,7 +1346,7 @@ export default function ScheduleExamPage() {
             const shift = shifts.find((s) => s.id === item.shiftId);
             return {
               programCourseId: item.programCourseId,
-              programCourseName: programCourse?.name || `Program Course ${item.programCourseId}`,
+              programCourseName: programCourse?.name || `Programme Course ${item.programCourseId}`,
               shiftId: item.shiftId,
               shiftName: shift?.name || `Shift ${item.shiftId}`,
               count: item.count,
@@ -1362,7 +1365,7 @@ export default function ScheduleExamPage() {
       }
     },
     {
-      // Enable as soon as class, program courses, and shifts are selected
+      // Enable as soon as class, programme courses, and shifts are selected
       enabled:
         !!selectedAcademicYearId &&
         !!semester &&
@@ -1727,7 +1730,7 @@ export default function ScheduleExamPage() {
             <h1 className="text-3xl font-bold text-gray-800">Schedule Exam</h1>
             <p className="text-gray-600 mt-1">Create and schedule exams for your academic year</p>
           </div>
-          {/* Top filter strip (A.Y, Aff, Reg, Exam type, Semester, Shifts, Program Course, Subject Category) */}
+          {/* Top filter strip (A.Y, Aff, Reg, Exam type, Semester, Shifts, Programme Course, Subject Category) */}
           <div className="mb-4 mt-3 space-y-3">
             <Card className="border-0 shadow-none">
               <CardContent className="space-y-5 pb-4 pt-4">
@@ -1855,7 +1858,7 @@ export default function ScheduleExamPage() {
                         </Select>
                       </div>
                     </div>
-                    {/* Second Row: Semester, Shift(s), Program Course(s), Subject Category */}
+                    {/* Second Row: Semester, Shift(s), Programme Course(s), Subject Category */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 [&>*]:min-w-0">
                       {/* Semester */}
                       <div className="flex min-w-0 flex-col gap-1">
@@ -1923,9 +1926,9 @@ export default function ScheduleExamPage() {
                         </Popover>
                       </div>
 
-                      {/* Program Course(s) */}
+                      {/* Programme Course(s) */}
                       <div className="flex min-w-0 flex-col gap-1">
-                        <Label className="font-medium text-gray-700">Program Course(s)</Label>
+                        <Label className="font-medium text-gray-700">Programme Course(s)</Label>
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
@@ -1942,12 +1945,12 @@ export default function ScheduleExamPage() {
                                 {loading.programCourses
                                   ? "Loading..."
                                   : !selectedAffiliationId || !selectedRegulationTypeId
-                                    ? "Select Program Courses"
+                                    ? "Select Programme Courses"
                                     : getFilteredProgramCourses().length === 0
-                                      ? "No program courses available"
+                                      ? "No programme courses available"
                                       : selectedProgramCourses.length > 0
-                                        ? `Select Program Courses (${selectedProgramCourses.length})`
-                                        : "Select Program Courses"}
+                                        ? `Select Programme Courses (${selectedProgramCourses.length})`
+                                        : "Select Programme Courses"}
                               </span>
                               <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
                             </Button>
@@ -1956,7 +1959,7 @@ export default function ScheduleExamPage() {
                             <div className="max-h-60 overflow-y-auto space-y-1">
                               {getFilteredProgramCourses().length === 0 ? (
                                 <div className="text-center py-4 text-sm text-gray-500">
-                                  No program courses available for selected affiliation and
+                                  No programme courses available for selected affiliation and
                                   regulation
                                 </div>
                               ) : (
@@ -2220,10 +2223,10 @@ export default function ScheduleExamPage() {
 
                 <Card className="border-0 shadow-none">
                   <CardContent className="space-y-5 pb-4 pt-2">
-                    {/* New Flow: Subject, Component, Program Courses, Papers, Date/Time */}
+                    {/* New Flow: Subject, Component, Programme Courses, Papers, Date/Time */}
                     <div className="space-y-4 border border-gray-300 rounded-lg p-4">
                       {/* Added border to grid layout */}
-                      {/* First Row: Subjects, Component, Program Courses, Papers */}
+                      {/* First Row: Subjects, Component, Programme Courses, Papers */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 [&>*]:min-w-0">
                         {/* Subjects - Multi-Select */}
                         <div className="flex min-w-0 flex-col gap-1">
@@ -2348,9 +2351,9 @@ export default function ScheduleExamPage() {
                           </Select>
                         </div>
 
-                        {/* Program Courses (Multi-select) */}
+                        {/* Programme Courses (Multi-select) */}
                         <div className="flex min-w-0 flex-col gap-1">
-                          <Label className="font-medium text-gray-700">Program Course(s)</Label>
+                          <Label className="font-medium text-gray-700">Programme Course(s)</Label>
                           <Popover>
                             <PopoverTrigger asChild>
                               <Button
@@ -2370,7 +2373,7 @@ export default function ScheduleExamPage() {
                                       ? "All papers added"
                                       : currentProgramCourseIds.length > 0
                                         ? `${currentProgramCourseIds.length} selected`
-                                        : "All Program Courses"}
+                                        : "All Programme Courses"}
                                 </span>
                                 <ChevronDown className="w-4 h-4 opacity-50 flex-shrink-0" />
                               </Button>
@@ -2395,7 +2398,7 @@ export default function ScheduleExamPage() {
                                               ? prev.filter((id) => id !== pc.id)
                                               : [...prev, pc.id],
                                           );
-                                          // Reset paper selection when program courses change
+                                          // Reset paper selection when programme courses change
                                           setCurrentPaperIds([]);
                                         }}
                                       >
@@ -2625,7 +2628,7 @@ export default function ScheduleExamPage() {
                                   <div className="font-medium">Sr. No.</div>
                                 </TableHead>
                                 <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[15%]">
-                                  <div className="font-medium">Program Course</div>
+                                  <div className="font-medium">Programme Course</div>
                                 </TableHead>
                                 <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[20%]">
                                   <div className="font-medium">Subject</div>
@@ -2790,7 +2793,7 @@ export default function ScheduleExamPage() {
                     Complete the Basic Information First
                   </h3>
                   <p className="text-sm text-gray-500 max-w-md">
-                    Please select all required fields above (Exam Type, Semester, Program Courses,
+                    Please select all required fields above (Exam Type, Semester, Programme Courses,
                     Shifts, and Subject Categories) to proceed with scheduling exam papers.
                   </p>
                 </div>
@@ -2818,19 +2821,19 @@ export default function ScheduleExamPage() {
                     )}
                   </div>
 
-                  {/* Breakdown by Program Course and Shift - Table Format */}
+                  {/* Breakdown by Programme Course and Shift - Table Format */}
                   {(() => {
                     // Show actual data when available
-                    // Transform data into table format: rows = program courses, columns = shifts
+                    // Transform data into table format: rows = programme courses, columns = shifts
                     if (
                       !Array.isArray(studentCountBreakdown) ||
                       studentCountBreakdown.length === 0
                     ) {
-                      // Build empty table structure based on selected program courses and shifts
+                      // Build empty table structure based on selected programme courses and shifts
                       const sortedProgramCourses = selectedProgramCourses
                         .map((pcId) => {
                           const pc = programCourses.find((p) => p.id === pcId);
-                          return { id: pcId, name: pc?.name || `Program Course ${pcId}` };
+                          return { id: pcId, name: pc?.name || `Programme Course ${pcId}` };
                         })
                         .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -2848,7 +2851,7 @@ export default function ScheduleExamPage() {
                       return (
                         <div className="mt-3 pt-3 border-t border-blue-200">
                           <p className="text-xs font-medium text-blue-800 mb-3">
-                            Breakdown by Program Course & Shift:
+                            Breakdown by Programme Course & Shift:
                           </p>
                           <div className="overflow-x-auto">
                             <table className="w-full border-collapse bg-white rounded-lg border border-blue-200">
@@ -2858,7 +2861,7 @@ export default function ScheduleExamPage() {
                                     Sr. No.
                                   </th>
                                   <th className="border border-blue-200 px-3 py-2 text-left text-xs font-semibold text-blue-900">
-                                    Program Course
+                                    Programme Course
                                   </th>
                                   {sortedShifts.map((shift) => (
                                     <th
@@ -2901,7 +2904,7 @@ export default function ScheduleExamPage() {
                     }
 
                     // Show actual data when available
-                    // Transform data into table format: rows = program courses, columns = shifts
+                    // Transform data into table format: rows = programme courses, columns = shifts
                     const programCourseMap = new Map<
                       number,
                       { name: string; shifts: Map<number, { name: string; count: number }> }
@@ -2933,7 +2936,7 @@ export default function ScheduleExamPage() {
                       return nameA.localeCompare(nameB);
                     });
 
-                    // Sort program courses by name
+                    // Sort programme courses by name
                     const sortedProgramCourses = Array.from(programCourseMap.entries()).sort(
                       (a, b) => a[1].name.localeCompare(b[1].name),
                     );
@@ -2941,7 +2944,7 @@ export default function ScheduleExamPage() {
                     return (
                       <div className="mt-3 pt-3 border-t border-blue-200">
                         <p className="text-xs font-medium text-blue-800 mb-3">
-                          Breakdown by Program Course & Shift:
+                          Breakdown by Programme Course & Shift:
                         </p>
                         <div className="overflow-x-auto">
                           <table className="w-full border-collapse bg-white rounded-lg border border-blue-200">
@@ -2951,7 +2954,7 @@ export default function ScheduleExamPage() {
                                   Sr. No.
                                 </th>
                                 <th className="border border-blue-200 px-3 py-2 text-left text-xs font-semibold text-blue-900">
-                                  Program Course
+                                  Programme Course
                                 </th>
                                 {sortedShiftIds.map((shiftId) => (
                                   <th
@@ -2995,7 +2998,7 @@ export default function ScheduleExamPage() {
                   {totalStudentCount === 0 && !loadingStudentCount && (
                     <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
                       <p className="text-xs text-yellow-800">
-                        ⚠️ No eligible students found. Please check your filters (Program Courses,
+                        ⚠️ No eligible students found. Please check your filters (Programme Courses,
                         Shifts, Subjects).
                       </p>
                     </div>

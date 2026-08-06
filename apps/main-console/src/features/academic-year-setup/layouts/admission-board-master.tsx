@@ -26,7 +26,7 @@ export default function AdmissionBoardMaster() {
 
   const mainLinks = [
     { title: "Home", url: base, icon: Home },
-    { title: "Eligible Program Courses", url: `${base}/program-courses`, icon: Layers },
+    { title: "Eligible Programme Courses", url: `${base}/program-courses`, icon: Layers },
     { title: "Admission Quota Types", url: `${base}/quota-type`, icon: Ticket },
     { title: "Section", url: `${base}/sections`, icon: Rows3 },
     { title: "Cancel Source", url: `${base}/cancel-sources`, icon: XCircle },

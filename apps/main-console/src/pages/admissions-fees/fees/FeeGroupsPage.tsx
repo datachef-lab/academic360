@@ -450,7 +450,7 @@ const FeeGroupsPage: React.FC = () => {
 
                           <SelectItem value="ACADEMIC_YEAR">Academic Year</SelectItem>
 
-                          <SelectItem value="PROGRAM_COURSE">Program Course</SelectItem>
+                          <SelectItem value="PROGRAM_COURSE">Programme Course</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

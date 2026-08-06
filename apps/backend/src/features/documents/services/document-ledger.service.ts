@@ -12,6 +12,7 @@ import { idCardIssueModel } from "@repo/db/schemas/models/idcard";
 import { cuRegistrationDocumentUploadModel } from "@repo/db/schemas/models/admissions";
 import { eq, sql } from "drizzle-orm";
 import { recomputeFeeClearanceForStudent } from "./fee-clearance.service.js";
+import { emitDocumentsEvent } from "./documents-realtime.service.js";
 
 const log = createLogger("document-ledger");
 
@@ -156,6 +157,10 @@ export async function upsertIdCardLedgerEntry(
     })
     .where(eq(idCardIssueModel.id, issue.id));
 
+  emitDocumentsEvent("documents:ledger:updated", {
+    studentId: issue.studentId,
+    detail: { action: "id-card-issued", ledgerId: ledger.id },
+  });
   return ledger.id;
 }
 
@@ -169,6 +174,9 @@ export async function deleteIdCardLedgerEntry(
   executor: Executor = db,
 ): Promise<void> {
   if (ledgerId == null) return;
+  // Resolve student BEFORE the delete — after the row is gone the join is
+  // unreachable and the realtime emit would fall back to the global room.
+  const studentId = await lookupStudentIdForLedger(ledgerId, executor);
   await executor
     .update(idCardIssueModel)
     .set({ documentLedgerId: null })
@@ -176,6 +184,10 @@ export async function deleteIdCardLedgerEntry(
   await executor
     .delete(documentLedgerModel)
     .where(eq(documentLedgerModel.id, ledgerId));
+  emitDocumentsEvent("documents:ledger:updated", {
+    studentId,
+    detail: { action: "id-card-deleted", ledgerId },
+  });
 }
 
 /* ------------------------------------------------------------------------- */
@@ -276,6 +288,10 @@ export async function upsertCuRegUploadLedgerEntry(
     })
     .where(eq(cuRegistrationDocumentUploadModel.id, upload.id));
 
+  emitDocumentsEvent("documents:ledger:updated", {
+    studentId: upload.studentId,
+    detail: { action: "cureg-upload", ledgerId: ledger.id },
+  });
   return ledger.id;
 }
 
@@ -298,6 +314,36 @@ export async function refreshCuRegUploadLedgerEntry(
       updatedAt: upload.updatedAt ?? new Date(),
     })
     .where(eq(documentLedgerModel.id, upload.documentLedgerId));
+
+  const studentId = await lookupStudentIdForLedger(
+    upload.documentLedgerId,
+    executor,
+  );
+  emitDocumentsEvent("documents:ledger:updated", {
+    studentId,
+    detail: { action: "cureg-re-upload", ledgerId: upload.documentLedgerId },
+  });
+}
+
+/**
+ * Ledger row → student id, via the row's promotion. Used by the emit paths
+ * where the caller only carries the ledger id (re-uploads, deletes). Returns
+ * null when the ledger row or its promotion has already been removed —
+ * emitting without a student scope still reaches the global `documents` room.
+ */
+async function lookupStudentIdForLedger(
+  ledgerId: number,
+  executor: Executor,
+): Promise<number | null> {
+  const rows = (
+    await executor.execute(sql`
+      SELECT p.student_id_fk AS "studentId"
+      FROM document_ledger dl
+      INNER JOIN promotions p ON p.id = dl.promotion_id_fk
+      WHERE dl.id = ${ledgerId}
+      LIMIT 1`)
+  ).rows as unknown as { studentId: number }[];
+  return rows[0]?.studentId ?? null;
 }
 
 /** Drop the passbook entry belonging to a CU registration upload. */
@@ -307,6 +353,7 @@ export async function deleteCuRegUploadLedgerEntry(
   executor: Executor = db,
 ): Promise<void> {
   if (ledgerId == null) return;
+  const studentId = await lookupStudentIdForLedger(ledgerId, executor);
   await executor
     .update(cuRegistrationDocumentUploadModel)
     .set({ documentLedgerId: null })
@@ -314,6 +361,10 @@ export async function deleteCuRegUploadLedgerEntry(
   await executor
     .delete(documentLedgerModel)
     .where(eq(documentLedgerModel.id, ledgerId));
+  emitDocumentsEvent("documents:ledger:updated", {
+    studentId,
+    detail: { action: "cureg-deleted", ledgerId },
+  });
 }
 
 /** Bulk variant for "delete every upload of a correction request". */

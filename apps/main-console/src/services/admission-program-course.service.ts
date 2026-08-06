@@ -77,7 +77,7 @@ export async function getProgramCourses(): Promise<SimpleOption[]> {
   const list = payload<Array<Record<string, unknown>>>(res.data, []);
   return list.map((p) => ({
     id: Number(p.id),
-    name: String(p.name ?? p.shortName ?? `Program Course #${p.id}`),
+    name: String(p.name ?? p.shortName ?? `Programme Course #${p.id}`),
   }));
 }
 
@@ -108,7 +108,7 @@ export async function getProgramCoursesRich(): Promise<RichProgramCourse[]> {
   };
   return list.map((p) => ({
     id: Number(p.id),
-    name: String(p.name ?? p.shortName ?? `Program Course #${p.id}`),
+    name: String(p.name ?? p.shortName ?? `Programme Course #${p.id}`),
     shortName: asStr(p.shortName ?? p.short_name),
     affiliationId: asNum(p.affiliationId ?? p.affiliation_id_fk),
     regulationTypeId: asNum(p.regulationTypeId ?? p.regulation_type_id_fk),

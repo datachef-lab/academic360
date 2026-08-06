@@ -114,7 +114,7 @@ type ReportEntry = {
 //   - Fines (was: outstanding + collected as two)
 //   - Popular / high-demand books (was: popular + high-demand as two)
 // The Batch-wise demographic report was dropped — the Export filters dialog
-// now carries program course / class / shift / etc., so any circulation or
+// now carries programme course / class / shift / etc., so any circulation or
 // footfall report can be sliced by batch.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -534,7 +534,7 @@ export default function LibraryReportsPage() {
     })();
   }, []);
 
-  // Program courses narrow by selected affiliation + regulation, same pattern
+  // Programme courses narrow by selected affiliation + regulation, same pattern
   // as apps/main-console/src/features/reports/page/index.tsx:1150-1178
   const programCourseFilterOptions = useMemo<Option[]>(() => {
     let list = allProgramCourses;
@@ -767,7 +767,7 @@ export default function LibraryReportsPage() {
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Library Reports</h1>
           <p className="text-sm sm:text-base text-slate-600 mt-2">
             Download library reports as Excel. Open Export filters to pin branch, date range,
-            academic year, program course, class, shift, user type and more for every download.
+            academic year, programme course, class, shift, user type and more for every download.
           </p>
           <p className="text-[11px] text-slate-500 mt-1">
             <strong>Which filters apply:</strong> batch, user and circulation filters (program
@@ -924,7 +924,7 @@ export default function LibraryReportsPage() {
                 {/* Batch / demographics */}
                 <section className="space-y-3">
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Batch (program course, class, shift, session, section)
+                    Batch (programme course, class, shift, session, section)
                   </h3>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-1">
@@ -948,9 +948,9 @@ export default function LibraryReportsPage() {
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Program course</Label>
+                      <Label className="text-xs">Programme course</Label>
                       <DialogMultiSelect
-                        placeholder="All program courses"
+                        placeholder="All programme courses"
                         options={programCourseFilterOptions}
                         selectedOptions={programCourseIds.map(String)}
                         onChange={(s) => setProgramCourseIds(parseIdStrings(s))}
