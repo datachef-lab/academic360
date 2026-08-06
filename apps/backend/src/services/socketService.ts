@@ -377,6 +377,42 @@ class SocketService {
         },
       );
 
+      // Documents: mirrors the library pattern. One join covers every page in
+      // the documents-issuance module (batch receipts list, student ledger).
+      // Optional batchId / studentId joins scope detail pages, so a mutation
+      // on batch #42 only wakes clients that opened that batch — not every
+      // dashboard. Redis adapter delivers across instances.
+      socket.on(
+        "subscribe_documents",
+        (opts?: { batchId?: number; studentId?: number }) => {
+          try {
+            socket.join("documents");
+            if (opts?.batchId) socket.join(`documents:batch:${opts.batchId}`);
+            if (opts?.studentId)
+              socket.join(`documents:student:${opts.studentId}`);
+            log.debug(
+              `Socket ${socket.id} joined documents rooms (batch=${opts?.batchId ?? "-"}, student=${opts?.studentId ?? "-"})`,
+            );
+          } catch (error) {
+            log.error("Error subscribing to documents rooms", { error });
+          }
+        },
+      );
+
+      socket.on(
+        "unsubscribe_documents",
+        (opts?: { batchId?: number; studentId?: number }) => {
+          try {
+            socket.leave("documents");
+            if (opts?.batchId) socket.leave(`documents:batch:${opts.batchId}`);
+            if (opts?.studentId)
+              socket.leave(`documents:student:${opts.studentId}`);
+          } catch (error) {
+            log.error("Error unsubscribing from documents rooms", { error });
+          }
+        },
+      );
+
       socket.on("subscribe_fees_dashboard", () => {
         try {
           socket.join("fees_dashboard");
