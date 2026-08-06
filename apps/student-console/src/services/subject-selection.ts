@@ -43,7 +43,7 @@ export interface PerMetaOptionDto {
 /**
  * Server-resolved options per subject-selection meta. This is what drives the
  * dropdowns: one entry = one dropdown, already scoped to the student's stream,
- * program course and the meta's own semesters.
+ * programme course and the meta's own semesters.
  */
 export interface PerMetaOptionsDto {
   metaId: number;

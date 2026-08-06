@@ -1368,9 +1368,11 @@ export default function ReportsPage() {
                     </div>
 
                     <div className="min-w-0 space-y-2">
-                      <Label className="text-xs font-semibold text-slate-800">Program course</Label>
+                      <Label className="text-xs font-semibold text-slate-800">
+                        Programme course
+                      </Label>
                       <DialogMultiSelect
-                        placeholder="All program courses"
+                        placeholder="All programme courses"
                         options={programCourseFilterOptions}
                         selectedOptions={filterProgramCourseIds.map(String)}
                         onChange={(s) => setFilterProgramCourseIds(parseIdStrings(s))}

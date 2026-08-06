@@ -221,7 +221,7 @@ export default function IdCardIssuePage() {
     });
   };
 
-  // Auto "Program course" validity (dd-mm-yyyy) for the loaded student. This
+  // Auto "Programme course" validity (dd-mm-yyyy) for the loaded student. This
   // also carries the student's registration academic year (the academic year
   // of the Sem-1 promotion's session) which drives template selection below.
   const validityQuery = useQuery({
@@ -1138,7 +1138,7 @@ export default function IdCardIssuePage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="PROGRAM">Program course (auto)</SelectItem>
+                      <SelectItem value="PROGRAM">Programme course (auto)</SelectItem>
                       <SelectItem value="MANUAL">Manual</SelectItem>
                     </SelectContent>
                   </Select>

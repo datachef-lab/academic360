@@ -23,7 +23,7 @@ import { fetchRestrictedGroupings } from "@/services/restricted-grouping";
 
 /**
  * One dropdown, derived from one subject-selection meta. The server decides
- * which metas apply to this student (stream / program course / academic year)
+ * which metas apply to this student (stream / programme course / academic year)
  * and which subjects each offers, so the form no longer hardcodes
  * minor1/minor2/idc1/... slots.
  */
@@ -217,7 +217,7 @@ export default function SubjectSelectionForm({
 
         // The dropdowns and their options come straight from the server now:
         // one entry per applicable meta, already scoped to this student's
-        // stream / program course and the meta's own semesters, and already
+        // stream / programme course and the meta's own semesters, and already
         // filtered by the 12th-board eligibility rules.
         setMetaViews(toMetaViews(resp.perMetaOptions ?? []));
 
@@ -966,7 +966,7 @@ export default function SubjectSelectionForm({
                 />
               </svg>
             </div>
-            <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Program Course</label>
+            <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Programme Course</label>
             <p className="text-base font-semibold text-white">B.A. English (H)</p>
           </div>
           <div className="space-y-3 text-center">
@@ -1022,7 +1022,7 @@ export default function SubjectSelectionForm({
             <p className="text-base font-semibold text-white">{student?.currentPromotion?.rollNumber}</p>
           </div>
           <div className="space-y-3 text-center">
-            <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Program Course</label>
+            <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Programme Course</label>
             <p className="text-base font-semibold text-white">{student?.currentPromotion?.programCourse?.name}</p>
           </div>
           <div className="space-y-3 text-center">

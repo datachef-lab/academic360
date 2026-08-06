@@ -183,7 +183,7 @@ export function MisTable<Row extends MisTableRowLike = MisTableRow>({
             <TableRow className="border-b-2 border-blue-200 hover:bg-transparent">
               <HeaderCell className="border-r-2 border-blue-200 bg-blue-100 text-left text-gray-900">
                 <span className="items-start text-left text-base font-bold text-gray-800">
-                  Program course
+                  Programme course
                 </span>
               </HeaderCell>
               {METRIC_COLUMNS.map((col) => (

@@ -167,7 +167,7 @@ export default function ProfileContent() {
                     </div>
 
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Program Course</span>
+                      <span className="text-sm text-gray-600">Programme Course</span>
                       <span className="font-semibold text-right text-xs">
                         {student?.currentPromotion?.programCourse?.name}
                       </span>
@@ -1054,7 +1054,7 @@ export default function ProfileContent() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label htmlFor="course" className="text-sm font-medium text-gray-700">
-                          Program Course
+                          Programme Course
                         </label>
                         <Input
                           id="course"

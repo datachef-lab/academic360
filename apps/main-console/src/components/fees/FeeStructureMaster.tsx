@@ -202,7 +202,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
     );
   };
 
-  // Helper function to check if a program course has conflicts
+  // Helper function to check if a programme course has conflicts
   const hasProgramConflict = (programName: string): boolean => {
     if (!validationResult || validationResult.isUnique) return false;
 
@@ -315,7 +315,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
     ],
   );
 
-  // Fetch academic years, program courses, shifts, fee heads, concession slabs and fee groups on component mount
+  // Fetch academic years, programme courses, shifts, fee heads, concession slabs and fee groups on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -351,14 +351,14 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
           setAcademicYears([]);
         }
 
-        // Handle program courses - getProgramCourses already returns the payload (array)
+        // Handle programme courses - getProgramCourses already returns the payload (array)
         if (programCoursesData.status === "fulfilled") {
           const programCoursesArray = Array.isArray(programCoursesData.value)
             ? programCoursesData.value
             : [];
           setProgramCourses(programCoursesArray);
         } else {
-          console.error("Error fetching program courses:", programCoursesData.reason);
+          console.error("Error fetching programme courses:", programCoursesData.reason);
           setProgramCourses([]);
         }
 
@@ -406,7 +406,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
         }
 
         console.log(
-          "Fetched academic years, program courses, shifts, fee heads, concession slabs and fee groups from API",
+          "Fetched academic years, programme courses, shifts, fee heads, concession slabs and fee groups from API",
         );
       } catch (error) {
         console.error("Unexpected error in fetchData:", error);
@@ -497,7 +497,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
         return {
           ...prev,
           amount: feeStructure.baseAmount || 0,
-          // Set program courses
+          // Set programme courses
           programs: feeStructure.programCourse?.name ? [feeStructure.programCourse.name] : [],
           // Set shifts
           shifts: feeStructure.shift?.name ? [feeStructure.shift.name] : [],
@@ -862,7 +862,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
       return;
     }
     if (feeStructureRow.programs.length === 0) {
-      toast.error("Please select at least one Program Course");
+      toast.error("Please select at least one Programme Course");
       return;
     }
     if (feeStructureRow.shifts.length === 0) {
@@ -1233,7 +1233,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                   ))}
                               </SelectContent>
                               <div className="text-base font-semibold text-gray-900 pointer-events-none">
-                                Program Course
+                                Programme Course
                               </div>
                             </Select>
                           </TableHead>
@@ -2247,7 +2247,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                         Academic Year
                       </TableHead>
                       <TableHead className="text-center border-r border-gray-300 p-3 text-base font-semibold whitespace-nowrap">
-                        Program Course
+                        Programme Course
                       </TableHead>
                       <TableHead className="text-center border-r border-gray-300 p-3 text-base font-semibold whitespace-nowrap">
                         Shift
@@ -2382,7 +2382,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
             <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 flex-shrink-0">
               <p className="text-sm text-yellow-800">
                 <strong>Note:</strong> Please adjust the base amount or concession rates to ensure
-                unique final amounts for each concession slab across all program course and shift
+                unique final amounts for each concession slab across all programme course and shift
                 combinations.
               </p>
             </div>
@@ -2417,7 +2417,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                       Receipt Type
                     </TableHead>
                     <TableHead className="w-[250px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap">
-                      Program Course
+                      Programme Course
                     </TableHead>
                     <TableHead className="w-[200px] p-2 text-center text-base font-semibold whitespace-nowrap">
                       Shift

@@ -132,7 +132,7 @@ export default function ClassHolidaysMasterPage() {
         setProgramCourseOptions(
           programCourses.map((pc) => ({
             value: String(pc.id),
-            label: pc.name ?? `Program course #${pc.id}`,
+            label: pc.name ?? `Programme course #${pc.id}`,
           })),
         );
         setClassOptions(
@@ -191,7 +191,7 @@ export default function ClassHolidaysMasterPage() {
 
   const handleSave = async () => {
     if (!form.holidayId || !form.programCourseId || !form.classId) {
-      toast.error("Holiday, program course, and class are required");
+      toast.error("Holiday, programme course, and class are required");
       return;
     }
     try {
@@ -278,15 +278,15 @@ export default function ClassHolidaysMasterPage() {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Program course</Label>
+              <Label className="text-xs">Programme course</Label>
               <Combobox
-                dataArr={[{ value: "", label: "All program courses" }, ...programCourseOptions]}
+                dataArr={[{ value: "", label: "All programme courses" }, ...programCourseOptions]}
                 value={filterProgramCourseId}
                 onChange={(v) => {
                   setPage(1);
                   setFilterProgramCourseId(v);
                 }}
-                placeholder="Filter by program course"
+                placeholder="Filter by programme course"
               />
             </div>
             <div className="space-y-1">
@@ -373,7 +373,7 @@ export default function ClassHolidaysMasterPage() {
                             Range
                           </TableHead>
                           <TableHead className={cn(STICKY_TH_BASE, "min-w-[220px]")}>
-                            Program course
+                            Programme course
                           </TableHead>
                           <TableHead className={cn(STICKY_TH_BASE, "min-w-[140px]")}>
                             Class
@@ -472,12 +472,12 @@ export default function ClassHolidaysMasterPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Program course *</Label>
+              <Label>Programme course *</Label>
               <Combobox
                 dataArr={programCourseOptions}
                 value={form.programCourseId}
                 onChange={(v) => setForm((f) => ({ ...f, programCourseId: v }))}
-                placeholder="Select program course"
+                placeholder="Select programme course"
               />
             </div>
             <div className="space-y-1.5">

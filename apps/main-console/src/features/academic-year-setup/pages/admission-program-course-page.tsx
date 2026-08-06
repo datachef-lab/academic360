@@ -145,7 +145,7 @@ export default function AdmissionProgramCoursePage() {
   const handleSubmit = async () => {
     if (!admission) return;
     if (!form.programCourseId) {
-      toast.error("Program Course is required");
+      toast.error("Programme Course is required");
       return;
     }
     setSubmitting(true);
@@ -162,7 +162,7 @@ export default function AdmissionProgramCoursePage() {
       };
       if (selected) await updateAdmissionCourse(selected.id, body);
       else await createAdmissionCourse(body);
-      toast.success(`Program course ${selected ? "updated" : "added"}`);
+      toast.success(`Programme course ${selected ? "updated" : "added"}`);
       setIsFormOpen(false);
       await reloadRows();
     } catch (e) {
@@ -176,7 +176,7 @@ export default function AdmissionProgramCoursePage() {
     try {
       await deleteAdmissionCourse(id);
       setRows((prev) => prev.filter((r) => r.id !== id));
-      toast.success("Program course removed");
+      toast.success("Programme course removed");
     } catch {
       toast.error("Failed to remove");
     }
@@ -203,7 +203,7 @@ export default function AdmissionProgramCoursePage() {
           <div className="min-w-0 flex-1">
             <CardTitle className="flex items-center text-lg sm:text-xl">
               <GraduationCap className="mr-2 h-6 w-6 flex-shrink-0 rounded-md border border-slate-400 p-1 sm:h-8 sm:w-8" />
-              <span className="truncate">Eligible Program Courses</span>
+              <span className="truncate">Eligible Programme Courses</span>
             </CardTitle>
             <div className="mt-1 text-xs text-muted-foreground sm:text-sm">
               Program-courses offered in the admission process for{" "}
@@ -220,7 +220,7 @@ export default function AdmissionProgramCoursePage() {
               onClick={openAdd}
               className="flex-shrink-0 bg-purple-600 text-white hover:bg-purple-700"
             >
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Program Course
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Programme Course
             </Button>
           )}
         </CardHeader>
@@ -242,7 +242,7 @@ export default function AdmissionProgramCoursePage() {
             <>
               <div className="mb-0 flex items-center gap-2 border-b bg-background p-2 sm:p-4">
                 <Input
-                  placeholder="Search program course / shift / class…"
+                  placeholder="Search programme course / shift / class…"
                   className="w-full sm:w-80"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -252,7 +252,7 @@ export default function AdmissionProgramCoursePage() {
                 <Table className="min-w-[800px] border">
                   <TableHeader className="sticky top-0 z-10 bg-gray-100">
                     <TableRow>
-                      <TableHead className="bg-gray-100">Program Course</TableHead>
+                      <TableHead className="bg-gray-100">Programme Course</TableHead>
                       <TableHead className="bg-gray-100">Shift</TableHead>
                       <TableHead className="bg-gray-100">Class</TableHead>
                       <TableHead className="bg-gray-100">Amount</TableHead>
@@ -266,7 +266,7 @@ export default function AdmissionProgramCoursePage() {
                     {filtered.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center">
-                          No program courses configured.
+                          No programme courses configured.
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -328,22 +328,22 @@ export default function AdmissionProgramCoursePage() {
         </CardContent>
       </Card>
 
-      {/* Add / edit program course */}
+      {/* Add / edit programme course */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="w-[95vw] max-w-lg sm:w-full">
           <DialogHeader>
-            <DialogTitle>{selected ? "Edit Program Course" : "Add Program Course"}</DialogTitle>
+            <DialogTitle>{selected ? "Edit Programme Course" : "Add Programme Course"}</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
               <Label className="text-xs">
-                Program Course<span className="text-red-500"> *</span>
+                Programme Course<span className="text-red-500"> *</span>
               </Label>
               <SearchableSelect
                 value={form.programCourseId}
                 onChange={(v) => setForm((p) => ({ ...p, programCourseId: v }))}
                 options={programCourses.map((o) => ({ value: String(o.id), label: o.name }))}
-                placeholder="Select Program Course"
+                placeholder="Select Programme Course"
               />
             </div>
             <div className="flex flex-col gap-1">

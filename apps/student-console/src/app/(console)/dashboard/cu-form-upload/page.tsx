@@ -95,7 +95,7 @@ export default function CUFormUploadPage() {
     [declarationMaster],
   );
 
-  // Check if student's program course is MA or MCOM (hide admission registration for these)
+  // Check if student's programme course is MA or MCOM (hide admission registration for these)
   const isBlockedProgram = useMemo(() => {
     if (!student?.programCourse?.name) return false;
 

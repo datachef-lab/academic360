@@ -98,7 +98,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
   const [components, setComponents] = useState<PaperComponentDto[]>([]);
   const [isLoadingPaper, setIsLoadingPaper] = useState(false);
 
-  // Create lookup objects for constructing program course names
+  // Create lookup objects for constructing programme course names
   //   const coursesLookup: Record<number, string> = React.useMemo(() => {
   //     return courses.reduce(
   //       (acc, course) => {
@@ -427,7 +427,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
                 {/* Paper Details */}
                 <div className="grid grid-cols-4 gap-4">
                   <div>
-                    <Label htmlFor="courseId">Program Course</Label>
+                    <Label htmlFor="courseId">Programme Course</Label>
                     <Select
                       value={
                         form.programCourseId !== undefined && form.programCourseId !== null

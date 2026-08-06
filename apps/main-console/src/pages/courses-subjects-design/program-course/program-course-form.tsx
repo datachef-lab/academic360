@@ -181,7 +181,7 @@ export function ProgramCourseForm({
     }
   }, [initialData, form]);
 
-  // Auto-compose Program Course name based on pattern:
+  // Auto-compose Programme Course name based on pattern:
   // [Stream.(ugPrefix|pgPrefix)] + ' ' + [Course.name] + ' ' + ([CourseType.shortName])
   useEffect(() => {
     const courseId = form.getValues("courseId");
@@ -558,7 +558,11 @@ export function ProgramCourseForm({
             Cancel
           </Button>
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Saving..." : isEdit ? "Update Program Course" : "Create Program Course"}
+            {isLoading
+              ? "Saving..."
+              : isEdit
+                ? "Update Programme Course"
+                : "Create Programme Course"}
           </Button>
         </div>
       </form>

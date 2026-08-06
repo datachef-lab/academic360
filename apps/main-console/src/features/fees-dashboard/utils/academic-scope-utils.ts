@@ -92,7 +92,7 @@ export function listDefaultSemesterFeeScopeEntries(
   return listEnabledSemesterFeeScopes(activities, academicYearId);
 }
 
-/** Program courses that match each in-process scope row (stream + activity dimensions). */
+/** Programme courses that match each in-process scope row (stream + activity dimensions). */
 export function programCourseIdsForInProcessScopes(
   entries: InProcessScopeEntry[],
   programCourses: ProgramCourseDto[],

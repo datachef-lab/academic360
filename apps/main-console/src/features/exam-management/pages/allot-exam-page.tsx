@@ -476,7 +476,7 @@ export default function AllotExamPage() {
           }
         } catch (error) {
           console.error(
-            `Error fetching papers for program course ${programCourseId} and subject type ${subjectTypeId}:`,
+            `Error fetching papers for programme course ${programCourseId} and subject type ${subjectTypeId}:`,
             error,
           );
         }
@@ -532,7 +532,7 @@ export default function AllotExamPage() {
     count: number;
   }
 
-  // Fetch student count breakdown by program course and shift
+  // Fetch student count breakdown by programme course and shift
   const { data: studentCountBreakdownData, isLoading: loadingStudentCount } = useQuery(
     ["studentCountBreakdown", selectedExam?.id, gender, excelFile?.name],
     async () => {
@@ -578,7 +578,7 @@ export default function AllotExamPage() {
             return {
               programCourseId: item.programCourseId,
               programCourseName:
-                programCourse?.programCourse.name || `Program Course ${item.programCourseId}`,
+                programCourse?.programCourse.name || `Programme Course ${item.programCourseId}`,
               shiftId: item.shiftId,
               shiftName: shift?.shift.name || `Shift ${item.shiftId}`,
               count: item.count,
@@ -1425,7 +1425,7 @@ export default function AllotExamPage() {
                           <div className="font-medium">Shift(s)</div>
                         </TableHead>
                         <TableHead className="w-[25%] p-2 text-center border-r border-gray-400 bg-gray-100">
-                          <div className="font-medium">Program Course(s)</div>
+                          <div className="font-medium">Programme Course(s)</div>
                         </TableHead>
                         <TableHead className="w-[25%] p-2 text-center border-r border-gray-400 bg-gray-100">
                           <div className="font-medium">Subject Category</div>
@@ -1519,7 +1519,7 @@ export default function AllotExamPage() {
                               <div className="font-medium">Sr. No.</div>
                             </TableHead>
                             <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[15%]">
-                              <div className="font-medium">Program Course</div>
+                              <div className="font-medium">Programme Course</div>
                             </TableHead>
                             <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[25%]">
                               <div className="font-medium">Subject & Paper</div>
@@ -1645,7 +1645,7 @@ export default function AllotExamPage() {
                                     : `${startDateStr} - ${endDateStr}`;
                                 const timeDisplay = `${formatTime(startDate)} - ${formatTime(endDate)}`;
 
-                                // Collect all unique program courses for this group
+                                // Collect all unique programme courses for this group
                                 const uniqueProgramCourseIds = new Set<number>();
                                 group.papers.forEach(({ paper }) => {
                                   if (paper.programCourseId) {
@@ -1781,7 +1781,7 @@ export default function AllotExamPage() {
                   )}
                 </div>
 
-                {/* Breakdown by Program Course and Shift - Table Format */}
+                {/* Breakdown by Programme Course and Shift - Table Format */}
                 {(() => {
                   if (!Array.isArray(studentCountBreakdown) || studentCountBreakdown.length === 0) {
                     return null;
@@ -1796,7 +1796,7 @@ export default function AllotExamPage() {
                     }
                   });
 
-                  // Transform data into table format: rows = program courses, columns = shifts
+                  // Transform data into table format: rows = programme courses, columns = shifts
                   const programCourseMap = new Map<
                     number,
                     {
@@ -1837,7 +1837,7 @@ export default function AllotExamPage() {
                     return nameA.localeCompare(nameB);
                   });
 
-                  // Sort program courses by name
+                  // Sort programme courses by name
                   const sortedProgramCourses = Array.from(programCourseMap.entries()).sort((a, b) =>
                     a[1].name.localeCompare(b[1].name),
                   );
@@ -1845,7 +1845,7 @@ export default function AllotExamPage() {
                   return (
                     <div className="mt-3 pt-3 border-t border-blue-200">
                       <p className="text-xs font-medium text-blue-800 mb-3">
-                        Breakdown by Program Course & Shift:
+                        Breakdown by Programme Course & Shift:
                       </p>
                       <div className="overflow-x-auto">
                         <table className="w-full border-collapse bg-white rounded-lg border border-blue-200">
@@ -1855,7 +1855,7 @@ export default function AllotExamPage() {
                                 Sr. No.
                               </th>
                               <th className="border border-blue-200 px-3 py-2 text-left text-xs font-semibold text-blue-900">
-                                Program Course
+                                Programme Course
                               </th>
                               {sortedShiftIds.map((shiftId) => (
                                 <th

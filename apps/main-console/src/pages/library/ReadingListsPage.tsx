@@ -256,7 +256,7 @@ export default function ReadingListsPage() {
 
   const onSubmitList = async () => {
     if (!listForm.title.trim() || !listForm.programCourseId) {
-      toast.error("Title and program course ID are required.");
+      toast.error("Title and programme course ID are required.");
       return;
     }
     setSavingList(true);
@@ -554,9 +554,9 @@ export default function ReadingListsPage() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label>Program Course *</Label>
+                <Label>Programme Course *</Label>
                 <Combobox
-                  placeholder="Select program course"
+                  placeholder="Select programme course"
                   value={listForm.programCourseId}
                   dataArr={programCourseOptions}
                   onChange={(v) => setListForm({ ...listForm, programCourseId: v })}
