@@ -412,6 +412,32 @@ export default function StudentLedgerPage() {
     setSelectedIds(new Set());
   }, [student?.id]);
 
+  // Prune selected ids that are no longer collectable. Handles the common
+  // post-collect case: after the bulk mutation succeeds and the ledger
+  // refetches, the just-collected rows drop out of `collectableFilteredRows`
+  // (their status flips to COLLECTED). Without this, the ids linger in
+  // `selectedIds` and the emerald action bar stays on screen even though
+  // nothing is actually ticked. Also self-heals when a filter change hides
+  // a previously-ticked row. Skips when the current selection is already
+  // a subset — no state update, no re-render loop.
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const validIds = new Set(collectableFilteredRows.map((r) => r.ledgerId));
+      let allValid = true;
+      for (const id of prev) {
+        if (!validIds.has(id)) {
+          allValid = false;
+          break;
+        }
+      }
+      if (allValid) return prev;
+      const next = new Set<number>();
+      for (const id of prev) if (validIds.has(id)) next.add(id);
+      return next;
+    });
+  }, [collectableFilteredRows]);
+
   const handleSearch = () => {
     const uid = uidInput.trim();
     if (!uid) return;
