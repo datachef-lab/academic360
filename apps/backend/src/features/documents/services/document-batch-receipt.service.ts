@@ -983,10 +983,16 @@ export async function markLedgerEntryCollected(
   collectedAt: Date | null;
 }> {
   // Captured inside the tx and read after commit so the realtime emit can
-  // scope to the exact student + batch the row belongs to. Null for the
-  // "already collected" fast path — no emit needed there.
-  let emitContext: { batchId: number | null; studentId: number | null } | null =
-    null;
+  // scope to the exact student + batch the row belongs to. `shouldEmit`
+  // stays false on the "already collected" fast path — no emit there.
+  // Modelled as a mutable object rather than a nullable union so TS
+  // doesn't narrow the outer read to `never` just because the assignment
+  // happens inside the transaction closure.
+  const emitContext: {
+    shouldEmit: boolean;
+    batchId: number | null;
+    studentId: number | null;
+  } = { shouldEmit: false, batchId: null, studentId: null };
   const result = await db.transaction(async (tx) => {
     const [current] = await tx
       .select({
@@ -1030,10 +1036,9 @@ export async function markLedgerEntryCollected(
       .from(promotionModel)
       .where(eq(promotionModel.id, current.promotionId))
       .limit(1);
-    emitContext = {
-      batchId: current.batchId ?? null,
-      studentId: promoRow?.studentId ?? null,
-    };
+    emitContext.shouldEmit = true;
+    emitContext.batchId = current.batchId ?? null;
+    emitContext.studentId = promoRow?.studentId ?? null;
 
     // Reverse projection to the legacy temp_admit_card_distributions table so
     // the two systems stay in step for exam admit card handovers.
@@ -1074,7 +1079,7 @@ export async function markLedgerEntryCollected(
     return { ledgerId, collected: true, alreadyCollected: false, collectedAt };
   });
 
-  if (emitContext) {
+  if (emitContext.shouldEmit) {
     emitDocumentsEvent("documents:ledger:updated", {
       batchId: emitContext.batchId,
       studentId: emitContext.studentId,
