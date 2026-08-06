@@ -9,7 +9,7 @@ import {
   FileText,
   ReceiptText,
   BookUser,
-  FileClock,
+  // FileClock, // used by the temporarily-hidden "Document Requests" nav entry
 } from "lucide-react";
 import { Outlet, useLocation } from "react-router-dom";
 
@@ -26,11 +26,14 @@ const quickLinks = [
     icon: BookUser,
   },
 
-  {
-    title: "Document Requests",
-    url: "/dashboard/document-issuance/requests",
-    icon: FileClock,
-  },
+  // Temporarily hidden until the requests workflow is finalised. Route
+  // stays registered so a direct URL still works — restore this entry
+  // when the page is ready to ship.
+  // {
+  //   title: "Document Requests",
+  //   url: "/dashboard/document-issuance/requests",
+  //   icon: FileClock,
+  // },
   { title: "Reports", url: "/dashboard/document-issuance/reports", icon: BarChart2 },
 ];
 
