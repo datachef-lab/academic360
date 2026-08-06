@@ -180,7 +180,18 @@ export default function SubjectSelectionForm({
     setSelectionsByMeta((prev) => ({ ...prev, [metaId]: value }));
 
   /** Metas that actually have something to offer — these are the dropdowns. */
-  const visibleMetas = useMemo(() => metaViews.filter((v) => v.options.length > 0), [metaViews]);
+  // PRIOR_SELECTION metas (Minor 3/4) legitimately start with `options = []` —
+  // they draw from the source metas' current picks (see ADR 0014). The live-
+  // recompute inside the option-render path fills them in as Minor 1/2 are
+  // filled, but only if the row is rendered. Hiding them on
+  // `options.length === 0` was what stopped admins/students from seeing
+  // Minor 3/4 for fresh students. Keep them visible so the fallback path
+  // can render an empty dropdown that populates the instant Minor 1/2 is
+  // picked.
+  const visibleMetas = useMemo(
+    () => metaViews.filter((v) => v.options.length > 0 || v.optionSource === "PRIOR_SELECTION"),
+    [metaViews],
+  );
 
   /** Consecutive metas of the same subject type render together on one row. */
   const metaRows = useMemo(() => {
