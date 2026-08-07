@@ -748,6 +748,23 @@ export async function processStudentsFromExcelBuffer(
 
   emitProgress(0, "started");
 
+  // Heartbeat: keep the ETA "live" between UID emissions. If a single UID
+  // takes ~60s (slow legacy DB), the socket would otherwise show the same
+  // stale ETA for the whole 60s. The heartbeat re-emits at the current
+  // `done` count every 3s — EWMA stays the same (no new deltaDone), but
+  // elapsedMs updates and `etaMs` is recomputed from the current EWMA
+  // against the current time. Ref-unref'd so it never keeps Node alive
+  // past the workers.
+  const heartbeatMs = Math.max(
+    1000,
+    Number(process.env.LEGACY_IMPORT_HEARTBEAT_MS) || 3000,
+  );
+  const heartbeat: ReturnType<typeof setInterval> = setInterval(() => {
+    if (done >= total) return; // main loop is finishing; end emit handles it
+    emitProgress(done, "in_progress");
+  }, heartbeatMs);
+  heartbeat.unref?.();
+
   const processOneUid = async (uid: string): Promise<void> => {
     // Cross-upload guard with bounded retry: if a partner import (this
     // process or another backend instance) is already working on this UID,
@@ -885,9 +902,16 @@ export async function processStudentsFromExcelBuffer(
 
   // Workers share the process-wide limiter; allSettled + the worker's own
   // try/catch guarantee one UID's failure never aborts its siblings.
-  await Promise.allSettled(
-    uids.map((uid) => importLimit(() => processOneUid(uid))),
-  );
+  try {
+    await Promise.allSettled(
+      uids.map((uid) => importLimit(() => processOneUid(uid))),
+    );
+  } finally {
+    // Stop the heartbeat before the finalize/heal phase (which has its own
+    // emit) so we don't race an in-flight tick. try/finally ensures we
+    // never leak the interval if the caller aborts unexpectedly.
+    clearInterval(heartbeat);
+  }
 
   // This import creates promotions (affiliation stats) and loads legacy fees
   // (fee_mis stats), so nudge both Real Time Tracker tabs once at the end.
