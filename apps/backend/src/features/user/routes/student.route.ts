@@ -16,6 +16,7 @@ import {
   bulkUpdateFamilyMemberTitlesController,
   importStudentsFromExcelController,
   downloadImportErrorReportController,
+  getImportJobStatusController,
   precheckImportStudentsController,
   backfillStudentQuotaTypesController,
   exportStudentDetailedReportController,
@@ -107,11 +108,21 @@ router.post(
   importStudentsFromExcelController,
 );
 
-// GET /api/students/import-legacy-students/error-report/:fileName
-// Download the Excel of failed / not-found UIDs written at import completion
+// GET /api/students/import-legacy-students/error-report/:jobId
+// Download the Excel of failed / not-found UIDs from `legacy_import_jobs.
+// error_report_bytes` (any instance can serve it — see ADR 0030).
 router.get(
-  "/import-legacy-students/error-report/:fileName",
+  "/import-legacy-students/error-report/:jobId",
   downloadImportErrorReportController,
+);
+
+// GET /api/students/import-legacy-students/status/:jobId
+// Poll-fallback for the socket stream (network drop / reconnect on a
+// different instance). Returns the live job state from Postgres so ANY
+// backend instance behind the ALB can serve it — see ADR 0030.
+router.get(
+  "/import-legacy-students/status/:jobId",
+  getImportJobStatusController,
 );
 
 // POST /api/students/backfill-quota-types

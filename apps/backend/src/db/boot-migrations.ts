@@ -34,6 +34,7 @@ import { runLedgerTimestampHeal } from "@/features/documents/services/ledger-tim
 import { runLibraryLegacyLoad } from "@/features/library/services/library-legacy-load.service.js";
 import { runLibraryMastersSeed } from "@/features/library/services/library-masters-seed.service.js";
 import { runSubjectGroupMnHeal } from "@/features/subject-selection/services/subject-group-mn-heal.service.js";
+import { reconcileStaleLegacyImportJobs } from "@/features/user/services/legacy-import-jobs.service.js";
 
 const log = createLogger("boot-migrations");
 
@@ -249,6 +250,16 @@ const MIGRATIONS: Migration[] = [
     // starve this fast seed (and the dashboard's seed banner) until it ends.
     name: "library-masters-seed",
     run: async () => runLibraryMastersSeed(),
+  },
+  {
+    // Any legacy-import job left `queued`/`running` in THIS instance's row
+    // when the process boots is dead (we just started up). Fail those rows
+    // so the uploader's status poll returns a terminal state instead of
+    // hanging forever. Scoped to this instance's hostname-pid so a rolling
+    // deploy where instance A restarts doesn't wipe instance B's in-flight
+    // run (see legacy-import-jobs.service.ts).
+    name: "legacy-import-boot-reconcile",
+    run: async () => reconcileStaleLegacyImportJobs(),
   },
   {
     // Loads the library data from IRP. Unlike everything above it is a long
