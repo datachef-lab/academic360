@@ -1317,6 +1317,13 @@
 			"when": 1785911036386,
 			"tag": "0189_student_no_show_remarks",
 			"breakpoints": true
+		},
+		{
+			"idx": 190,
+			"version": "7",
+			"when": 1786100000000,
+			"tag": "0190_add_document_batch_receipt_modes",
+			"breakpoints": true
 		}
 	]
 }
