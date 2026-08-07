@@ -20,11 +20,13 @@
 -- Idempotent so it can be reapplied without failing on a DB that already
 -- carries the index.
 
-CREATE INDEX IF NOT EXISTS "document_ledger_promotion_id_idx"
-  ON "document_ledger" ("promotion_id_fk");
-
-CREATE INDEX IF NOT EXISTS "document_ledger_batch_receipt_id_idx"
-  ON "document_ledger" ("document_batch_receipt_id_fk");
-
-CREATE INDEX IF NOT EXISTS "document_ledger_document_type_id_idx"
-  ON "document_ledger" ("document_type_id_fk");
+-- Hardened 2026-08-07: guard against document_ledger not existing yet
+-- (dev DB may be behind — CREATE INDEX IF NOT EXISTS only guards the
+-- index name, not the target table; a missing table fails with 42P01).
+DO $$ BEGIN
+    IF to_regclass('public.document_ledger') IS NOT NULL THEN
+        EXECUTE 'CREATE INDEX IF NOT EXISTS "document_ledger_promotion_id_idx" ON "document_ledger" ("promotion_id_fk")';
+        EXECUTE 'CREATE INDEX IF NOT EXISTS "document_ledger_batch_receipt_id_idx" ON "document_ledger" ("document_batch_receipt_id_fk")';
+        EXECUTE 'CREATE INDEX IF NOT EXISTS "document_ledger_document_type_id_idx" ON "document_ledger" ("document_type_id_fk")';
+    END IF;
+END $$;

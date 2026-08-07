@@ -32,67 +32,94 @@
 -- is a no-op. On the poisoned database it closes the gap without needing a
 -- separate psql step.
 
+-- HARDENED 2026-08-07: every ALTER TABLE now guards on target-table
+-- existence via `to_regclass`. The bare `ALTER TABLE "document_types" ADD
+-- COLUMN IF NOT EXISTS ...` form fails with 42P01 (relation does not exist)
+-- if the table itself hasn't been created yet — the IF NOT EXISTS only
+-- guards the column, not the table. This bit a dev-EC2 deploy whose
+-- 0175 rename (documents → document_types) never landed, blocking the
+-- entire CD on a repair migration that had nothing to repair on that DB.
+-- Guards make each block a no-op when the parent table is absent, letting
+-- whatever creates the table later (boot service `loadDocumentTypesV2`
+-- or a later migration) proceed cleanly.
+
 -- 0177 — document_types.code (nullable → backfill → NOT NULL + UNIQUE)
 
-ALTER TABLE "document_types" ADD COLUMN IF NOT EXISTS "code" varchar(64);--> statement-breakpoint
-
--- Backfills only rows whose code is still NULL, matching the eleven seeded
--- types by their canonical names; any row not in that list gets a slug of
--- its own name (the same fallback the create path uses).
-UPDATE "document_types" SET "code" = CASE "name"
-    WHEN 'Exam Admit Card'     THEN 'EXAM_ADMIT_CARD'
-    WHEN 'Fee Receipt'         THEN 'FEE_RECEIPT'
-    WHEN 'CU Registration PDF' THEN 'CU_REGISTRATION_PDF'
-    WHEN 'ID Card'             THEN 'ID_CARD'
-    WHEN 'CU Exam Form'        THEN 'CU_EXAM_FORM'
-    WHEN 'Class XII Marksheet' THEN 'CLASS_XII_MARKSHEET'
-    WHEN 'Aadhaar Card'        THEN 'AADHAAR_CARD'
-    WHEN 'APAAR ID Card'       THEN 'APAAR_ID_CARD'
-    WHEN 'Father Photo ID'     THEN 'FATHER_PHOTO_ID'
-    WHEN 'Mother Photo ID'     THEN 'MOTHER_PHOTO_ID'
-    WHEN 'EWS Certificate'     THEN 'EWS_CERTIFICATE'
-    ELSE left(regexp_replace(upper(trim("name")), '[^A-Z0-9]+', '_', 'g'), 64)
-END
-WHERE "code" IS NULL;--> statement-breakpoint
-
 DO $$ BEGIN
-    ALTER TABLE "document_types" ALTER COLUMN "code" SET NOT NULL;
-EXCEPTION WHEN others THEN NULL; END $$;--> statement-breakpoint
+    IF to_regclass('public.document_types') IS NOT NULL THEN
+        EXECUTE 'ALTER TABLE "document_types" ADD COLUMN IF NOT EXISTS "code" varchar(64)';
 
-DO $$ BEGIN
-    ALTER TABLE "document_types" ADD CONSTRAINT "document_types_code_unique" UNIQUE ("code");
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint
+        -- Backfills only rows whose code is still NULL, matching the eleven
+        -- seeded types by their canonical names; any row not in that list
+        -- gets a slug of its own name (the same fallback the create path uses).
+        UPDATE "document_types" SET "code" = CASE "name"
+            WHEN 'Exam Admit Card'     THEN 'EXAM_ADMIT_CARD'
+            WHEN 'Fee Receipt'         THEN 'FEE_RECEIPT'
+            WHEN 'CU Registration PDF' THEN 'CU_REGISTRATION_PDF'
+            WHEN 'ID Card'             THEN 'ID_CARD'
+            WHEN 'CU Exam Form'        THEN 'CU_EXAM_FORM'
+            WHEN 'Class XII Marksheet' THEN 'CLASS_XII_MARKSHEET'
+            WHEN 'Aadhaar Card'        THEN 'AADHAAR_CARD'
+            WHEN 'APAAR ID Card'       THEN 'APAAR_ID_CARD'
+            WHEN 'Father Photo ID'     THEN 'FATHER_PHOTO_ID'
+            WHEN 'Mother Photo ID'     THEN 'MOTHER_PHOTO_ID'
+            WHEN 'EWS Certificate'     THEN 'EWS_CERTIFICATE'
+            ELSE left(regexp_replace(upper(trim("name")), '[^A-Z0-9]+', '_', 'g'), 64)
+        END
+        WHERE "code" IS NULL;
+
+        BEGIN
+            EXECUTE 'ALTER TABLE "document_types" ALTER COLUMN "code" SET NOT NULL';
+        EXCEPTION WHEN others THEN NULL; END;
+
+        BEGIN
+            EXECUTE 'ALTER TABLE "document_types" ADD CONSTRAINT "document_types_code_unique" UNIQUE ("code")';
+        EXCEPTION WHEN duplicate_object THEN NULL; END;
+    END IF;
+END $$;--> statement-breakpoint
 
 -- 0177 (continued) — id_card_issues.document_ledger_id_fk
-
-ALTER TABLE "id_card_issues" ADD COLUMN IF NOT EXISTS "document_ledger_id_fk" integer;--> statement-breakpoint
-
-DO $$ BEGIN
-    ALTER TABLE "id_card_issues"
-        ADD CONSTRAINT "id_card_issues_document_ledger_id_fk_document_ledger_id_fk"
-        FOREIGN KEY ("document_ledger_id_fk") REFERENCES "public"."document_ledger"("id")
-        ON DELETE NO ACTION ON UPDATE NO ACTION;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint
+-- Requires BOTH id_card_issues AND document_ledger to exist.
 
 DO $$ BEGIN
-    ALTER TABLE "id_card_issues"
-        ADD CONSTRAINT "id_card_issues_document_ledger_id_fk_unique"
-        UNIQUE ("document_ledger_id_fk");
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint
+    IF to_regclass('public.id_card_issues') IS NOT NULL
+       AND to_regclass('public.document_ledger') IS NOT NULL THEN
+        EXECUTE 'ALTER TABLE "id_card_issues" ADD COLUMN IF NOT EXISTS "document_ledger_id_fk" integer';
+
+        BEGIN
+            EXECUTE 'ALTER TABLE "id_card_issues"
+                ADD CONSTRAINT "id_card_issues_document_ledger_id_fk_document_ledger_id_fk"
+                FOREIGN KEY ("document_ledger_id_fk") REFERENCES "public"."document_ledger"("id")
+                ON DELETE NO ACTION ON UPDATE NO ACTION';
+        EXCEPTION WHEN duplicate_object THEN NULL; END;
+
+        BEGIN
+            EXECUTE 'ALTER TABLE "id_card_issues"
+                ADD CONSTRAINT "id_card_issues_document_ledger_id_fk_unique"
+                UNIQUE ("document_ledger_id_fk")';
+        EXCEPTION WHEN duplicate_object THEN NULL; END;
+    END IF;
+END $$;--> statement-breakpoint
 
 -- 0178 — cu_registration_document_uploads.document_ledger_id_fk
-
-ALTER TABLE "cu_registration_document_uploads" ADD COLUMN IF NOT EXISTS "document_ledger_id_fk" integer;--> statement-breakpoint
-
-DO $$ BEGIN
-    ALTER TABLE "cu_registration_document_uploads"
-        ADD CONSTRAINT "cu_registration_document_uploads_document_ledger_id_fk_document_ledger_id_fk"
-        FOREIGN KEY ("document_ledger_id_fk") REFERENCES "public"."document_ledger"("id")
-        ON DELETE NO ACTION ON UPDATE NO ACTION;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint
+-- Requires BOTH cu_registration_document_uploads AND document_ledger to exist.
 
 DO $$ BEGIN
-    ALTER TABLE "cu_registration_document_uploads"
-        ADD CONSTRAINT "cu_registration_document_uploads_document_ledger_id_fk_unique"
-        UNIQUE ("document_ledger_id_fk");
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    IF to_regclass('public.cu_registration_document_uploads') IS NOT NULL
+       AND to_regclass('public.document_ledger') IS NOT NULL THEN
+        EXECUTE 'ALTER TABLE "cu_registration_document_uploads" ADD COLUMN IF NOT EXISTS "document_ledger_id_fk" integer';
+
+        BEGIN
+            EXECUTE 'ALTER TABLE "cu_registration_document_uploads"
+                ADD CONSTRAINT "cu_registration_document_uploads_document_ledger_id_fk_document_ledger_id_fk"
+                FOREIGN KEY ("document_ledger_id_fk") REFERENCES "public"."document_ledger"("id")
+                ON DELETE NO ACTION ON UPDATE NO ACTION';
+        EXCEPTION WHEN duplicate_object THEN NULL; END;
+
+        BEGIN
+            EXECUTE 'ALTER TABLE "cu_registration_document_uploads"
+                ADD CONSTRAINT "cu_registration_document_uploads_document_ledger_id_fk_unique"
+                UNIQUE ("document_ledger_id_fk")';
+        EXCEPTION WHEN duplicate_object THEN NULL; END;
+    END IF;
+END $$;
