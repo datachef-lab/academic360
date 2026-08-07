@@ -14,6 +14,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { pool } from "@/db/index.js";
 import { createLogger } from "@/config/logger.js";
 import { runRegistrationYearDriftMigration } from "@/features/subject-selection/services/registration-year-drift-migration.service.js";
 import { runCuAdmitCardSemVSemVILoader } from "@/features/subject-selection/services/cu-admitcard-loader.service.js";
@@ -21,6 +22,7 @@ import { runStreamMismatchHeal } from "@/features/subject-selection/services/str
 import { runLegacyFeesAmountHeal } from "@/features/fees/services/legacy-fees-amount-heal.service.js";
 import { runLibraryLegacyLoad } from "@/features/library/services/library-legacy-load.service.js";
 import { runLibraryMastersSeed } from "@/features/library/services/library-masters-seed.service.js";
+import { reconcileStaleLegacyImportJobs } from "@/features/user/services/legacy-import-jobs.service.js";
 
 const log = createLogger("boot-migrations");
 
@@ -91,13 +93,44 @@ const MIGRATIONS: Migration[] = [
     run: async () => runStreamMismatchHeal({ commit: true }),
   },
   {
-    // Legacy fee-amount heal — reconciles fee_student_mappings /
-    // payments.amount against IRP's `Installment Total Amount To Pay`
-    // for every mapping outside the 2025-26 / 2026-27 Sem I fresh-admit
-    // scope. Idempotent: a mapping already matching IRP is skipped.
-    // See legacy-fees-amount-heal.service.ts for the exact rule.
-    name: "legacy-fees-amount-heal",
-    run: async () => runLegacyFeesAmountHeal({ commit: true, sampleLimit: 20 }),
+    // Legacy fee-slab heal — re-points fee_student_mappings at the concession
+    // slab IRP actually granted (resolved from studentfeesconcessiontab,
+    // section-less, including students IRP has not billed yet) and reconciles
+    // total_payable / payments.amount, for every mapping outside the 2025-26 /
+    // 2026-27 Sem I fresh-admit scope. Idempotent: a matching mapping is
+    // skipped, and an admin's MANUAL edit is never reverted. See
+    // legacy-fees-amount-heal.service.ts for the exact rule.
+    //
+    // Multi-instance: a fleet-wide restart boots every instance at once. Take a
+    // session-scoped advisory lock so exactly ONE instance runs the (full,
+    // legacy-DB-scanning) heal; the rest skip. The winner writes the marker, so
+    // once it completes no instance re-runs it on a later restart.
+    name: "legacy-fees-slab-heal",
+    run: async () => {
+      const HEAL_LOCK_KEY = 918360007;
+      const lockClient = await pool.connect();
+      try {
+        const { rows } = await lockClient.query<{ locked: boolean }>(
+          "SELECT pg_try_advisory_lock($1) AS locked",
+          [HEAL_LOCK_KEY],
+        );
+        if (rows[0]?.locked !== true) {
+          return { skipped: "another instance holds the fee-slab heal lock" };
+        }
+        try {
+          return await runLegacyFeesAmountHeal({
+            commit: true,
+            sampleLimit: 20,
+          });
+        } finally {
+          await lockClient.query("SELECT pg_advisory_unlock($1)", [
+            HEAL_LOCK_KEY,
+          ]);
+        }
+      } finally {
+        lockClient.release();
+      }
+    },
   },
   {
     // Seeds the library masters — branch, patron & item categories, zones,
@@ -108,6 +141,15 @@ const MIGRATIONS: Migration[] = [
     // starve this fast seed (and the dashboard's seed banner) until it ends.
     name: "library-masters-seed",
     run: async () => runLibraryMastersSeed(),
+  },
+  {
+    // Time-based reconcile of stale legacy-import jobs. Any row still marked
+    // queued/running whose updated_at is older than 15 min is dead (a healthy
+    // job's persistProgress bumps updated_at every ~1s). Safe under a rolling
+    // deploy — an actively-running peer's row is never stale, so this cannot
+    // kill a live job. See legacy-import-jobs.service.ts for the query.
+    name: "legacy-import-boot-reconcile",
+    run: async () => reconcileStaleLegacyImportJobs(),
   },
   {
     // Loads the library data from IRP. Unlike everything above it is a long

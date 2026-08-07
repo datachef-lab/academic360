@@ -84,6 +84,13 @@ export async function acquireImportUidLock(
     }
   }
 
+  if (!warnedAboutMapFallback) {
+    warnedAboutMapFallback = true;
+    console.warn(
+      "[import-uid-lock] Redis unavailable — using in-process Map fallback. " +
+        "This is fine on a single node but WILL race across a multi-instance fleet.",
+    );
+  }
   const existing = inProcessLocks.get(uid);
   if (existing) {
     const { token: _token, ...holderInfo } = existing;
@@ -97,6 +104,61 @@ export async function acquireImportUidLock(
       if (current?.token === stored.token) inProcessLocks.delete(uid);
     },
   };
+}
+
+let warnedAboutMapFallback = false;
+
+/**
+ * Acquire with bounded retry. If the UID is held by someone else, back off
+ * (jittered) and try again a few times before giving up. Closes the
+ * silent-skip class where instance A crashes mid-import (leaves a UID
+ * Redis-locked for the full TTL) — the retry lets a partner import through
+ * once A's lock either releases normally or expires.
+ *
+ * Total wait ≤ maxAttempts × avg(backoffMs) so a genuinely-stuck UID still
+ * surfaces to the operator's error report reasonably fast.
+ */
+export async function waitForImportUidLock(
+  uid: string,
+  holder: { userId?: string | null; userName?: string | null },
+  opts?: { maxAttempts?: number; backoffMsSchedule?: number[] },
+): Promise<AcquireImportUidLockResult & { attempts: number }> {
+  const maxAttempts = Math.max(1, opts?.maxAttempts ?? 3);
+  // 2s, 5s, 12s — gives roughly 20s of headroom for a partner import to
+  // release a slow UID's lock; anything longer than that isn't a partner run
+  // but a stuck holder we want to surface.
+  const schedule = opts?.backoffMsSchedule ?? [2000, 5000, 12000];
+
+  let lastResult: AcquireImportUidLockResult = {
+    acquired: false,
+    holder: null,
+  };
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    lastResult = await acquireImportUidLock(uid, holder);
+    if (lastResult.acquired) {
+      // Made it on a retry — surface contention so a slow run isn't invisible
+      // in the ops log (retries stall the per-container pLimit worker).
+      if (attempt > 1) {
+        console.warn(
+          `[import-uid-lock] uid=${uid} acquired on attempt ${attempt}/${maxAttempts} after contention`,
+        );
+      }
+      return { ...lastResult, attempts: attempt };
+    }
+    if (attempt < maxAttempts) {
+      const base =
+        schedule[attempt - 1] ?? schedule[schedule.length - 1] ?? 5000;
+      const jitter = Math.floor(Math.random() * Math.min(1000, base / 3));
+      await new Promise((r) => setTimeout(r, base + jitter));
+    }
+  }
+  // All retries exhausted — the UID is genuinely held by someone else and is
+  // about to become a terminal error in the import summary. WARN so ops sees
+  // the stuck holder before the operator downloads the error report.
+  console.warn(
+    `[import-uid-lock] uid=${uid} gave up after ${maxAttempts} attempts — holder=${lastResult.holder?.userName ?? "unknown"}`,
+  );
+  return { ...lastResult, attempts: maxAttempts };
 }
 
 /**
