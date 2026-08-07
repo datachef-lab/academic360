@@ -1317,6 +1317,13 @@
 			"when": 1785911280000,
 			"tag": "0190_temp_admit_card_ledger_fk",
 			"breakpoints": true
+		},
+		{
+			"idx": 191,
+			"version": "7",
+			"when": 1786100000000,
+			"tag": "0191_add_document_batch_receipt_modes",
+			"breakpoints": true
 		}
 	]
 }
