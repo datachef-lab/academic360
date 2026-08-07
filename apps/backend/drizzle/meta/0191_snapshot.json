@@ -22039,6 +22039,19 @@
 					"primaryKey": false,
 					"notNull": false
 				},
+				"is_no_show": {
+					"name": "is_no_show",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": false
+				},
+				"no_show_remarks": {
+					"name": "no_show_remarks",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
 				"created_at": {
 					"name": "created_at",
 					"type": "timestamp",
