@@ -27,10 +27,6 @@ export interface FleetSlot {
 
 const RELEASE_LUA = `if redis.call("GET", KEYS[1]) == ARGV[1] then return redis.call("DEL", KEYS[1]) else return 0 end`;
 
-const BUSY: FleetSlot = {
-  release: async () => undefined,
-};
-
 export interface AcquireOptions {
   key: string; // Redis key prefix (e.g. "a360:sem:legacy-import-workers")
   capacity: number;
@@ -40,9 +36,15 @@ export interface AcquireOptions {
 }
 
 /**
- * Acquire one slot. Returns null when Redis is unavailable (the caller must
- * fall back to a local limiter). Throws only on programming errors — a full
- * fleet triggers a timeout Error the caller can log and skip.
+ * Acquire one slot. Returns `null` in two indistinguishable "no slot" cases:
+ *   (a) Redis is unavailable → caller falls back to its local limiter.
+ *   (b) The fleet has been saturated for the full `waitForMs` window →
+ *       caller proceeds anyway (deliberate: preferable to hanging an upload
+ *       indefinitely; the process-local `pLimit` is still an outer bound).
+ *
+ * Both cases WARN so a sustained overshoot is visible in logs. The caller's
+ * `if (fleetSlot) release()` pattern handles null cleanly, so there is a
+ * single "no slot" code path — no sentinel object to distinguish.
  */
 export async function acquireFleetSlot(
   opts: AcquireOptions,
@@ -99,13 +101,14 @@ export async function acquireFleetSlot(
     await sleep(pollMs + Math.floor(Math.random() * 100));
   }
 
-  // Fleet fully saturated for `waitForMs`. Rather than blocking the worker
-  // indefinitely, return a busy sentinel — the caller decides whether to
-  // proceed without a slot (rare) or error the UID.
+  // Fleet fully saturated for `waitForMs`. Return null (same code path as
+  // "Redis unavailable") so the caller proceeds under only its process-local
+  // pLimit — hanging the upload indefinitely is worse than briefly
+  // overshooting the fleet cap. WARN so operators see the overshoot.
   console.warn(
-    `[fleet-semaphore] timed out waiting for slot on ${opts.key} after ${waitForMs}ms`,
+    `[fleet-semaphore] SATURATED: no slot on ${opts.key} after ${waitForMs}ms — worker proceeding without fleet slot; fleet cap briefly exceeded`,
   );
-  return BUSY;
+  return null;
 }
 
 function sleep(ms: number): Promise<void> {

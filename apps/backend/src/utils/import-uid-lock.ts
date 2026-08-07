@@ -136,6 +136,13 @@ export async function waitForImportUidLock(
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     lastResult = await acquireImportUidLock(uid, holder);
     if (lastResult.acquired) {
+      // Made it on a retry — surface contention so a slow run isn't invisible
+      // in the ops log (retries stall the per-container pLimit worker).
+      if (attempt > 1) {
+        console.warn(
+          `[import-uid-lock] uid=${uid} acquired on attempt ${attempt}/${maxAttempts} after contention`,
+        );
+      }
       return { ...lastResult, attempts: attempt };
     }
     if (attempt < maxAttempts) {
@@ -145,6 +152,12 @@ export async function waitForImportUidLock(
       await new Promise((r) => setTimeout(r, base + jitter));
     }
   }
+  // All retries exhausted — the UID is genuinely held by someone else and is
+  // about to become a terminal error in the import summary. WARN so ops sees
+  // the stuck holder before the operator downloads the error report.
+  console.warn(
+    `[import-uid-lock] uid=${uid} gave up after ${maxAttempts} attempts — holder=${lastResult.holder?.userName ?? "unknown"}`,
+  );
   return { ...lastResult, attempts: maxAttempts };
 }
 

@@ -522,10 +522,13 @@ const FLEET_CAPACITY = Math.max(
   Number(process.env.LEGACY_IMPORT_FLEET_CAPACITY) || 60,
 );
 const FLEET_SLOT_KEY = "a360:sem:legacy-import-workers";
-// TTL is a safety net if a worker crashes mid-slot. Long enough to cover the
-// slowest single-UID (~90-120s) plus headroom, short enough that a stuck slot
-// clears on its own.
-const FLEET_SLOT_TTL_SEC = 300;
+// TTL is a safety net if a worker crashes mid-slot. Sized to cover the
+// slowest observed single-UID + fees-heal chain (up to ~5 min under DB
+// contention) with wide headroom, and aligned with the boot-reconcile's
+// 15-min staleness cutoff so a truly-stuck slot corresponds to a truly-stuck
+// job. Shorter TTLs risk a scanner grabbing an occupied slot mid-work and
+// silently overshooting the fleet cap.
+const FLEET_SLOT_TTL_SEC = 900;
 
 /**
  * Resolve numeric-typed UIDs whose leading zeros Excel dropped.
