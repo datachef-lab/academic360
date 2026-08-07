@@ -252,12 +252,11 @@ const MIGRATIONS: Migration[] = [
     run: async () => runLibraryMastersSeed(),
   },
   {
-    // Any legacy-import job left `queued`/`running` in THIS instance's row
-    // when the process boots is dead (we just started up). Fail those rows
-    // so the uploader's status poll returns a terminal state instead of
-    // hanging forever. Scoped to this instance's hostname-pid so a rolling
-    // deploy where instance A restarts doesn't wipe instance B's in-flight
-    // run (see legacy-import-jobs.service.ts).
+    // Time-based reconcile of stale legacy-import jobs. Any row still marked
+    // queued/running whose updated_at is older than 15 min is dead (a healthy
+    // job's persistProgress bumps updated_at every ~1s). Safe under a rolling
+    // deploy — an actively-running peer's row is never stale, so this cannot
+    // kill a live job. See legacy-import-jobs.service.ts for the query.
     name: "legacy-import-boot-reconcile",
     run: async () => reconcileStaleLegacyImportJobs(),
   },

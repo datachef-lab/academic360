@@ -502,15 +502,18 @@ export async function precheckStudentsFromExcelBuffer(
 
 // ONE limiter for the whole process, shared by every upload: N simultaneous
 // uploads must not multiply the concurrency, they queue into the same pool.
-// Default 35 workers per file (measured ~2s/uid vs 41.6s sequential); pool
-// sizes in db/index.ts are sized to match. IMPORT_CONCURRENCY=1 restores the
-// old strictly-sequential behavior.
+// Default 50 workers per file (bumped from 35 for ~40% solo-upload speedup;
+// still comfortably under PG_POOL_MAX=70 for a single container, and under
+// the fleet cap of 60 the semaphore enforces across multiple containers).
+// IMPORT_CONCURRENCY=1 restores strictly-sequential behavior; ops can tune
+// this env alongside PG_POOL_MAX / OLD_DB_POOL_LIMIT to trade pool headroom
+// for throughput.
 //
 // PROCESS-LOCAL bound. Fleet-wide bound is enforced INSIDE processOneUid via
-// `acquireFleetSlot` (redis-semaphore), so N instances × 35 workers cannot
-// exceed the shared PG pool budget.
+// `acquireFleetSlot` (redis-semaphore), so N containers × per-container
+// workers cannot exceed the shared PG pool budget.
 const importLimit = pLimit(
-  Math.max(1, Number(process.env.IMPORT_CONCURRENCY) || 35),
+  Math.max(1, Number(process.env.IMPORT_CONCURRENCY) || 50),
 );
 
 // Fleet-wide concurrent-worker ceiling across ALL backend instances (Redis
@@ -672,29 +675,61 @@ export async function processStudentsFromExcelBuffer(
 
   // Live progress to the uploading user via socket (the main-console upload dialog
   // listens for `progress_update` scoped by this operation). Each update carries
-  // elapsed/ETA so the dialog can show expected duration and finish time —
-  // computed from the overall average rate, which self-corrects as waves land.
+  // elapsed/ETA.
+  //
+  // ETA uses an EWMA (exponentially weighted moving average) of the recent
+  // per-UID rate instead of the overall average — the overall-average version
+  // caused the ETA to "balloon" in the middle of a run: a fast first wave
+  // (fresh pools + master rows already cached) set a rosy average, then
+  // slower middle UIDs (fee-load chain, master-data misses) revealed the
+  // truth all at once and the ETA jumped. EWMA reacts to the recent rate
+  // gradually so the operator sees a stable, slowly-adjusting number.
   const total = uids.length;
   const progressOperation = "student_import_legacy_students";
   const importStartedAtMs = Date.now();
+  const EWMA_ALPHA = 0.15; // smoothing factor: 15% weight on the most recent tick, 85% on history
+  let ewmaMsPerUid = 0;
+  let lastDoneCount = 0;
+  let lastTickMs = importStartedAtMs;
   const emitProgress = (
     doneCount: number,
     status: "started" | "in_progress" | "completed",
+    messageOverride?: string,
   ) => {
     if (!opts?.progressUserId) return;
     const progress = total > 0 ? Math.round((doneCount / total) * 100) : 100;
-    const elapsedMs = Date.now() - importStartedAtMs;
+    const nowMs = Date.now();
+    const elapsedMs = nowMs - importStartedAtMs;
+
+    // Update EWMA from the delta since the last tick. Skip the very first
+    // tick (doneCount=0) and skip when nothing landed since last tick.
+    const deltaDone = doneCount - lastDoneCount;
+    const deltaMs = nowMs - lastTickMs;
+    if (deltaDone > 0 && deltaMs > 0) {
+      const instantMsPerUid = deltaMs / deltaDone;
+      ewmaMsPerUid =
+        ewmaMsPerUid === 0
+          ? instantMsPerUid
+          : EWMA_ALPHA * instantMsPerUid + (1 - EWMA_ALPHA) * ewmaMsPerUid;
+      lastDoneCount = doneCount;
+      lastTickMs = nowMs;
+    }
+
+    const remaining = Math.max(0, total - doneCount);
     const etaMs =
-      doneCount > 0 && doneCount < total
-        ? Math.round((elapsedMs / doneCount) * (total - doneCount))
-        : doneCount >= total
-          ? 0
-          : null;
+      remaining === 0
+        ? 0
+        : ewmaMsPerUid > 0
+          ? Math.round(ewmaMsPerUid * remaining)
+          : doneCount > 0
+            ? Math.round((elapsedMs / doneCount) * remaining) // pre-EWMA fallback
+            : null;
+
     socketService.sendProgressUpdate(
       String(opts.progressUserId),
       socketService.createExportProgressUpdate(
         String(opts.progressUserId),
-        `Imported ${doneCount}/${total} students`,
+        messageOverride ?? `Imported ${doneCount}/${total} students`,
         progress,
         status,
         undefined,
@@ -883,6 +918,11 @@ export async function processStudentsFromExcelBuffer(
   // this batch, never touches the global heal marker, and — like the fee load
   // itself — a failure here is logged but never fails the import.
   if (processed > 0) {
+    // Emit a "Finalizing…" tick so the operator doesn't see the bar hit
+    // 100% and then hang for ~30s while the heal runs. Progress stays at
+    // done=total (bar is full), but the message tells the truth about what
+    // the backend is doing.
+    emitProgress(done, "in_progress", "Finalizing (fee-slab heal)…");
     try {
       const { runLegacyFeesAmountHeal } =
         await import("@/features/fees/services/legacy-fees-amount-heal.service.js");
