@@ -40,9 +40,14 @@ import ExcelJS from "exceljs";
 import pLimit from "p-limit";
 import { getOrCreateWithLock } from "@/utils/db-concurrency";
 import {
-  acquireImportUidLock,
   getImportUidLockHolders,
+  waitForImportUidLock,
 } from "@/utils/import-uid-lock";
+import { acquireFleetSlot } from "@/utils/redis-semaphore";
+import {
+  updateLegacyImportJobProgress,
+  setLegacyImportJobTotal,
+} from "./legacy-import-jobs.service";
 
 const BATCH_SIZE = 500;
 
@@ -448,35 +453,18 @@ export async function precheckStudentsFromExcelBuffer(
 
   // Number-typed cells that didn't match exactly may have lost a leading
   // zero (Excel/Sheets silently strips it from plain numeric cells, e.g.
-  // "0304250034" -> 304250034). Check for an existing student under a
-  // zero-padded version of the same digits before giving up on it — but
-  // only ever act when there's exactly one such student; ambiguity is
-  // surfaced, never guessed.
-  const autoCorrectedUids: Array<{ fileValue: string; matchedUid: string }> =
-    [];
-  const ambiguousNumericUids: string[] = [];
+  // "0304250034" -> 304250034). Look these up under a zero-padded version.
+  // Extracted so the import path (processStudentsFromExcelBuffer) can apply
+  // the same fixup instead of counting recoverable UIDs as `notFound`.
   const numericCandidates = [...new Set(parsed.numericTypedUids)].filter(
     (uid) => !existingSet.has(uid),
   );
-  await Promise.all(
-    numericCandidates.map(async (candidate) => {
-      const rows = await db
-        .select({ uid: studentModel.uid })
-        .from(studentModel)
-        .where(sql`${studentModel.uid} ~ ('^0+' || ${candidate} || '$')`)
-        .limit(2);
-      if (rows.length === 1) {
-        autoCorrectedUids.push({
-          fileValue: candidate,
-          matchedUid: rows[0].uid,
-        });
-        existingSet.add(candidate);
-        existingUidsDisplay.add(rows[0].uid);
-      } else if (rows.length > 1) {
-        ambiguousNumericUids.push(candidate);
-      }
-    }),
-  );
+  const { autoCorrectedUids, ambiguousNumericUids } =
+    await resolveNumericAutoCorrections(numericCandidates);
+  for (const { fileValue, matchedUid } of autoCorrectedUids) {
+    existingSet.add(fileValue);
+    existingUidsDisplay.add(matchedUid);
+  }
   // Which of these UIDs are locked by a running import right now (any
   // process/instance). Best-effort — a lock read failure must not block the
   // pre-check.
@@ -517,9 +505,63 @@ export async function precheckStudentsFromExcelBuffer(
 // Default 35 workers per file (measured ~2s/uid vs 41.6s sequential); pool
 // sizes in db/index.ts are sized to match. IMPORT_CONCURRENCY=1 restores the
 // old strictly-sequential behavior.
+//
+// PROCESS-LOCAL bound. Fleet-wide bound is enforced INSIDE processOneUid via
+// `acquireFleetSlot` (redis-semaphore), so N instances × 35 workers cannot
+// exceed the shared PG pool budget.
 const importLimit = pLimit(
   Math.max(1, Number(process.env.IMPORT_CONCURRENCY) || 35),
 );
+
+// Fleet-wide concurrent-worker ceiling across ALL backend instances (Redis
+// semaphore). Sized just below PG_POOL_MAX × instance count so no single
+// instance can starve its own or a peer's pool. Falls back to the local
+// `importLimit` above when Redis is unavailable (single-node dev/staging).
+const FLEET_CAPACITY = Math.max(
+  1,
+  Number(process.env.LEGACY_IMPORT_FLEET_CAPACITY) || 60,
+);
+const FLEET_SLOT_KEY = "a360:sem:legacy-import-workers";
+// TTL is a safety net if a worker crashes mid-slot. Long enough to cover the
+// slowest single-UID (~90-120s) plus headroom, short enough that a stuck slot
+// clears on its own.
+const FLEET_SLOT_TTL_SEC = 300;
+
+/**
+ * Resolve numeric-typed UIDs whose leading zeros Excel dropped.
+ * Returns which UIDs matched exactly one existing student under a zero-padded
+ * form (auto-corrected) and which matched more than one (ambiguous — refused).
+ * Used by both the pre-check (report) and the import path (apply fixup).
+ */
+async function resolveNumericAutoCorrections(candidates: string[]): Promise<{
+  autoCorrectedUids: Array<{ fileValue: string; matchedUid: string }>;
+  ambiguousNumericUids: string[];
+}> {
+  const autoCorrectedUids: Array<{ fileValue: string; matchedUid: string }> =
+    [];
+  const ambiguousNumericUids: string[] = [];
+  if (candidates.length === 0) {
+    return { autoCorrectedUids, ambiguousNumericUids };
+  }
+  await Promise.all(
+    candidates.map(async (candidate) => {
+      const rows = await db
+        .select({ uid: studentModel.uid })
+        .from(studentModel)
+        .where(sql`${studentModel.uid} ~ ('^0+' || ${candidate} || '$')`)
+        .limit(2);
+      if (rows.length === 1) {
+        autoCorrectedUids.push({
+          fileValue: candidate,
+          matchedUid: rows[0].uid,
+        });
+      } else if (rows.length > 1) {
+        ambiguousNumericUids.push(candidate);
+      }
+    }),
+  );
+  return { autoCorrectedUids, ambiguousNumericUids };
+}
 
 export async function processStudentsFromExcelBuffer(
   file: Buffer | ArrayBuffer | Uint8Array,
@@ -527,6 +569,9 @@ export async function processStudentsFromExcelBuffer(
     progressUserId?: string | null;
     /** Shown to OTHER uploaders who hit the same UID ("Being imported by <name>"). */
     uploaderName?: string | null;
+    /** When set, per-uid progress is also persisted to `legacy_import_jobs`
+     *  so any instance can serve the status polling endpoint. */
+    jobId?: string | null;
   },
 ): Promise<{
   totalRows: number;
@@ -536,6 +581,10 @@ export async function processStudentsFromExcelBuffer(
   /** UIDs with no legacy row — listed so the UI can hand them back for review. */
   notFoundUids: string[];
   errors: Array<{ uid: string; error: string }>;
+  /** UIDs that were remapped from a leading-zero-stripped numeric cell to
+   *  their canonical zero-padded form before import. Non-fatal — surfaced so
+   *  the operator sees what was corrected instead of it looking like a skip. */
+  autoCorrectedUids: Array<{ fileValue: string; matchedUid: string }>;
 }> {
   const parsed = await parseUidsFromExcelBuffer(file);
   if (parsed.error) {
@@ -546,17 +595,77 @@ export async function processStudentsFromExcelBuffer(
       notFound: 0,
       notFoundUids: [],
       errors: [{ uid: "", error: parsed.error }],
+      autoCorrectedUids: [],
     };
   }
 
   // Dedupe within the file: a UID listed twice must not race against itself.
-  const uids: string[] = [...new Set(parsed.uids)];
+  let uids: string[] = [...new Set(parsed.uids)];
+
+  // Apply the SAME leading-zero fixup the pre-check reports. Without this,
+  // an Excel cell that Excel/Sheets typed as Number ("0304250034" → 304250034)
+  // would be looked up in the legacy DB verbatim and land as `notFoundUids`
+  // even though the student exists under the zero-padded form. Ambiguous
+  // candidates (>1 match) surface as terminal errors so we never guess.
+  const numericCandidates = [...new Set(parsed.numericTypedUids)];
+  const existingSet = uids.length
+    ? new Set(
+        (
+          await db
+            .select({ uid: studentModel.uid })
+            .from(studentModel)
+            .where(inArray(studentModel.uid, uids))
+        )
+          .map((r) => String(r.uid))
+          .filter(Boolean),
+      )
+    : new Set<string>();
+  const correctionCandidates = numericCandidates.filter(
+    (uid) => !existingSet.has(uid),
+  );
+  const { autoCorrectedUids, ambiguousNumericUids } =
+    await resolveNumericAutoCorrections(correctionCandidates);
+  const importErrors: Array<{ uid: string; error: string }> = [];
+  if (autoCorrectedUids.length > 0) {
+    const corrMap = new Map(
+      autoCorrectedUids.map((c) => [c.fileValue, c.matchedUid]),
+    );
+    uids = uids.map((u) => corrMap.get(u) ?? u);
+    // Re-dedupe: two file rows could collapse onto the same canonical uid.
+    uids = [...new Set(uids)];
+  }
+  for (const ambiguous of ambiguousNumericUids) {
+    importErrors.push({
+      uid: ambiguous,
+      error:
+        "Numeric UID matches more than one existing student under leading-zero variants — resolve manually and re-upload",
+    });
+  }
+  if (opts?.jobId) {
+    // The dedupe + auto-correction can change total after parse, so update
+    // the persisted total once we know the final count.
+    void setLegacyImportJobTotal(opts.jobId, uids.length);
+  }
 
   let processed = 0;
   let notFound = 0;
   let done = 0;
   const notFoundUids: string[] = [];
-  const errors: Array<{ uid: string; error: string }> = [];
+  const errors: Array<{ uid: string; error: string }> = [...importErrors];
+  // Persistent-progress throttling: at most one DB UPDATE per second per job
+  // regardless of how many UIDs land — cheap for the poller, no hot writes.
+  let lastProgressWriteMs = 0;
+  const persistProgress = (): void => {
+    if (!opts?.jobId) return;
+    const now = Date.now();
+    if (now - lastProgressWriteMs < 1000 && done < total) return;
+    lastProgressWriteMs = now;
+    void updateLegacyImportJobProgress(opts.jobId, {
+      processed,
+      notFound,
+      errorCount: errors.length,
+    });
+  };
 
   // Live progress to the uploading user via socket (the main-console upload dialog
   // listens for `progress_update` scoped by this operation). Each update carries
@@ -602,10 +711,13 @@ export async function processStudentsFromExcelBuffer(
   emitProgress(0, "started");
 
   const processOneUid = async (uid: string): Promise<void> => {
-    // Cross-upload guard: if another import (this process or another backend
-    // instance) is already working on this UID, skip it and tell the uploader
-    // who holds it — never process the same UID twice at once.
-    const lock = await acquireImportUidLock(uid, {
+    // Cross-upload guard with bounded retry: if a partner import (this
+    // process or another backend instance) is already working on this UID,
+    // back off and try a few times before giving up. This closes the silent
+    // skip where instance A crashes mid-run and instance B's overlapping
+    // UIDs would otherwise be terminal-errored on the first attempt while
+    // A's Redis lock TTL was still counting down.
+    const lock = await waitForImportUidLock(uid, {
       userId: opts?.progressUserId ?? null,
       userName: opts?.uploaderName ?? null,
     });
@@ -616,12 +728,22 @@ export async function processStudentsFromExcelBuffer(
         : "";
       errors.push({
         uid,
-        error: `Being imported by ${who}${since} — remove this UID and reupload`,
+        error: `Being imported by ${who}${since} after ${lock.attempts} attempt(s) — remove this UID and reupload`,
       });
       done++;
       emitProgress(done, done >= total ? "completed" : "in_progress");
+      persistProgress();
       return;
     }
+
+    // Fleet-wide slot. Fleet cap keeps N instances × per-instance workers
+    // from blowing the shared PG pool. Null = Redis unavailable → the
+    // process-local `importLimit` (pLimit) is the only bound (dev/single node).
+    const fleetSlot = await acquireFleetSlot({
+      key: FLEET_SLOT_KEY,
+      capacity: FLEET_CAPACITY,
+      slotTtlSec: FLEET_SLOT_TTL_SEC,
+    });
 
     try {
       const oldStudent = await getOldStudentByUid(uid);
@@ -711,6 +833,7 @@ export async function processStudentsFromExcelBuffer(
         e?.message || "Unknown error",
       );
     } finally {
+      if (fleetSlot) await fleetSlot.release();
       await lock.release();
       // Yield event loop to let socket heartbeats and timer callbacks drain
       // between each UID, preventing disconnect-on-timeout during heavy imports
@@ -718,6 +841,7 @@ export async function processStudentsFromExcelBuffer(
       // Always emit after each uid completes, regardless of outcome.
       done++;
       emitProgress(done, done >= total ? "completed" : "in_progress");
+      persistProgress();
     }
   };
 
@@ -784,6 +908,7 @@ export async function processStudentsFromExcelBuffer(
     notFound,
     notFoundUids,
     errors,
+    autoCorrectedUids,
   };
 }
 
