@@ -32,6 +32,7 @@ import { runCuRegPdfLedgerBackfill } from "@/features/documents/services/cureg-p
 import { runLedgerTimestampHeal } from "@/features/documents/services/ledger-timestamp-heal.service.js";
 import { runLibraryLegacyLoad } from "@/features/library/services/library-legacy-load.service.js";
 import { runLibraryMastersSeed } from "@/features/library/services/library-masters-seed.service.js";
+import { reconcileStaleLegacyImportJobs } from "@/features/user/services/legacy-import-jobs.service.js";
 
 const log = createLogger("boot-migrations");
 
@@ -227,6 +228,15 @@ const MIGRATIONS: Migration[] = [
     // starve this fast seed (and the dashboard's seed banner) until it ends.
     name: "library-masters-seed",
     run: async () => runLibraryMastersSeed(),
+  },
+  {
+    // Time-based reconcile of stale legacy-import jobs. Any row still marked
+    // queued/running whose updated_at is older than 15 min is dead (a healthy
+    // job's persistProgress bumps updated_at every ~1s). Safe under a rolling
+    // deploy — an actively-running peer's row is never stale, so this cannot
+    // kill a live job. See legacy-import-jobs.service.ts for the query.
+    name: "legacy-import-boot-reconcile",
+    run: async () => reconcileStaleLegacyImportJobs(),
   },
   {
     // Loads the library data from IRP. Unlike everything above it is a long
