@@ -1319,10 +1319,10 @@
 			"breakpoints": true
 		},
 		{
-			"idx": 190,
+			"idx": 191,
 			"version": "7",
 			"when": 1786100000000,
-			"tag": "0190_add_document_batch_receipt_modes",
+			"tag": "0191_add_document_batch_receipt_modes",
 			"breakpoints": true
 		}
 	]
