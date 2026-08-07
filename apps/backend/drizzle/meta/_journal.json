@@ -1324,6 +1324,13 @@
 			"when": 1786100000000,
 			"tag": "0191_add_document_batch_receipt_modes",
 			"breakpoints": true
+		},
+		{
+			"idx": 192,
+			"version": "7",
+			"when": 1786200000000,
+			"tag": "0192_docs_comprehensive_repair",
+			"breakpoints": true
 		}
 	]
 }
