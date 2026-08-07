@@ -29,6 +29,17 @@ function attachClientErrorHandlers(
 export async function connectRedis(): Promise<void> {
   const url = process.env.REDIS_URL?.trim();
   if (!url) {
+    // In production the fleet is multi-instance behind an ALB with no sticky
+    // sessions. Without Redis, sessions and per-UID import locks silently
+    // degrade to per-process state and races become correctness bugs.
+    // Fail loudly instead of masking the misconfiguration.
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "REDIS_URL is required in production (multi-instance fleet needs " +
+          "shared sessions, Socket.IO adapter, and per-UID import locks). " +
+          "Set REDIS_URL or run with NODE_ENV != production.",
+      );
+    }
     log.warn(
       "REDIS_URL is not set — using in-memory sessions and single-node Socket.IO",
     );
