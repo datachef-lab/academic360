@@ -552,11 +552,18 @@ export const declarationMasterContextEnum = pgEnum("declaration_master_context",
  * PRIOR_SELECTION  - the subjects the student already chose in other configured
  *   metas (subject_selection_meta_sources). e.g. a Semester 5 "Minor 5" meta can
  *   offer only what the student picked in Minor 1 / Minor 2.
+ * SUBJECT_GROUP    - the subject groups (subject_grouping_main) whose subjectType
+ *   matches this meta's subjectTypeId and that contain at least one elective
+ *   (isOptional=true) paper for the student's programCourse + registration
+ *   academic year in the meta's semesters. The student picks a whole group as
+ *   the terminal selection; storage keys on subject_grouping_main_id_fk rather
+ *   than subject_id_fk.
  */
 export const subjectSelectionOptionSourceEnum = pgEnum(
     "subject_selection_option_source",
     [
         "ELECTIVE_SUBJECTS",
         "PRIOR_SELECTION",
+        "SUBJECT_GROUP",
     ],
 );

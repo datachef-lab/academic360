@@ -96,6 +96,7 @@ import {
 
 import { classModel } from "@repo/db/schemas/models/academics/class.model.js";
 import { migrateSubjectSelectionForStudent } from "./subject-selection-migration.service.js";
+import { ensureSubjectGroupMnForStudent } from "@/features/subject-selection/services/subject-group-mn-heal.service.js";
 import { recordImportLog } from "@/utils/legacy-import-log.js";
 import { ensureCuRegPendingLedgerForStudent } from "@/features/documents/services/cureg-missing-uploads-backfill.service.js";
 import { and, eq, ilike, or } from "drizzle-orm";
@@ -2277,6 +2278,30 @@ export async function processStudent(
         (e as Error)?.message || "unknown error",
       );
     }
+
+    // Step 11b: If this student is a BCom (H)/(G) whose registration
+    // academic year is 2023-24 or 2024-25, consolidate their newly-
+    // migrated per-semester Minor 3 subject picks into one SUBJECT_GROUP
+    // row. The per-student projector is idempotent and no-ops for
+    // students outside that cohort; failures are swallowed so a
+    // consolidation glitch never aborts the student's overall migration.
+    try {
+      if (student?.id) {
+        const result = await ensureSubjectGroupMnForStudent(student.id);
+        if (result.healed) {
+          console.log("[subject-group-mn-heal]", {
+            uid: student.uid,
+            healed: true,
+          });
+        }
+      }
+    } catch (e) {
+      console.warn(
+        "[subject-group-mn-heal] failed for",
+        student.uid,
+        (e as Error)?.message || e,
+      );
+    }
   }
 
   return student;
@@ -2706,19 +2731,43 @@ async function loadStudentAcademicInfoAndSubjects(
         continue; // Skip this subject if no board found
       }
 
-      // Create board subject with default values
-      const [newBoardSubject] = await db
-        .insert(boardSubjectModel)
-        .values({
-          boardId: foundBoard.id!,
-          boardSubjectNameId: foundBoardSubjectName.id!,
-          passingMarksTheory: 0,
-          passingMarksPractical: 0,
-          fullMarksTheory: 0,
-          fullMarksPractical: 0,
-        })
-        .returning();
-      boardSubject = newBoardSubject;
+      // Find-or-create, NOT create.
+      //
+      // This runs once per student, and `addBoardSubject` above returns
+      // undefined for any board whose legacy boardsubjectmapping rows are
+      // missing — so without this lookup every student sharing that (board,
+      // subject) pair inserted another placeholder row. That is how the table
+      // reached 14,307 rows for 661 real pairs, 13,159 of them all-zero
+      // duplicates created right here.
+      const [existingBoardSubject] = await db
+        .select()
+        .from(boardSubjectModel)
+        .where(
+          and(
+            eq(boardSubjectModel.boardId, foundBoard.id!),
+            eq(boardSubjectModel.boardSubjectNameId, foundBoardSubjectName.id!),
+          ),
+        )
+        .limit(1);
+
+      if (existingBoardSubject) {
+        boardSubject = existingBoardSubject;
+      } else {
+        // Still zeroed: the real marks live in the legacy mapping tables, which
+        // by definition are absent on this path. A later admin edit fills them.
+        const [newBoardSubject] = await db
+          .insert(boardSubjectModel)
+          .values({
+            boardId: foundBoard.id!,
+            boardSubjectNameId: foundBoardSubjectName.id!,
+            passingMarksTheory: 0,
+            passingMarksPractical: 0,
+            fullMarksTheory: 0,
+            fullMarksPractical: 0,
+          })
+          .returning();
+        boardSubject = newBoardSubject;
+      }
     }
 
     // Collect this subject's total for the best-of-N aggregate.

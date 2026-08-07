@@ -1235,17 +1235,10 @@
 			"breakpoints": true
 		},
 		{
-			"idx": 177,
+			"idx": 179,
 			"version": "7",
-			"when": 1785477715993,
-			"tag": "0177_complete_expediter",
-			"breakpoints": true
-		},
-		{
-			"idx": 178,
-			"version": "7",
-			"when": 1785481510938,
-			"tag": "0178_superb_dark_beast",
+			"when": 1785495281711,
+			"tag": "0179_loud_kinsey_walden",
 			"breakpoints": true
 		},
 		{
@@ -1279,43 +1272,64 @@
 		{
 			"idx": 184,
 			"version": "7",
-			"when": 1785911100000,
-			"tag": "0184_docs_skipped_migration_repair",
+			"when": 1785862602287,
+			"tag": "0184_student_is_no_show",
 			"breakpoints": true
 		},
 		{
 			"idx": 185,
 			"version": "7",
-			"when": 1785911160000,
-			"tag": "0185_typical_skrulls",
+			"when": 1785866090797,
+			"tag": "0185_subject_selection_subject_group",
 			"breakpoints": true
 		},
 		{
 			"idx": 186,
 			"version": "7",
-			"when": 1785911220000,
-			"tag": "0186_document_ledger_lookup_indexes",
+			"when": 1785911036386,
+			"tag": "0186_student_no_show_remarks",
 			"breakpoints": true
 		},
 		{
 			"idx": 187,
 			"version": "7",
-			"when": 1785911280000,
-			"tag": "0187_temp_admit_card_ledger_fk",
+			"when": 1785911100000,
+			"tag": "0187_docs_skipped_migration_repair",
 			"breakpoints": true
 		},
 		{
 			"idx": 188,
 			"version": "7",
-			"when": 1785862602287,
-			"tag": "0188_student_is_no_show",
+			"when": 1785911160000,
+			"tag": "0188_typical_skrulls",
 			"breakpoints": true
 		},
 		{
 			"idx": 189,
 			"version": "7",
-			"when": 1785911036386,
-			"tag": "0189_student_no_show_remarks",
+			"when": 1785911220000,
+			"tag": "0189_document_ledger_lookup_indexes",
+			"breakpoints": true
+		},
+		{
+			"idx": 190,
+			"version": "7",
+			"when": 1785911280000,
+			"tag": "0190_temp_admit_card_ledger_fk",
+			"breakpoints": true
+		},
+		{
+			"idx": 191,
+			"version": "7",
+			"when": 1786100000000,
+			"tag": "0191_add_document_batch_receipt_modes",
+			"breakpoints": true
+		},
+		{
+			"idx": 192,
+			"version": "7",
+			"when": 1786200000000,
+			"tag": "0192_docs_comprehensive_repair",
 			"breakpoints": true
 		}
 	]

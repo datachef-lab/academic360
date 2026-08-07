@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -183,6 +183,15 @@ export default function StudentLedgerPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   /** Row currently awaiting a "Collect" confirmation in the dialog. */
   const [confirmRow, setConfirmRow] = useState<StudentLedgerRow | null>(null);
+  /**
+   * Bulk-collect selection. Set of ledger ids the operator has ticked. Only
+   * rows where `canCollect === true` (college-issued PENDING with the
+   * batch's ADMINISTRATIVE mode enabled) can be added — the checkbox does
+   * not render on other rows. Cleared whenever the student changes.
+   */
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  /** True while the bulk-confirm dialog is open. */
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
   const { user: authUser } = useAuth();
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const [uploadTarget, setUploadTarget] = useState<StudentLedgerRow | null>(null);
@@ -241,6 +250,45 @@ export default function StudentLedgerPage() {
       }
     },
     onError: () => toast.error("Could not mark this entry as collected."),
+  });
+
+  /**
+   * Bulk-collect mutation. Fires N single-row collects in parallel — there is
+   * no server-side bulk endpoint yet and building one for this UX would add
+   * scope. `Promise.allSettled` so a single already-collected row (or any
+   * other server-side failure) doesn't abort the rest; the summary toast
+   * reports what actually landed.
+   */
+  const bulkCollectMutation = useMutation({
+    mutationFn: async (ledgerIds: number[]) => {
+      const results = await Promise.allSettled(ledgerIds.map((id) => markLedgerEntryCollected(id)));
+      let collected = 0;
+      let already = 0;
+      let failed = 0;
+      for (const r of results) {
+        if (r.status === "rejected") failed++;
+        else if (r.value?.alreadyCollected) already++;
+        else collected++;
+      }
+      return { collected, already, failed, total: ledgerIds.length };
+    },
+    onSuccess: async (summary) => {
+      const parts: string[] = [];
+      if (summary.collected > 0) parts.push(`${summary.collected} collected`);
+      if (summary.already > 0) parts.push(`${summary.already} already collected`);
+      if (summary.failed > 0) parts.push(`${summary.failed} failed`);
+      const msg = parts.join(" · ") || "Nothing to do.";
+      if (summary.failed > 0) toast.error(msg);
+      else if (summary.collected === 0) toast.warning(msg);
+      else toast.success(msg);
+
+      setBulkConfirmOpen(false);
+      setSelectedIds(new Set());
+      if (student?.id) {
+        await queryClient.invalidateQueries({ queryKey: ["student-ledger", student.id] });
+      }
+    },
+    onError: () => toast.error("Could not run the bulk collect."),
   });
 
   const openUploadPicker = (row: StudentLedgerRow) => {
@@ -306,6 +354,89 @@ export default function StudentLedgerPage() {
     }
     return t;
   }, [filteredRows]);
+
+  /**
+   * A row is collectable when the college has issued it (not self-sourced),
+   * it is still PENDING, and the parent batch's ADMINISTRATIVE mode is on.
+   * Kept as a top-level helper so both the row action and the bulk-select
+   * checkbox stay in sync — one source of truth, no chance of the two
+   * disagreeing on which rows can be collected.
+   */
+  const isRowCollectable = (r: StudentLedgerRow): boolean =>
+    !r.isSelfSourced && r.status === "PENDING" && r.batchAdministrativeEnabled !== false;
+
+  const collectableFilteredRows = useMemo(
+    () => filteredRows.filter(isRowCollectable),
+    [filteredRows],
+  );
+
+  /** The rows the current selection resolves to, in table order. */
+  const selectedRows = useMemo(
+    () => collectableFilteredRows.filter((r) => selectedIds.has(r.ledgerId)),
+    [collectableFilteredRows, selectedIds],
+  );
+
+  /** Header select-all state (checked / unchecked / indeterminate). */
+  const allSelectableChecked =
+    collectableFilteredRows.length > 0 &&
+    collectableFilteredRows.every((r) => selectedIds.has(r.ledgerId));
+  const someSelectableChecked =
+    !allSelectableChecked && collectableFilteredRows.some((r) => selectedIds.has(r.ledgerId));
+
+  const toggleSelectRow = (ledgerId: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(ledgerId)) next.delete(ledgerId);
+      else next.add(ledgerId);
+      return next;
+    });
+  };
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) => {
+      if (collectableFilteredRows.every((r) => prev.has(r.ledgerId))) {
+        // All were selected → clear only the ones from this filtered view,
+        // preserving any selections from rows the current filter hid.
+        const next = new Set(prev);
+        for (const r of collectableFilteredRows) next.delete(r.ledgerId);
+        return next;
+      }
+      const next = new Set(prev);
+      for (const r of collectableFilteredRows) next.add(r.ledgerId);
+      return next;
+    });
+  };
+
+  // Clear selections whenever the student changes — a bulk collect against
+  // the wrong student would be catastrophic, so we never carry ids across.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [student?.id]);
+
+  // Prune selected ids that are no longer collectable. Handles the common
+  // post-collect case: after the bulk mutation succeeds and the ledger
+  // refetches, the just-collected rows drop out of `collectableFilteredRows`
+  // (their status flips to COLLECTED). Without this, the ids linger in
+  // `selectedIds` and the emerald action bar stays on screen even though
+  // nothing is actually ticked. Also self-heals when a filter change hides
+  // a previously-ticked row. Skips when the current selection is already
+  // a subset — no state update, no re-render loop.
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const validIds = new Set(collectableFilteredRows.map((r) => r.ledgerId));
+      let allValid = true;
+      for (const id of prev) {
+        if (!validIds.has(id)) {
+          allValid = false;
+          break;
+        }
+      }
+      if (allValid) return prev;
+      const next = new Set<number>();
+      for (const id of prev) if (validIds.has(id)) next.add(id);
+      return next;
+    });
+  }, [collectableFilteredRows]);
 
   const handleSearch = () => {
     const uid = uidInput.trim();
@@ -437,6 +568,43 @@ export default function StudentLedgerPage() {
             </div>
           </div>
 
+          {/* Bulk-action bar — appears only when the operator has ticked at
+              least one row. Keeps the per-row Collect button intact for
+              one-off collects; this is the shortcut for handing over N
+              documents at once. Confirmation dialog still runs — just once
+              for the whole batch instead of once per row. */}
+          {selectedIds.size > 0 && (
+            <div className="flex items-center justify-between gap-3 border-b border-emerald-200 bg-emerald-50 px-4 py-2.5">
+              <div className="flex items-center gap-3 text-sm">
+                <span className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-emerald-600 px-1.5 text-xs font-semibold text-white tabular-nums">
+                  {selectedIds.size}
+                </span>
+                <span className="text-emerald-900">
+                  document{selectedIds.size === 1 ? "" : "s"} selected
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  Clear
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-emerald-600 text-white hover:bg-emerald-700"
+                  onClick={() => setBulkConfirmOpen(true)}
+                >
+                  <CheckCircle2 className="mr-2 h-3.5 w-3.5" />
+                  Collect selected
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Body */}
           {ledgerQuery.isFetching ? (
             <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
@@ -487,6 +655,23 @@ export default function StudentLedgerPage() {
               <table className="min-w-full border-collapse text-sm">
                 <thead className="sticky top-0 z-10 bg-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-700">
                   <tr>
+                    <th className={`${CELL} w-[40px] px-2 py-3 text-center`}>
+                      {/* Select-all — only rendered when at least one row in
+                          the current view is collectable. Indeterminate when
+                          some (but not all) collectable rows are selected. */}
+                      {collectableFilteredRows.length > 0 && (
+                        <input
+                          type="checkbox"
+                          aria-label="Select all collectable rows"
+                          className="h-4 w-4 cursor-pointer accent-emerald-600"
+                          checked={allSelectableChecked}
+                          ref={(el) => {
+                            if (el) el.indeterminate = someSelectableChecked;
+                          }}
+                          onChange={toggleSelectAll}
+                        />
+                      )}
+                    </th>
                     <th className={`${CELL} w-[90px] px-3 py-3 text-center`}>Year / Sem</th>
                     <th className={`${CELL} w-1/2 px-4 py-3 text-left`}>Document</th>
                     <th className={`${CELL} w-1/2 px-4 py-3 text-center`}>Source</th>
@@ -505,11 +690,10 @@ export default function StudentLedgerPage() {
                     //   - self-sourced (any status) → Upload (also acts as
                     //     re-upload for rows already UPLOADED).
                     //   - Eye shows independently whenever a file exists.
-                    const batchReadyToDistribute = r.batchAdministrativeEnabled !== false;
-                    const canCollect =
-                      !r.isSelfSourced && r.status === "PENDING" && batchReadyToDistribute;
+                    const canCollect = isRowCollectable(r);
                     const canUpload = r.isSelfSourced;
                     const viewUrl = resolveViewUrl(r);
+                    const isSelected = selectedIds.has(r.ledgerId);
                     // "Recorded at" only carries a meaningful timestamp once
                     // the row has materialised. Pending/Expected/On-hold/
                     // No-change rows have nothing to record yet, so show a
@@ -523,7 +707,23 @@ export default function StudentLedgerPage() {
                             ? r.updatedAt
                             : null;
                     return (
-                      <tr key={r.ledgerId} className="hover:bg-indigo-50/40">
+                      <tr
+                        key={r.ledgerId}
+                        className={`hover:bg-indigo-50/40 ${isSelected ? "bg-emerald-50/60" : ""}`}
+                      >
+                        <td className={`${CELL} px-2 py-2.5 text-center`}>
+                          {canCollect ? (
+                            <input
+                              type="checkbox"
+                              aria-label="Select this document for bulk collect"
+                              className="h-4 w-4 cursor-pointer accent-emerald-600"
+                              checked={isSelected}
+                              onChange={() => toggleSelectRow(r.ledgerId)}
+                            />
+                          ) : (
+                            <span className="text-muted-foreground">·</span>
+                          )}
+                        </td>
                         <td className={`${CELL} px-4 py-2.5 text-center`}>
                           <div className="flex flex-col items-center gap-1">
                             <span className="whitespace-nowrap text-sm font-medium tabular-nums">
@@ -791,6 +991,82 @@ export default function StudentLedgerPage() {
               </DialogFooter>
             </>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {/* ---------------------- collect: bulk confirmation dialog ---------------- */}
+      <Dialog open={bulkConfirmOpen} onOpenChange={(open) => !open && setBulkConfirmOpen(false)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              Confirm bulk collection
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="mt-2 space-y-3 text-sm">
+            <p>
+              Mark the following <strong className="tabular-nums">{selectedRows.length}</strong>{" "}
+              document{selectedRows.length === 1 ? "" : "s"} as collected for{" "}
+              <strong>{student?.name ?? "this student"}</strong>?
+            </p>
+
+            {/* Show the first N document names inline; collapse the rest into
+                a "+K more" line so the dialog never grows uncontrollably even
+                when an operator selects a passbook's worth of rows. */}
+            <div className="max-h-64 overflow-y-auto rounded-md border bg-slate-50 px-3 py-2 text-xs">
+              <ul className="space-y-1">
+                {selectedRows.slice(0, 12).map((r) => (
+                  <li key={r.ledgerId} className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-[2px] h-3 w-3 shrink-0 text-emerald-600" />
+                    <span>
+                      <span className="font-medium">{r.documentTypeName}</span>
+                      {r.className && (
+                        <span className="text-muted-foreground">
+                          {" · "}
+                          {displaySemester(r.className)}
+                        </span>
+                      )}
+                    </span>
+                  </li>
+                ))}
+                {selectedRows.length > 12 && (
+                  <li className="pl-5 text-[11px] text-muted-foreground">
+                    …and {selectedRows.length - 12} more
+                  </li>
+                )}
+              </ul>
+            </div>
+
+            <div className="rounded-md border bg-slate-50 px-3 py-2 text-xs">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Recording as provided by
+              </div>
+              <div className="mt-1 font-medium">{authUser?.name ?? "the current user"}</div>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-3 flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setBulkConfirmOpen(false)}
+              disabled={bulkCollectMutation.isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              disabled={bulkCollectMutation.isLoading || selectedRows.length === 0}
+              onClick={() => bulkCollectMutation.mutate(selectedRows.map((r) => r.ledgerId))}
+            >
+              {bulkCollectMutation.isLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Confirm collect ({selectedRows.length})
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

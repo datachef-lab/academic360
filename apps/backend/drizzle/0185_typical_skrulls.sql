@@ -1,1 +1,0 @@
-ALTER TABLE "document_batch_receipts" ADD COLUMN "is_archived" boolean DEFAULT false NOT NULL;
