@@ -30,7 +30,7 @@ export function DashboardHeader({
   tabCounts?: Partial<Record<DashboardTabId, string>>;
 }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-[#d1d1d1] bg-white">
+    <div className="overflow-hidden rounded-lg border border-[#d1d1d1] bg-[#fafafa]">
       <div className="flex flex-col gap-4 border-b border-[#d1d1d1] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#d1d1d1] ">
