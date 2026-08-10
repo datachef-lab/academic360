@@ -86,8 +86,15 @@ export interface SubjectSelectionMetaDto extends Omit<SubjectSelectionMetaT, "su
     sources: SubjectSelectionMetaSourceDto[];
 }
 
-export interface StudentSubjectSelectionDto extends Omit<StudentSubjectSelectionT, "sessionId" | "subjectSelectionMetaId" | "subjectId"> {
+export interface StudentSubjectSelectionDto extends Omit<StudentSubjectSelectionT, "sessionId" | "subjectSelectionMetaId" | "subjectId" | "subjectGroupingMainId"> {
     session: SessionT;
     subjectSelectionMeta: SubjectSelectionMetaDto;
-    subject: SubjectT;
+    /**
+     * Exactly one of `subject` / `subjectGroupingMain` is populated per row,
+     * mirroring the DB CHECK constraint on `student_subject_selections`.
+     * SUBJECT_GROUP option-source metas populate the group; every other source
+     * populates the subject.
+     */
+    subject: SubjectT | null;
+    subjectGroupingMain?: { id: number; name: string; code?: string | null } | null;
 }

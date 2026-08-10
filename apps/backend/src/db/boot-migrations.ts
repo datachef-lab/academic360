@@ -24,6 +24,7 @@ import {
   loadDefaultDocuments,
   loadDocumentTypesV2,
 } from "@/features/academics/services/document.service.js";
+import { runBoardSubjectDedupe } from "@/features/admissions/services/board-subject-dedupe.service.js";
 import { runIdCardLedgerBackfill } from "@/features/documents/services/idcard-ledger-backfill.service.js";
 import { runCuRegUploadLedgerBackfill } from "@/features/documents/services/cureg-upload-ledger-backfill.service.js";
 import { runTempAdmitCardLedgerBackfill } from "@/features/documents/services/temp-admit-card-ledger-backfill.service.js";
@@ -32,6 +33,8 @@ import { runCuRegPdfLedgerBackfill } from "@/features/documents/services/cureg-p
 import { runLedgerTimestampHeal } from "@/features/documents/services/ledger-timestamp-heal.service.js";
 import { runLibraryLegacyLoad } from "@/features/library/services/library-legacy-load.service.js";
 import { runLibraryMastersSeed } from "@/features/library/services/library-masters-seed.service.js";
+import { runSubjectGroupMnHeal } from "@/features/subject-selection/services/subject-group-mn-heal.service.js";
+import { reconcileStaleLegacyImportJobs } from "@/features/user/services/legacy-import-jobs.service.js";
 
 const log = createLogger("boot-migrations");
 
@@ -102,6 +105,18 @@ const MIGRATIONS: Migration[] = [
     run: async () => runStreamMismatchHeal({ commit: true }),
   },
   {
+    // Consolidates BCom (H)/(G) Minor 3 (Sem III-VI) subject-based
+    // selections into single SUBJECT_GROUP rows for students whose
+    // registration academic year is 2023-24 or 2024-25. Picks were
+    // synced from the old DB as per-semester per-subject rows before
+    // SUBJECT_GROUP existed (ADR 0027). Runs AFTER stream-mismatch-heal
+    // so the meta assignment is already correct. State-based (skips
+    // students who already have an active SUBJECT_GROUP row for the
+    // same meta); ambiguous / no-match cases log and skip.
+    name: "subject-group-mn-heal",
+    run: async () => runSubjectGroupMnHeal(),
+  },
+  {
     // Legacy fee-slab heal — re-points fee_student_mappings at the concession
     // slab IRP actually granted (resolved from studentfeesconcessiontab,
     // section-less, including students IRP has not billed yet) and reconciles
@@ -148,6 +163,14 @@ const MIGRATIONS: Migration[] = [
     // a type an admin later renames, edits or deletes must stay that way.
     name: "document-types-seed",
     run: async () => loadDefaultDocuments(),
+  },
+  {
+    // Collapses duplicate board_subjects and installs the unique constraint that
+    // makes the duplication impossible. Normally migration 0179 has already done
+    // it; this self-heals a database where migrations were skipped. Takes its
+    // OWN advisory lock, so it is multi-instance safe on its own.
+    name: "board-subject-dedupe",
+    run: async () => runBoardSubjectDedupe(),
   },
   {
     // Second document-types step: the three university-issued types
@@ -229,6 +252,15 @@ const MIGRATIONS: Migration[] = [
     run: async () => runLibraryMastersSeed(),
   },
   {
+    // Time-based reconcile of stale legacy-import jobs. Any row still marked
+    // queued/running whose updated_at is older than 15 min is dead (a healthy
+    // job's persistProgress bumps updated_at every ~1s). Safe under a rolling
+    // deploy — an actively-running peer's row is never stale, so this cannot
+    // kill a live job. See legacy-import-jobs.service.ts for the query.
+    name: "legacy-import-boot-reconcile",
+    run: async () => reconcileStaleLegacyImportJobs(),
+  },
+  {
     // Loads the library data from IRP. Unlike everything above it is a long
     // walk (~200k legacy rows), so it takes its OWN advisory lock: the
     // resolvers are find-or-create, which makes a sequential re-run safe but
@@ -304,6 +336,16 @@ async function runMigrationList(): Promise<void> {
   for (const m of MIGRATIONS) {
     const started = Date.now();
     try {
+      if (
+        process.env.NODE_ENV &&
+        process.env.NODE_ENV === "development" &&
+        m.name === "library-legacy-load"
+      ) {
+        log.info(
+          `[${m.name}] skipping library-legacy-load in development mode`,
+        );
+        continue;
+      }
       const result = await m.run();
       const ms = Date.now() - started;
       log.info(`[${m.name}] done in ${ms}ms`, result);

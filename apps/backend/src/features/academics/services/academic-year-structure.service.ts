@@ -18,6 +18,7 @@ import {
   subjectSelectionMetaModel,
   subjectSelectionMetaClassModel,
   subjectSelectionMetaStreamModel,
+  subjectSelectionMetaSourceModel,
   relatedSubjectMainModel,
   relatedSubjectSubModel,
   restrictedGroupingMainModel,
@@ -274,7 +275,14 @@ async function copyMetas(
 
     const existingId = existingByKey.get(metaKey(meta));
     if (existingId != null) {
-      // Meta already present — only add class/stream links it is missing.
+      // Meta already present — top up optionSource (older copies dropped it)
+      // and add class/stream links it is missing.
+      await tx
+        .update(subjectSelectionMetaModel)
+        .set({
+          optionSource: (meta as any).optionSource ?? "ELECTIVE_SUBJECTS",
+        })
+        .where(eq(subjectSelectionMetaModel.id, existingId));
       const haveClasses = new Set(
         (
           await tx
@@ -334,6 +342,11 @@ async function copyMetas(
         label: meta.label,
         sequence: meta.sequence,
         isActive: meta.isActive,
+        // Carry the option-source across years. Prior copies silently reverted
+        // every meta to ELECTIVE_SUBJECTS, breaking Minor 3/4 (PRIOR_SELECTION)
+        // and SUBJECT_GROUP metas until an admin re-picked. Sources M2M is
+        // copied in a second pass below (needs the new metas' ids on both sides).
+        optionSource: (meta as any).optionSource ?? "ELECTIVE_SUBJECTS",
       })
       .returning({ id: subjectSelectionMetaModel.id });
     if (srcClasses.length) {
@@ -353,6 +366,48 @@ async function copyMetas(
       );
     }
     result.metas += 1;
+  }
+
+  // Second pass: copy PRIOR_SELECTION source mappings. Must run after every
+  // target meta exists on both sides of every mapping, so ids can be remapped
+  // by natural key (subjectTypeId + label). Idempotent per unique index
+  // `(subjectSelectionMetaId, sourceSubjectSelectionMetaId)`.
+  const srcById = new Map(srcMetas.map((m) => [m.id, m]));
+  const targetMetas = await tx
+    .select()
+    .from(subjectSelectionMetaModel)
+    .where(eq(subjectSelectionMetaModel.academicYearId, targetYearId));
+  const targetByKey = new Map(targetMetas.map((m) => [metaKey(m), m.id]));
+  for (const meta of srcMetas) {
+    const targetId = targetByKey.get(metaKey(meta));
+    if (targetId == null) continue;
+    const srcSources = await tx
+      .select()
+      .from(subjectSelectionMetaSourceModel)
+      .where(
+        eq(subjectSelectionMetaSourceModel.subjectSelectionMetaId, meta.id),
+      );
+    if (!srcSources.length) continue;
+    const remapped: {
+      subjectSelectionMetaId: number;
+      sourceSubjectSelectionMetaId: number;
+    }[] = [];
+    for (const s of srcSources) {
+      const srcSourceMeta = srcById.get(s.sourceSubjectSelectionMetaId);
+      if (!srcSourceMeta) continue; // source meta not in this year — skip
+      const remappedSourceId = targetByKey.get(metaKey(srcSourceMeta));
+      if (remappedSourceId == null) continue;
+      remapped.push({
+        subjectSelectionMetaId: targetId,
+        sourceSubjectSelectionMetaId: remappedSourceId,
+      });
+    }
+    if (!remapped.length) continue;
+    // ON CONFLICT DO NOTHING — idempotent across reruns and top-ups.
+    await tx
+      .insert(subjectSelectionMetaSourceModel)
+      .values(remapped)
+      .onConflictDoNothing();
   }
 }
 

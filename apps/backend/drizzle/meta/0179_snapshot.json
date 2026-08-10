@@ -1,6 +1,6 @@
 {
-  "id": "0576cf35-8dc4-42cd-8cc5-bd4e9e98a87f",
-  "prevId": "af5c9a9d-f9fb-4ff2-922c-e863ff08a35b",
+  "id": "69f60343-1c82-4785-b804-55402be787ce",
+  "prevId": "6ed010ca-6d34-4070-9081-e2a3700b4c96",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2746,7 +2746,16 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "board_subjects_board_id_fk_board_subject_name_id_fk_unique": {
+          "name": "board_subjects_board_id_fk_board_subject_name_id_fk_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "board_id_fk",
+            "board_subject_name_id_fk"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -6294,12 +6303,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "document_ledger_id_fk": {
-          "name": "document_ledger_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -6342,31 +6345,10 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
-        },
-        "cu_registration_document_uploads_document_ledger_id_fk_document_ledger_id_fk": {
-          "name": "cu_registration_document_uploads_document_ledger_id_fk_document_ledger_id_fk",
-          "tableFrom": "cu_registration_document_uploads",
-          "tableTo": "document_ledger",
-          "columnsFrom": [
-            "document_ledger_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "cu_registration_document_uploads_document_ledger_id_fk_unique": {
-          "name": "cu_registration_document_uploads_document_ledger_id_fk_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "document_ledger_id_fk"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -10145,12 +10127,6 @@
           "notNull": true,
           "default": "'OTHER'"
         },
-        "code": {
-          "name": "code",
-          "type": "varchar(64)",
-          "primaryKey": false,
-          "notNull": true
-        },
         "name": {
           "name": "name",
           "type": "varchar(255)",
@@ -10250,13 +10226,6 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "document_types_code_unique": {
-          "name": "document_types_code_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
-        },
         "document_types_name_unique": {
           "name": "document_types_name_unique",
           "nullsNotDistinct": false,
@@ -27691,12 +27660,6 @@
           "notNull": true,
           "default": "'ISSUED'"
         },
-        "document_ledger_id_fk": {
-          "name": "document_ledger_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
         "renewed_from_issue_id_fk": {
           "name": "renewed_from_issue_id_fk",
           "type": "integer",
@@ -27883,19 +27846,6 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "id_card_issues_document_ledger_id_fk_document_ledger_id_fk": {
-          "name": "id_card_issues_document_ledger_id_fk_document_ledger_id_fk",
-          "tableFrom": "id_card_issues",
-          "tableTo": "document_ledger",
-          "columnsFrom": [
-            "document_ledger_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
         "id_card_issues_renewed_from_issue_id_fk_id_card_issues_id_fk": {
           "name": "id_card_issues_renewed_from_issue_id_fk_id_card_issues_id_fk",
           "tableFrom": "id_card_issues",
@@ -27930,13 +27880,6 @@
           "nullsNotDistinct": false,
           "columns": [
             "legacy_issue_id"
-          ]
-        },
-        "id_card_issues_document_ledger_id_fk_unique": {
-          "name": "id_card_issues_document_ledger_id_fk_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "document_ledger_id_fk"
           ]
         }
       },

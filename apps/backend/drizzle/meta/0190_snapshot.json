@@ -1,6 +1,6 @@
 {
-  "id": "af5c9a9d-f9fb-4ff2-922c-e863ff08a35b",
-  "prevId": "6ed010ca-6d34-4070-9081-e2a3700b4c96",
+  "id": "881c02b8-7ac1-4cc3-878d-5a81f728d00e",
+  "prevId": "0186eeee-0000-4000-8000-000000000186",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -6294,6 +6294,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "document_ledger_id_fk": {
+          "name": "document_ledger_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -6336,10 +6342,31 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "cu_registration_document_uploads_document_ledger_id_fk_document_ledger_id_fk": {
+          "name": "cu_registration_document_uploads_document_ledger_id_fk_document_ledger_id_fk",
+          "tableFrom": "cu_registration_document_uploads",
+          "tableTo": "document_ledger",
+          "columnsFrom": [
+            "document_ledger_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "cu_registration_document_uploads_document_ledger_id_fk_unique": {
+          "name": "cu_registration_document_uploads_document_ledger_id_fk_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "document_ledger_id_fk"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -9811,6 +9838,13 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "is_archived": {
+          "name": "is_archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "created_at": {
           "name": "created_at",
@@ -15983,7 +16017,7 @@
         },
         "phone": {
           "name": "phone",
-          "type": "varchar(15)",
+          "type": "varchar(500)",
           "primaryKey": false,
           "notNull": false
         },
@@ -16007,7 +16041,7 @@
         },
         "person_of_contact_phone": {
           "name": "person_of_contact_phone",
-          "type": "varchar(15)",
+          "type": "varchar(500)",
           "primaryKey": false,
           "notNull": false
         },
@@ -16034,6 +16068,242 @@
       },
       "indexes": {},
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.library_sync_state": {
+      "name": "library_sync_state",
+      "schema": "",
+      "columns": {
+        "table_name": {
+          "name": "table_name",
+          "type": "varchar(120)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "last_synced_at": {
+          "name": "last_synced_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_success_at": {
+          "name": "last_success_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_error": {
+          "name": "last_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_upserts": {
+          "name": "last_upserts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "last_deletes": {
+          "name": "last_deletes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "last_scanned": {
+          "name": "last_scanned",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "last_duration_ms": {
+          "name": "last_duration_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.library_floor_plans": {
+      "name": "library_floor_plans",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "branch_id_fk": {
+          "name": "branch_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "layout": {
+          "name": "layout",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "library_floor_plans_branch_id_fk_library_branches_id_fk": {
+          "name": "library_floor_plans_branch_id_fk_library_branches_id_fk",
+          "tableFrom": "library_floor_plans",
+          "tableTo": "library_branches",
+          "columnsFrom": [
+            "branch_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.library_cdl_sessions": {
+      "name": "library_cdl_sessions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "book_id_fk": {
+          "name": "book_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id_fk": {
+          "name": "user_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "library_cdl_sessions_book_id_fk_books_id_fk": {
+          "name": "library_cdl_sessions_book_id_fk_books_id_fk",
+          "tableFrom": "library_cdl_sessions",
+          "tableTo": "books",
+          "columnsFrom": [
+            "book_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "library_cdl_sessions_user_id_fk_users_id_fk": {
+          "name": "library_cdl_sessions_user_id_fk_users_id_fk",
+          "tableFrom": "library_cdl_sessions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -25703,6 +25973,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "document_ledger_id_fk": {
+          "name": "document_ledger_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -25758,10 +26034,31 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "temp_admit_card_distributions_document_ledger_id_fk_document_ledger_id_fk": {
+          "name": "temp_admit_card_distributions_document_ledger_id_fk_document_ledger_id_fk",
+          "tableFrom": "temp_admit_card_distributions",
+          "tableTo": "document_ledger",
+          "columnsFrom": [
+            "document_ledger_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "temp_admit_card_distributions_document_ledger_id_fk_unique": {
+          "name": "temp_admit_card_distributions_document_ledger_id_fk_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "document_ledger_id_fk"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
