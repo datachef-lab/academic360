@@ -20,6 +20,7 @@ import { runRegistrationYearDriftMigration } from "@/features/subject-selection/
 import { runCuAdmitCardSemVSemVILoader } from "@/features/subject-selection/services/cu-admitcard-loader.service.js";
 import { runStreamMismatchHeal } from "@/features/subject-selection/services/stream-mismatch-heal.service.js";
 import { runLegacyFeesAmountHeal } from "@/features/fees/services/legacy-fees-amount-heal.service.js";
+import { runBoardSubjectDedupe } from "@/features/admissions/services/board-subject-dedupe.service.js";
 // TEMPORARILY DISABLED 2026-08-10 (ADR 0034) — re-enable together with the
 // commented boot-migration entry below when the timeout fix is proven stable.
 // import { runLibraryLegacyLoad } from "@/features/library/services/library-legacy-load.service.js";
@@ -146,6 +147,14 @@ const MIGRATIONS: Migration[] = [
         lockClient.release();
       }
     },
+  },
+  {
+    // Collapses duplicate board_subjects and installs the unique constraint that
+    // makes the duplication impossible. Normally migration 0179 has already done
+    // it; this self-heals a database where migrations were skipped. Takes its
+    // OWN advisory lock, so it is multi-instance safe on its own.
+    name: "board-subject-dedupe",
+    run: async () => runBoardSubjectDedupe(),
   },
   {
     // Seeds the library masters — branch, patron & item categories, zones,

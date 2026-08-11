@@ -35,8 +35,17 @@ export async function getAllBoardSubjectsHandler(req: Request, res: Response) {
     const degreeId = req.query.degreeId
       ? parseInt(req.query.degreeId as string)
       : undefined;
+    const boardId = req.query.boardId
+      ? parseInt(req.query.boardId as string)
+      : undefined;
 
-    const result = await getAllBoardSubjects(page, pageSize, search, degreeId);
+    const result = await getAllBoardSubjects(
+      page,
+      pageSize,
+      search,
+      degreeId,
+      boardId,
+    );
     const response = new ApiResponse(
       200,
       "OK",
