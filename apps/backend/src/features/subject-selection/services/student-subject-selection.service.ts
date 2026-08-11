@@ -2341,6 +2341,7 @@ const STUDENT_SUBJECTS_FINAL_WHERE_PROMOTED = `WHERE promotion_id IS NOT NULL
 const STUDENT_SUBJECTS_FINAL_SELECT_FULL = `SELECT
     student_id,
     uid,
+    COALESCE(registration_number, '') AS registration_number,
     user_name,
     registration_year,
     COALESCE(promotion_academic_year, '') AS promotion_academic_year,
@@ -2477,6 +2478,7 @@ mandatory AS (
   SELECT
       std.id                              AS student_id,
       std.uid                             AS uid,
+      std.registration_number             AS registration_number,
       u.name                              AS user_name,
       ay.year                             AS academic_year,
       sry.registration_year               AS registration_year,
@@ -2536,6 +2538,7 @@ optional_direct AS (
   SELECT
       std.id                              AS student_id,
       std.uid                             AS uid,
+      std.registration_number             AS registration_number,
       u.name                              AS user_name,
       ay.year                             AS academic_year,
       sry.registration_year               AS registration_year,
@@ -2602,6 +2605,7 @@ optional_grouped AS (
   SELECT
       std.id                              AS student_id,
       std.uid                             AS uid,
+      std.registration_number             AS registration_number,
       u.name                              AS user_name,
       ay.year                             AS academic_year,
       sry.registration_year               AS registration_year,
@@ -2703,6 +2707,7 @@ optional_group_selected AS (
   SELECT
       std.id                              AS student_id,
       std.uid                             AS uid,
+      std.registration_number             AS registration_number,
       u.name                              AS user_name,
       ay.year                             AS academic_year,
       sry.registration_year               AS registration_year,
@@ -2775,7 +2780,7 @@ optional_group_selected AS (
 
 optional AS (
   SELECT DISTINCT ON (student_id, paper_id, promotion_id)
-         student_id, uid, user_name, academic_year, registration_year, promotion_academic_year,
+         student_id, uid, registration_number, user_name, academic_year, registration_year, promotion_academic_year,
          program_course, affiliation, regulation, semester, class_id_for_order,
          subject, subject_type, selection_label, selection_id_for_order, selection_version,
          paper_id, paper_type, paper, paper_code, is_optional, auto_assign, is_active,
