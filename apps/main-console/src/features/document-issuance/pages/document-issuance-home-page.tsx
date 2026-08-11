@@ -52,10 +52,10 @@ const DocumentIssuanceHomePage = () => {
   );
 
   return (
-    <div className="min-h-full  p-2 sm:p-4">
-      <div className="flex flex-col gap-3">
-        <DashboardHeader activeTab={activeTab} onTabChange={setActiveTab} tabCounts={tabCounts} />
+    <div className="min-h-full bg-[#eaeaea]">
+      <DashboardHeader activeTab={activeTab} onTabChange={setActiveTab} tabCounts={tabCounts} />
 
+      <div className="flex flex-col gap-3 p-3 lg:p-4">
         {activeTab === "overview" && <OverviewTab onNavigate={setActiveTab} />}
         {activeTab === "batch-receipts" && <BatchReceiptsTab />}
         {activeTab === "by-document-type" && <ByDocumentTypeTab />}

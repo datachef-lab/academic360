@@ -171,7 +171,7 @@ export function BatchReceiptsTab() {
         />
       </div>
 
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid gap-3">
         <DashboardPanel
           title="Batches needing top-up"
           subtitle="Live scope has grown beyond materialised rows · click a row to open the batch"
@@ -233,6 +233,7 @@ export function BatchReceiptsTab() {
           )}
         </DashboardPanel>
 
+        {/*
         <div className="flex flex-col gap-3">
           <DashboardPanel title="Mode mix" subtitle="EXAM_LINKED × ADMINISTRATIVE">
             <div className="flex flex-col gap-3">
@@ -298,6 +299,7 @@ export function BatchReceiptsTab() {
             )}
           </DashboardPanel>
         </div>
+        */}
       </div>
     </div>
   );

@@ -1,9 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import { DashboardPanel, GradientKpi, ProportionBar, Chip } from "../ui";
 import { useDashboardHandovers } from "@/features/document-issuance/hooks/use-documents-dashboard";
 import { StudentAvatar } from "@/components/student/StudentAvatar";
-import { Pagination } from "@/components/ui/pagination";
 
 /** "2026-08-07T10:12:00Z" -> "2 min ago" / "3h ago" / "5d ago". */
 function relativeTime(iso: string): string {
@@ -23,23 +22,14 @@ const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 function peakDayLabel(date: string): string {
   const d = new Date(`${date}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return date;
-  return WEEKDAY[d.getUTCDay()];
+  return WEEKDAY[d.getUTCDay()] ?? date;
 }
 
 export function HandoversTab() {
   const { data, isLoading, isError } = useDashboardHandovers();
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const recent = data?.recent ?? [];
-  const totalItems = recent.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
-  const pagedRecent = useMemo(
-    () => recent.slice(startIndex, endIndex),
-    [recent, startIndex, endIndex],
-  );
+  const pagedRecent = useMemo(() => recent.slice(0, 10), [recent]);
 
   if (isLoading) {
     return (
@@ -106,50 +96,35 @@ export function HandoversTab() {
               No handovers recorded yet.
             </div>
           ) : (
-            <>
-              <div className="flex flex-col divide-y divide-[#ebebeb]">
-                {pagedRecent.map((h) => (
-                  <div
-                    key={h.ledgerId}
-                    className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
-                  >
-                    <StudentAvatar uid={h.studentUid} name={h.studentName} size="sm" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-[#1a1a1a]">
-                        <span className="font-medium">{h.studentName}</span>
-                        <span className="text-[#999]">
-                          {" "}
-                          · {h.documentTypeName}
-                          {h.status === "UPLOADED" ? " upload" : ""}
-                        </span>
-                      </p>
-                      <p className="truncate text-xs text-[#999]">
-                        {h.status === "COLLECTED"
-                          ? `Handed by ${h.providedByName ?? "staff"}`
-                          : "Uploaded by student"}
-                        {h.className ? ` · ${h.className}` : ""} · {relativeTime(h.at)}
-                      </p>
-                    </div>
-                    <Chip tone={h.status === "COLLECTED" ? "green" : "violet"}>
-                      {h.status === "COLLECTED" ? "Collected" : "Uploaded"}
-                    </Chip>
+            <div className="flex flex-col divide-y divide-[#ebebeb]">
+              {pagedRecent.map((h) => (
+                <div
+                  key={h.ledgerId}
+                  className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
+                >
+                  <StudentAvatar uid={h.studentUid} name={h.studentName} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm text-[#1a1a1a]">
+                      <span className="font-medium">{h.studentName}</span>
+                      <span className="text-[#999]">
+                        {" "}
+                        · {h.documentTypeName}
+                        {h.status === "UPLOADED" ? " upload" : ""}
+                      </span>
+                    </p>
+                    <p className="truncate text-xs text-[#999]">
+                      {h.status === "COLLECTED"
+                        ? `Handed by ${h.providedByName ?? "staff"}`
+                        : "Uploaded by student"}
+                      {h.className ? ` · ${h.className}` : ""} · {relativeTime(h.at)}
+                    </p>
                   </div>
-                ))}
-              </div>
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={totalItems}
-                itemsPerPage={itemsPerPage}
-                startIndex={startIndex}
-                endIndex={endIndex}
-                onPageChange={setCurrentPage}
-                onItemsPerPageChange={(n) => {
-                  setItemsPerPage(n);
-                  setCurrentPage(1);
-                }}
-              />
-            </>
+                  <Chip tone={h.status === "COLLECTED" ? "green" : "violet"}>
+                    {h.status === "COLLECTED" ? "Collected" : "Uploaded"}
+                  </Chip>
+                </div>
+              ))}
+            </div>
           )}
         </DashboardPanel>
 
