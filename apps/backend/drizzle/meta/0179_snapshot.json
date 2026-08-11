@@ -15396,7 +15396,7 @@
         },
         "phone": {
           "name": "phone",
-          "type": "varchar(15)",
+          "type": "varchar(500)",
           "primaryKey": false,
           "notNull": false
         },
@@ -15420,7 +15420,7 @@
         },
         "person_of_contact_phone": {
           "name": "person_of_contact_phone",
-          "type": "varchar(15)",
+          "type": "varchar(500)",
           "primaryKey": false,
           "notNull": false
         },
@@ -15447,6 +15447,242 @@
       },
       "indexes": {},
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.library_sync_state": {
+      "name": "library_sync_state",
+      "schema": "",
+      "columns": {
+        "table_name": {
+          "name": "table_name",
+          "type": "varchar(120)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "last_synced_at": {
+          "name": "last_synced_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_success_at": {
+          "name": "last_success_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_error": {
+          "name": "last_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_upserts": {
+          "name": "last_upserts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "last_deletes": {
+          "name": "last_deletes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "last_scanned": {
+          "name": "last_scanned",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "last_duration_ms": {
+          "name": "last_duration_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.library_floor_plans": {
+      "name": "library_floor_plans",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "branch_id_fk": {
+          "name": "branch_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "layout": {
+          "name": "layout",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "library_floor_plans_branch_id_fk_library_branches_id_fk": {
+          "name": "library_floor_plans_branch_id_fk_library_branches_id_fk",
+          "tableFrom": "library_floor_plans",
+          "tableTo": "library_branches",
+          "columnsFrom": [
+            "branch_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.library_cdl_sessions": {
+      "name": "library_cdl_sessions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "book_id_fk": {
+          "name": "book_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id_fk": {
+          "name": "user_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "library_cdl_sessions_book_id_fk_books_id_fk": {
+          "name": "library_cdl_sessions_book_id_fk_books_id_fk",
+          "tableFrom": "library_cdl_sessions",
+          "tableTo": "books",
+          "columnsFrom": [
+            "book_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "library_cdl_sessions_user_id_fk_users_id_fk": {
+          "name": "library_cdl_sessions_user_id_fk_users_id_fk",
+          "tableFrom": "library_cdl_sessions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -20183,7 +20419,13 @@
           "name": "subject_id_fk",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "subject_grouping_main_id_fk": {
+          "name": "subject_grouping_main_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "version": {
           "name": "version",
@@ -20306,6 +20548,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "student_subject_selections_subject_group_id_idx": {
+          "name": "student_subject_selections_subject_group_id_idx",
+          "columns": [
+            {
+              "expression": "subject_grouping_main_id_fk",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -20361,6 +20618,19 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
+        "student_subject_selections_subject_grouping_main_id_fk_subject_grouping_main_id_fk": {
+          "name": "student_subject_selections_subject_grouping_main_id_fk_subject_grouping_main_id_fk",
+          "tableFrom": "student_subject_selections",
+          "tableTo": "subject_grouping_main",
+          "columnsFrom": [
+            "subject_grouping_main_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
         "student_subject_selections_parent_id_fk_student_subject_selections_id_fk": {
           "name": "student_subject_selections_parent_id_fk_student_subject_selections_id_fk",
           "tableFrom": "student_subject_selections",
@@ -20391,7 +20661,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "student_subject_selections_subject_xor_group_check": {
+          "name": "student_subject_selections_subject_xor_group_check",
+          "value": "(\"student_subject_selections\".\"subject_id_fk\" IS NOT NULL AND \"student_subject_selections\".\"subject_grouping_main_id_fk\" IS NULL)\n         OR (\"student_subject_selections\".\"subject_id_fk\" IS NULL AND \"student_subject_selections\".\"subject_grouping_main_id_fk\" IS NOT NULL)"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.subject_selection_meta_classes": {
@@ -21179,6 +21454,19 @@
         "cancelled_admission_by_user_id_fk": {
           "name": "cancelled_admission_by_user_id_fk",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_no_show": {
+          "name": "is_no_show",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "no_show_remarks": {
+          "name": "no_show_remarks",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -27999,7 +28287,8 @@
       "schema": "public",
       "values": [
         "ELECTIVE_SUBJECTS",
-        "PRIOR_SELECTION"
+        "PRIOR_SELECTION",
+        "SUBJECT_GROUP"
       ]
     },
     "public.user_type": {
