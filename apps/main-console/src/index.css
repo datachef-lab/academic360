@@ -350,3 +350,28 @@ html[data-env="development"] {
   --brandb-900: 13 21 48;
   --brandb-950: 8 12 30;
 }
+
+/* --------------------------------------------------------------------------
+ * Live-update flash — pulses a soft amber ring around a widget for ~1.2s
+ * whenever a socket event bumps its parent's `key`. Used by the library
+ * dashboard so operators can see, at a glance, that a tile just refreshed
+ * from a real backend change (as opposed to a manual reload).
+ * ------------------------------------------------------------------------ */
+@keyframes libraryLiveFlash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55);
+    background-color: rgba(255, 251, 235, 0.9);
+  }
+  40% {
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.28);
+    background-color: rgba(255, 247, 219, 0.75);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+    background-color: transparent;
+  }
+}
+.library-live-flash {
+  animation: libraryLiveFlash 1.2s ease-out;
+  border-radius: 0.5rem;
+}

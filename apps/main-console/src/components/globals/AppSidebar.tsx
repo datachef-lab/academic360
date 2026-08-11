@@ -223,12 +223,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Modules/admin items still being worked on are grouped into a "Pending"
   // section that is hidden entirely when the backend runs as production. Shared
   // by both the module list and the Administration list.
-  const PENDING_TITLES = [
-    "Admission Process",
-    "Library",
-    "Notice Management",
-    "User Groups & Accesses",
-  ];
+  const PENDING_TITLES = ["Admission Process", "Notice Management", "User Groups & Accesses"];
   const stripStar = (t: string) => t.replace(/\*+$/, "").trim();
   const isPending = (t: string) => PENDING_TITLES.includes(stripStar(t));
   const adminVisible =
@@ -411,6 +406,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       "Fees Module",
                       "Exam Management",
                       "Document Issuance",
+                      "Library",
                       "Reports",
                     ];
                     const modulesRank = (t: string) => {

@@ -279,12 +279,13 @@ export async function exportPromotionStudentsReport(params: {
     ay.year AS academic_year,
      -- Derived student status (based on users + students table)
     CASE
+      WHEN std.is_no_show = true THEN 'NO_SHOW'
       WHEN u.is_suspended = true THEN 'SUSPENDED'
       WHEN std.has_cancelled_admission = true THEN 'CANCELLED_ADMISSION'
       WHEN std.taken_transfer_certificate = true THEN 'TC'
       WHEN std.alumni = true AND std.active = true THEN 'GRADUATED_WITH_SUPP'
       WHEN std.alumni = true AND std.active = false THEN 'COMPLETED_LEFT'
-      WHEN std.active = false 
+      WHEN std.active = false
            AND (std.leaving_date IS NOT NULL OR std.leaving_reason IS NOT NULL)
            THEN 'DROPPED_OUT'
       WHEN u.is_active = true THEN 'REGULAR'

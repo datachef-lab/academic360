@@ -335,9 +335,12 @@ export async function updateStudentStatusById(
       | "GRADUATED_WITH_SUPP"
       | "TC"
       | "CANCELLED_ADMISSION"
-      | "SUSPENDED";
+      | "SUSPENDED"
+      | "NO_SHOW";
     takenTransferCertificate?: boolean;
     hasCancelledAdmission?: boolean;
+    isNoShow?: boolean;
+    noShowRemarks?: string | null;
     cancelledAdmissionReason?: string | null;
     cancelledAdmissionAt?: string | null;
     cancelledAdmissionByUserId?: number | null;
@@ -348,7 +351,13 @@ export async function updateStudentStatusById(
 ) {
   const update: any = {};
 
-  // If statusOption provided, map to fields per doc
+  // If statusOption provided, map to fields per doc. NO_SHOW is mutually
+  // exclusive with every other status flag — default to clearing it (and
+  // its remarks), then the NO_SHOW case below re-sets both.
+  if (data.statusOption !== undefined) {
+    update.isNoShow = false;
+    update.noShowRemarks = null;
+  }
   switch (data.statusOption) {
     case "DROPPED_OUT": {
       update.active = false;
@@ -507,6 +516,22 @@ export async function updateStudentStatusById(
       update.cancelledAdmissionAt = null;
       break;
     }
+    case "NO_SHOW": {
+      // Student never turned up despite admission. All other status flags
+      // are cleared — see the model comment on `isNoShow`.
+      update.isNoShow = true;
+      update.noShowRemarks = data.noShowRemarks ?? null;
+      update.active = false;
+      update.alumni = false;
+      update.takenTransferCertificate = false;
+      update.hasCancelledAdmission = false;
+      update.cancelledAdmissionReason = null;
+      update.cancelledAdmissionAt = null;
+      update.cancelledAdmissionByUserId = null;
+      update.leavingDate = null;
+      update.leavingReason = null;
+      break;
+    }
   }
 
   // Allow direct overrides too (these take precedence over switch case logic)
@@ -516,6 +541,10 @@ export async function updateStudentStatusById(
     update.takenTransferCertificate = data.takenTransferCertificate;
   if (typeof data.hasCancelledAdmission === "boolean")
     update.hasCancelledAdmission = data.hasCancelledAdmission;
+  if (typeof data.isNoShow === "boolean") update.isNoShow = data.isNoShow;
+  if (Object.prototype.hasOwnProperty.call(data, "noShowRemarks")) {
+    update.noShowRemarks = data.noShowRemarks ?? null;
+  }
   // If RFID is provided (including empty string or null), update that column
   if (Object.prototype.hasOwnProperty.call(data, "rfidNumber")) {
     update.rfidNumber = data.rfidNumber ?? null;
@@ -1589,6 +1618,8 @@ export async function exportStudentDetailedReport(
         sec.name AS section,
         std.rfid_number AS student_rfid_number,
         std.class_roll_number AS student_class_roll_number,
+        std.community AS community,
+        cl.name AS semester,
         pd.aadhaar_card_number AS personal_details_aadhaar_card_number,
         pd.date_of_birth AS personal_details_dateOfBirth,
         pd.gender AS personal_details_gender,
@@ -1667,6 +1698,7 @@ export async function exportStudentDetailedReport(
       LEFT JOIN family_details fd ON fd.user_id_fk = u.id
       LEFT JOIN sections sec ON sec.id = pr.section_id_fk
       LEFT JOIN shifts sh ON sh.id = pr.shift_id_fk
+      LEFT JOIN classes cl ON cl.id = pr.class_id_fk
       LEFT JOIN person father ON father.family_id_fk = fd.id AND father.type = 'FATHER'
       LEFT JOIN person mother ON mother.family_id_fk = fd.id AND mother.type = 'MOTHER'
       LEFT JOIN addr_pivot ap ON ap.personal_details_id_fk = pd.id

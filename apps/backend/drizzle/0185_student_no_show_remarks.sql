@@ -1,0 +1,1 @@
+ALTER TABLE "students" ADD COLUMN "no_show_remarks" text;

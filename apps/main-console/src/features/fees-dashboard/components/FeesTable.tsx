@@ -17,6 +17,17 @@ type FeesTableProps = {
   dense?: boolean;
   /** Outer frame when table is not already inside CompactPanel border */
   framed?: boolean;
+  /**
+   * Pin the header row while the body scrolls. Combine with `maxHeight` to
+   * bound the scroll box; without it the wrapper just uses its natural
+   * height and sticky has no effect (position: sticky needs a scroll box).
+   * The header cells carry the sticky classes unconditionally — sticky is
+   * inert when there is no scroll ancestor, so nothing breaks.
+   */
+  stickyHeader?: boolean;
+  /** Tailwind max-height class — e.g. `max-h-[520px]`. Applied only when
+   *  `stickyHeader` is true so callers get vertical scroll. */
+  maxHeight?: string;
 };
 
 export function FeesTable({
@@ -25,12 +36,20 @@ export function FeesTable({
   fixed = true,
   dense = false,
   framed = false,
+  stickyHeader = false,
+  maxHeight,
 }: FeesTableProps) {
   return (
     <div
       className={cn(
         "w-full overflow-x-auto",
-        framed && "overflow-hidden rounded-md border border-[#a0a0a0] bg-white",
+        framed && "rounded-md border border-[#a0a0a0] bg-white",
+        // `overflow-hidden` clashes with sticky (needs a scroll container),
+        // so drop it when the caller opts into a scrolling header. The border
+        // still frames the table because it lives on the wrapper.
+        framed && !stickyHeader && "overflow-hidden",
+        stickyHeader && "overflow-y-auto",
+        stickyHeader && (maxHeight ?? "max-h-[520px]"),
         className,
       )}
     >
@@ -100,7 +119,11 @@ export function FeesTableHead({
       colSpan={colSpan}
       rowSpan={rowSpan}
       className={cn(
-        "h-9 whitespace-nowrap border-r border-[#b8b8b8] px-2 py-1.5 text-left text-xs font-semibold text-[#1a1a1a] last:!border-r last:border-[#b8b8b8]",
+        // `sticky top-0` pins the header when the wrapping FeesTable has a
+        // scroll box (`stickyHeader + maxHeight`). No-op otherwise because
+        // sticky needs a scroll ancestor to attach to. Solid bg is critical:
+        // without it the body rows show through as they slide underneath.
+        "sticky top-0 z-10 h-9 whitespace-nowrap border-r border-b border-[#b8b8b8] bg-[#f0f0f0] px-2 py-1.5 text-left text-xs font-semibold text-[#1a1a1a] last:!border-r last:border-[#b8b8b8]",
         className,
       )}
     >

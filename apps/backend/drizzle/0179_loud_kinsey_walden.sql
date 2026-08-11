@@ -39,4 +39,12 @@ WHERE bs.id = m.board_subject_id_fk AND m.board_subject_id_fk <> k.survivor_id;-
 
 DELETE FROM board_subjects WHERE id NOT IN (SELECT survivor_id FROM _bs_keep);--> statement-breakpoint
 
-ALTER TABLE "board_subjects" ADD CONSTRAINT "board_subjects_board_id_fk_board_subject_name_id_fk_unique" UNIQUE("board_id_fk","board_subject_name_id_fk");
+-- Guarded: this migration's `when` was bumped past main's 0185 so prod runs it
+-- (ADR 0028); databases that already applied it (develop) will re-run it, where
+-- the dedupe statements are no-ops and this ADD CONSTRAINT must not error.
+DO $$ BEGIN
+  ALTER TABLE "board_subjects" ADD CONSTRAINT "board_subjects_board_id_fk_board_subject_name_id_fk_unique" UNIQUE("board_id_fk","board_subject_name_id_fk");
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+  WHEN duplicate_table THEN NULL;
+END $$;
