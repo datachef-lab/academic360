@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Download, Loader2, Pencil, Plus, Search, ShieldCheck, Trash2 } from "lucide-react";
+import { Download, Edit, Loader2, Plus, Search, ShieldCheck, Trash2 } from "lucide-react";
 import {
   createEvidenceDoc,
   deleteEvidenceDoc,
@@ -223,8 +223,8 @@ export default function EvidenceLockerPage() {
         title="Accreditation Evidence Locker"
         subtitle="Evidence documents tagged by NAAC / NIRF / AISHE criterion code."
         actions={
-          <Button onClick={onCreate} className="gap-1">
-            <Plus className="h-4 w-4" /> Upload entry
+          <Button onClick={onCreate} className="gap-1" size="sm">
+            <Plus className="h-4 w-4" /> ADD
           </Button>
         }
       />
@@ -255,60 +255,8 @@ export default function EvidenceLockerPage() {
             />
           </div>
 
-          {/* Mobile */}
-          <div className="space-y-2 sm:hidden">
-            {loading ? (
-              <div className="flex justify-center py-6 text-gray-500">
-                <Loader2 className="h-5 w-5 animate-spin" />
-              </div>
-            ) : rows.length === 0 ? (
-              <div className="py-6 text-center text-sm text-gray-500">No evidence docs.</div>
-            ) : (
-              rows.map((r) => (
-                <div key={r.id} className="rounded-lg border p-3 shadow-sm">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{r.title}</p>
-                      <p className="text-xs text-gray-500">
-                        {r.criterionCode}
-                        {r.academicYear ? ` · ${r.academicYear}` : ""}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <button
-                        type="button"
-                        onClick={() => void onView(r)}
-                        className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline"
-                      >
-                        <Download className="h-3.5 w-3.5" /> View
-                      </button>
-                      <div className="flex gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7"
-                          onClick={() => onEdit(r)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 text-red-600"
-                          onClick={() => setConfirm(r)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
           {/* Desktop */}
-          <div className="hidden sm:block">
+          <div>
             <Table>
               <TableHeader className={STICKY_THEAD_CLASS}>
                 <TableRow>
@@ -350,22 +298,24 @@ export default function EvidenceLockerPage() {
                         </button>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8"
-                          onClick={() => onEdit(r)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-red-600"
-                          onClick={() => setConfirm(r)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="h-8 w-8"
+                            onClick={() => onEdit(r)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="destructive"
+                            className="h-8 w-8"
+                            onClick={() => setConfirm(r)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))

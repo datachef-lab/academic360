@@ -30,7 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Pencil, Plus, Scale, Trash2 } from "lucide-react";
+import { Loader2, Edit, Plus, Scale, Trash2 } from "lucide-react";
 import type {
   LibraryCirculationPolicyRow,
   LibraryCirculationPolicyUpsertBody,
@@ -252,7 +252,7 @@ export default function CirculationPoliciesMasterPage() {
             <div className="flex shrink-0 flex-wrap items-center gap-2">
               <Button type="button" size="sm" onClick={openCreate}>
                 <Plus className="mr-1 h-4 w-4" />
-                Add policy
+                ADD
               </Button>
             </div>
           </div>
@@ -298,51 +298,7 @@ export default function CirculationPoliciesMasterPage() {
               </div>
             ) : (
               <>
-                <div className="space-y-3 pb-2 lg:hidden">
-                  {rows.map((row, i) => (
-                    <div
-                      key={row.id}
-                      className="rounded-lg border border-slate-200 bg-card p-3 shadow-sm"
-                    >
-                      <div className="mb-2 flex items-start justify-between gap-2">
-                        <span className="text-xs font-medium text-slate-500">
-                          #{(page - 1) * limit + i + 1}
-                        </span>
-                        <div className="inline-flex shrink-0 items-center gap-0.5">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => openEdit(row.id)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-600 hover:text-red-700"
-                            onClick={() => setDeleteTarget(row)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <p className="font-semibold text-slate-900">
-                        {row.patronCategoryName} × {row.itemCategoryName}
-                      </p>
-                      <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                        <span>Loan: {row.loanDays}d</span>
-                        <span>Fine: ₹{row.finePerDay}/d</span>
-                        <span>Renewals: {row.renewalLimit}</span>
-                        <span>Grace: {row.graceDays}d</span>
-                        <span>Max copies: {row.maxCopiesAtOnce}</span>
-                        <span>Skip holidays: {row.skipHolidaysInFine ? "Yes" : "No"}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="hidden min-w-0 pb-2 lg:block">
+                <div className="min-w-0 pb-2">
                   <div className="max-h-[70vh] overflow-auto [&>div]:!overflow-visible rounded-md border bg-background">
                     <Table containerClassName="min-w-[1100px]">
                       <TableHeader className={STICKY_THEAD_CLASS}>
@@ -380,7 +336,11 @@ export default function CirculationPoliciesMasterPage() {
                       </TableHeader>
                       <TableBody>
                         {rows.map((row, i) => (
-                          <TableRow key={row.id}>
+                          <TableRow
+                            key={row.id}
+                            className="cursor-pointer hover:bg-gray-50/60"
+                            onClick={() => openEdit(row.id)}
+                          >
                             <TableCell className="align-top">
                               {(page - 1) * limit + i + 1}
                             </TableCell>
@@ -414,20 +374,26 @@ export default function CirculationPoliciesMasterPage() {
                               </span>
                             </TableCell>
                             <TableCell className="text-right align-top">
-                              <div className="inline-flex items-center gap-0.5">
+                              <div className="flex justify-end gap-2">
                                 <Button
-                                  variant="ghost"
+                                  variant="outline"
                                   size="icon"
                                   className="h-8 w-8"
-                                  onClick={() => openEdit(row.id)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEdit(row.id);
+                                  }}
                                 >
-                                  <Pencil className="h-4 w-4" />
+                                  <Edit className="h-4 w-4" />
                                 </Button>
                                 <Button
-                                  variant="ghost"
+                                  variant="destructive"
                                   size="icon"
-                                  className="h-8 w-8 text-red-600 hover:text-red-700"
-                                  onClick={() => setDeleteTarget(row)}
+                                  className="h-8 w-8"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteTarget(row);
+                                  }}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>

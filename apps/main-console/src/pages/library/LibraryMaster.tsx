@@ -83,14 +83,49 @@ const quickLinks = [
 
 const masterLinks = [
   {
-    title: "Series",
-    url: "/dashboard/library/series",
-    icon: Workflow,
+    title: "Academic Archive",
+    url: "/dashboard/library/academic-archives",
+    icon: FolderArchive,
   },
   {
-    title: "Publications",
-    url: "/dashboard/library/publications",
+    title: "Article",
+    url: "/dashboard/library/articles",
     icon: ScrollText,
+  },
+  {
+    title: "Author",
+    url: "/dashboard/library/authors",
+    icon: Users,
+  },
+  {
+    title: "Author Type",
+    url: "/dashboard/library/author-types",
+    icon: UserCog,
+  },
+  {
+    title: "Binding Type",
+    url: "/dashboard/library/binding-types",
+    icon: ScanBarcode,
+  },
+  {
+    title: "Borrowing Type",
+    url: "/dashboard/library/borrowing-types",
+    icon: BookOpenCheck,
+  },
+  {
+    title: "Branch",
+    url: "/dashboard/library/branches",
+    icon: Building,
+  },
+  {
+    title: "Circulation Policy",
+    url: "/dashboard/library/circulation-policies",
+    icon: Scale,
+  },
+  {
+    title: "Class Holiday",
+    url: "/dashboard/library/class-holidays",
+    icon: CalendarRange,
   },
   {
     title: "Enclosure / Attachments",
@@ -103,64 +138,9 @@ const masterLinks = [
     icon: Rows3,
   },
   {
-    title: "Journal Type",
-    url: "/dashboard/library/journal-types",
-    icon: BookText,
-  },
-  {
-    title: "Status",
-    url: "/dashboard/library/statuses",
-    icon: Tags,
-  },
-  {
-    title: "Rack",
-    url: "/dashboard/library/racks",
-    icon: Package2,
-  },
-  {
-    title: "Shelf",
-    url: "/dashboard/library/shelves",
-    icon: LibraryBig,
-  },
-  {
-    title: "Binding Type",
-    url: "/dashboard/library/binding-types",
-    icon: ScanBarcode,
-  },
-  {
-    title: "Period / Frequency",
-    url: "/dashboard/library/periods",
-    icon: Rows3,
-  },
-  {
-    title: "Article",
-    url: "/dashboard/library/articles",
-    icon: ScrollText,
-  },
-  {
-    title: "Library Document",
-    url: "/dashboard/library/library-documents",
-    icon: Book,
-  },
-  {
-    title: "Borrowing Type",
-    url: "/dashboard/library/borrowing-types",
-    icon: BookOpenCheck,
-  },
-  {
-    title: "Author Type",
-    url: "/dashboard/library/author-types",
-    icon: UserCog,
-  },
-  {
-    title: "Author",
-    url: "/dashboard/library/authors",
-    icon: Users,
-  },
-  {
-    title: "Vendor",
-    url: "/dashboard/library/vendors",
-    icon: Building2,
+    title: "Evidence Locker",
+    url: "/dashboard/library/evidence-locker",
+    icon: ShieldCheck,
   },
   {
     title: "Holiday",
@@ -168,14 +148,19 @@ const masterLinks = [
     icon: CalendarDays,
   },
   {
-    title: "Class Holiday",
-    url: "/dashboard/library/class-holidays",
-    icon: CalendarRange,
+    title: "Item Category",
+    url: "/dashboard/library/item-categories",
+    icon: BookMarked,
   },
   {
-    title: "Branch",
-    url: "/dashboard/library/branches",
-    icon: Building,
+    title: "Journal Type",
+    url: "/dashboard/library/journal-types",
+    icon: BookText,
+  },
+  {
+    title: "Library Document",
+    url: "/dashboard/library/library-documents",
+    icon: Book,
   },
   {
     title: "Patron Category",
@@ -183,34 +168,49 @@ const masterLinks = [
     icon: IdCard,
   },
   {
-    title: "Item Category",
-    url: "/dashboard/library/item-categories",
-    icon: BookMarked,
+    title: "Period / Frequency",
+    url: "/dashboard/library/periods",
+    icon: Rows3,
   },
   {
-    title: "Circulation Policy",
-    url: "/dashboard/library/circulation-policies",
-    icon: Scale,
+    title: "Publications",
+    url: "/dashboard/library/publications",
+    icon: ScrollText,
   },
   {
-    title: "Zones",
-    url: "/dashboard/library/zones",
-    icon: MapPin,
+    title: "Rack",
+    url: "/dashboard/library/racks",
+    icon: Package2,
   },
   {
-    title: "Academic Archive",
-    url: "/dashboard/library/academic-archives",
-    icon: FolderArchive,
+    title: "Series",
+    url: "/dashboard/library/series",
+    icon: Workflow,
   },
   {
-    title: "Evidence Locker",
-    url: "/dashboard/library/evidence-locker",
-    icon: ShieldCheck,
+    title: "Shelf",
+    url: "/dashboard/library/shelves",
+    icon: LibraryBig,
+  },
+  {
+    title: "Status",
+    url: "/dashboard/library/statuses",
+    icon: Tags,
   },
   {
     title: "Student Analytics",
     url: "/dashboard/library/student-analytics",
     icon: FileBarChart,
+  },
+  {
+    title: "Vendor",
+    url: "/dashboard/library/vendors",
+    icon: Building2,
+  },
+  {
+    title: "Zones",
+    url: "/dashboard/library/zones",
+    icon: MapPin,
   },
 ];
 
