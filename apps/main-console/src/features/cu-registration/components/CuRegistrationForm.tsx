@@ -1740,7 +1740,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
     return isMA || isMCOM;
   })();
 
-  console.log("[CU-REG MAIN-CONSOLE] Program course name:", studentData?.programCourse?.name);
+  console.log("[CU-REG MAIN-CONSOLE] Programme course name:", studentData?.programCourse?.name);
   console.log("[CU-REG MAIN-CONSOLE] Is MA or MCOM program:", isMaOrMcomProgram);
   console.log("[CU-REG MAIN-CONSOLE] Is BCOM program:", isBcomProgram);
 

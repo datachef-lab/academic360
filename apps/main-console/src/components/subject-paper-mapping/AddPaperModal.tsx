@@ -408,7 +408,7 @@ export default function AddPaperModal({
                       "w-40 shrink-0 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
                   },
                   {
-                    label: "Applicable Program Course",
+                    label: "Applicable Programme Course",
                     className:
                       "w-56 shrink-0 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
                   },
@@ -561,7 +561,7 @@ export default function AddPaperModal({
                           classes: updatedClasses,
                         });
                       }}
-                      placeholder="Select Program Courses"
+                      placeholder="Select Programme Courses"
                       modalPopover={true}
                       popoverClassName={dropdownZClass}
                     />
@@ -755,10 +755,10 @@ export default function AddPaperModal({
           </h3>
 
           <div className="flex gap-6">
-            {/* Program Courses */}
+            {/* Programme Courses */}
             {inputPaper[selectedRowIndex].programCourses.length > 0 && (
               <div className="flex-1">
-                <h4 className="text-xs font-medium text-gray-600 mb-1">Program Courses:</h4>
+                <h4 className="text-xs font-medium text-gray-600 mb-1">Programme Courses:</h4>
                 <div className="flex flex-wrap gap-1">
                   {inputPaper[selectedRowIndex].programCourses.map((programCourseId) => (
                     <span

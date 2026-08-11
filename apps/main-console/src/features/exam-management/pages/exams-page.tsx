@@ -680,7 +680,7 @@ const ExamsPage = () => {
 
   //         return {
   //           "Sr. No.": index + 1,
-  //           "Program Course": programCourse?.name || "-",
+  //           "Programme Course": programCourse?.name || "-",
   //           "Subject & Paper": paper.name || "-",
   //           "Subject Name": subject?.name || "-",
   //           "Paper Code": paper.code || "-",
@@ -704,7 +704,7 @@ const ExamsPage = () => {
   //       // Set column widths
   //       const colWidths = [
   //         { wch: 8 }, // Sr. No.
-  //         { wch: 30 }, // Program Course
+  //         { wch: 30 }, // Programme Course
   //         { wch: 25 }, // Subject & Paper
   //         { wch: 25 }, // Subject Name
   //         { wch: 15 }, // Paper Code
@@ -980,7 +980,7 @@ const ExamsPage = () => {
   //         rowErrors.push("Academic Year not found");
   //       }
 
-  //       // Program Course
+  //       // Programme Course
   //       const programCourse = programCourses.find(
   //         (pc) =>
   //           (
@@ -988,7 +988,7 @@ const ExamsPage = () => {
   //           )
   //       );
   //       if (!programCourse) {
-  //         rowErrors.push("Program Course not found");
+  //         rowErrors.push("Programme Course not found");
   //       }
 
   //       // Class
@@ -1448,7 +1448,7 @@ const ExamsPage = () => {
                       </Select>
                     </div>
                     <div>
-                      <div className="mb-1 text-sm text-muted-foreground">Program Course</div>
+                      <div className="mb-1 text-sm text-muted-foreground">Programme Course</div>
                       <Select
                         value={filtersObj.programCourseId?.toString() ?? "all"}
                         onValueChange={(value) =>
@@ -1459,10 +1459,10 @@ const ExamsPage = () => {
                         }
                       >
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="All Program Courses" />
+                          <SelectValue placeholder="All Programme Courses" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All Program Courses</SelectItem>
+                          <SelectItem value="all">All Programme Courses</SelectItem>
                           {programCourses.map((pc) => (
                             <SelectItem key={pc.id!} value={pc.id!.toString()}>
                               {pc.name}
@@ -1667,9 +1667,9 @@ const ExamsPage = () => {
                     variant="outline"
                     className="text-xs border-blue-300 text-blue-700 bg-blue-50 flex items-center gap-1"
                   >
-                    {programCourses.find((pc) => pc.id === filtersObj.programCourseId)?.name || "Program Course"}
+                    {programCourses.find((pc) => pc.id === filtersObj.programCourseId)?.name || "Programme Course"}
                     <button
-                      aria-label="Clear program course filter"
+                      aria-label="Clear programme course filter"
                       className="ml-1 hover:text-blue-900"
                       onClick={() => {
                         setFiltersObj((prev) => ({ ...prev, programCourseId: null }));
@@ -2163,7 +2163,7 @@ const ExamsPage = () => {
                       Exam Group Name
                     </th>
                     <th className="w-[18%] px-3 py-3 border-r border-slate-300 text-center">
-                      Program Courses
+                      Programme Courses
                     </th>
                     <th className="w-[14%] px-3 py-3 border-r border-slate-300 text-center">
                       Subjects
@@ -2201,7 +2201,7 @@ const ExamsPage = () => {
                     </tr>
                   ) : (
                     examGroups.map((examGroup: ExamGroupDto, groupIdx: number) => {
-                      // Extract all distinct program courses from the group
+                      // Extract all distinct programme courses from the group
                       const distinctPCMap = new Map<
                         number | undefined,
                         (typeof examGroup.exams)[0]["examProgramCourses"][0]

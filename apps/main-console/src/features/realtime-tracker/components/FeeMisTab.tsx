@@ -38,7 +38,7 @@ export function FeeMisTab({ data, isLoading }: Props) {
           <thead>
             <tr>
               <th className={cn(th, "w-10")}>#</th>
-              <th className={cn(th, "text-left")}>Program Course</th>
+              <th className={cn(th, "text-left")}>Programme Course</th>
               <th className={th}>Total Number</th>
               <th className={th}>Paid</th>
               <th className={th}>Not Paid</th>

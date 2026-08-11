@@ -41,15 +41,15 @@ import {
 import multer from "multer";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
-import { documentModel } from "@repo/db/index.js";
+import { documentTypeModel } from "@repo/db/index.js";
 
 // Helper function to get document name by ID from database
 async function getDocumentNameById(documentId: string): Promise<string> {
   try {
     const document = await db
       .select()
-      .from(documentModel)
-      .where(eq(documentModel.id, parseInt(documentId)))
+      .from(documentTypeModel)
+      .where(eq(documentTypeModel.id, parseInt(documentId)))
       .limit(1);
     return document[0]?.name || `Document ${documentId}`;
   } catch (error) {

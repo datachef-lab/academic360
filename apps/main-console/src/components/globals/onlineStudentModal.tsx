@@ -77,7 +77,7 @@ export function OnlineStudentsModal({
                   <TableHead className="w-16 text-center">Photo</TableHead>
                   <TableHead>UID</TableHead>
                   <TableHead>Name</TableHead>
-                  <TableHead>Program Course</TableHead>
+                  <TableHead>Programme Course</TableHead>
                   <TableHead>Class</TableHead>
                   <TableHead>Shift</TableHead>
                   <TableHead>Login Time</TableHead>

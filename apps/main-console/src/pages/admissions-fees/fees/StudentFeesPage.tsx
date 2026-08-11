@@ -600,7 +600,7 @@ const StudentFeesPage: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
-                      Program Course
+                      Programme Course
                     </p>
                     <p className="text-sm font-medium text-gray-900">
                       {selectedStudent.programCourse?.name || "-"}

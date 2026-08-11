@@ -342,6 +342,17 @@ export class ExportService {
         data: response.data,
       };
     } catch (error: unknown) {
+      // 409 = same file already in flight (ADR 0030 double-submit dedupe). Surface
+      // the server message so the operator sees WHO / WHEN instead of a generic fail.
+      const axiosErr = error as { response?: { status?: number; data?: { message?: string } } };
+      if (axiosErr?.response?.status === 409) {
+        return {
+          success: false,
+          message:
+            axiosErr.response.data?.message ??
+            "This file is already being imported — refresh to see progress.",
+        };
+      }
       console.error("Student import upload error:", error);
       return {
         success: false,

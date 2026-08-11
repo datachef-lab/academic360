@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import axios from "axios";
 import DOMPurify, { type Config } from "dompurify";
 import { Button } from "@/components/ui/button";
+import declarationMastersIllustration from "@/features/document-issuance/assets/declaration-masters-illustration.svg?raw";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -1634,274 +1635,300 @@ export default function DeclarationMastersPage() {
             if (!open) resetDialog();
           }}
         >
-          <DialogContent className="w-[min(100vw-2rem,1200px)] sm:max-w-6xl max-h-[90vh] gap-0 p-0 flex flex-col overflow-hidden">
+          <DialogContent className="w-[min(100vw-2rem,1440px)] sm:max-w-[1440px] max-h-[90vh] gap-0 p-0 flex flex-col lg:flex-row overflow-hidden">
             {/*
+              Decorative rail. Fixed width rather than a percentage so the
+              statements table keeps its columns, and dropped below `lg` where
+              there is no room for it. Inlined so the accent resolves
+              `--brand-400` and follows the environment palette.
+              "Consent" by Storyset — see ATTRIBUTION.txt.
+            */}
+            <aside
+              aria-hidden="true"
+              className="relative hidden w-[260px] shrink-0 overflow-hidden border-r-2 border-purple-200 bg-purple-50/60 lg:block"
+            >
+              <div
+                className="absolute inset-0 [&>svg]:h-full [&>svg]:w-full"
+                dangerouslySetInnerHTML={{ __html: declarationMastersIllustration }}
+              />
+            </aside>
+
+            {/*
+              Tabs AND footer share this column: DialogContent is a row on `lg`,
+              so leaving the footer as a direct child would sit it beside the
+              content instead of under it.
+            */}
+            <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
+              {/*
               The Tabs root has to wrap the header and the body so the triggers
               can sit in the sticky header while the panels live in the scroll
               box below.
             */}
-            <Tabs
-              value={dialogTab}
-              onValueChange={(v) => setDialogTab(v as DialogTab)}
-              className="flex min-h-0 w-full flex-col overflow-hidden"
-            >
-              <DialogHeader className="shrink-0 px-6 pb-3 pt-4">
-                <DialogTitle className="flex items-center gap-2">
-                  <ScrollText className="h-5 w-5 shrink-0 text-muted-foreground" />
-                  {editingMasterId != null ? "Edit declaration master" : "New declaration master"}
-                </DialogTitle>
+              <Tabs
+                value={dialogTab}
+                onValueChange={(v) => setDialogTab(v as DialogTab)}
+                className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden"
+              >
                 {/*
+                  Title and tab strip share one row. `pr-12` keeps the triggers
+                  clear of the dialog's absolutely-positioned close button, and
+                  `space-y-0` undoes DialogHeader's stacked-column spacing.
+                */}
+                <DialogHeader className="shrink-0 flex-row items-center justify-between gap-4 space-y-0 border-b px-6 py-3 pr-12">
+                  <DialogTitle className="flex items-center gap-2">
+                    <ScrollText className="h-5 w-5 shrink-0 text-muted-foreground" />
+                    {editingMasterId != null ? "Edit declaration master" : "New declaration master"}
+                  </DialogTitle>
+                  {/*
                   Radix warns when a dialog has no description, so keep one for
                   assistive tech only — the header row is icon + title.
                 */}
-                <DialogDescription className="sr-only">
-                  Configure the declaration master, its statements, their fields and dropdown
-                  options.
-                </DialogDescription>
-              </DialogHeader>
+                  <DialogDescription className="sr-only">
+                    Configure the declaration master, its statements, their fields and dropdown
+                    options.
+                  </DialogDescription>
+                  <TabsList className="shrink-0">
+                    <TabsTrigger value="configuration">Configuration</TabsTrigger>
+                    {/* renders the unsaved draft, so it works for new masters too */}
+                    <TabsTrigger value="preview">Email preview</TabsTrigger>
+                  </TabsList>
+                </DialogHeader>
 
-              {/* Tab strip: its own full-width row under the header, still outside the scroll box. */}
-              <div className="shrink-0 border-b px-6 pb-3">
-                <TabsList className="justify-start">
-                  <TabsTrigger value="configuration">Configuration</TabsTrigger>
-                  {/* renders the unsaved draft, so it works for new masters too */}
-                  <TabsTrigger value="preview">Email preview</TabsTrigger>
-                </TabsList>
-              </div>
-
-              {/*
+                {/*
                 A fixed 72vh scroll box: the dialog is header + 72vh + footer no
                 matter which tab is active or how many statements the draft has,
                 so switching tabs never resizes the dialog — the content scrolls.
               */}
-              <div className="flex h-[72vh] min-h-[320px] flex-col overflow-y-auto px-6 py-5">
-                <TabsContent value="configuration" className="mt-0 flex-1 space-y-6">
-                  {/* ------------------------ master details ----------------------- */}
-                  <section className="space-y-4">
-                    <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      <Settings2 className="h-4 w-4 shrink-0" />
-                      Master details
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="space-y-2 min-w-0">
-                        <Label htmlFor="dm-name">Name</Label>
-                        <Input
-                          id="dm-name"
-                          value={masterForm.name}
-                          onChange={(e) => setMasterForm((f) => ({ ...f, name: e.target.value }))}
-                          placeholder="Fee Due Declaration"
-                          autoComplete="off"
-                          className="h-10 w-full"
-                        />
-                      </div>
-                      <div className="space-y-2 min-w-0">
-                        <Label htmlFor="dm-context">Context</Label>
-                        <Select
-                          value={masterForm.context}
-                          onValueChange={(v) =>
-                            setMasterForm((f) => ({ ...f, context: v as DeclarationContext }))
-                          }
-                        >
-                          <SelectTrigger id="dm-context" className="h-10 w-full">
-                            <SelectValue placeholder="Select context" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {DECLARATION_CONTEXTS.map((c) => (
-                              <SelectItem key={c} value={c}>
-                                {c}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2 min-w-0">
-                        <Label htmlFor="dm-template">Template</Label>
-                        <Input
-                          id="dm-template"
-                          value={masterForm.template}
-                          onChange={(e) =>
-                            setMasterForm((f) => ({ ...f, template: e.target.value }))
-                          }
-                          placeholder="fee-due-declaration"
-                          autoComplete="off"
-                          disabled={editingMasterId != null}
-                          readOnly={editingMasterId != null}
-                          aria-describedby={
-                            editingMasterId != null ? "dm-template-hint" : undefined
-                          }
-                          className={`h-10 w-full ${
-                            editingMasterId != null
-                              ? "cursor-not-allowed bg-muted text-muted-foreground"
-                              : ""
-                          }`}
-                        />
-                        {editingMasterId != null && (
-                          <p
-                            id="dm-template-hint"
-                            className="text-[11px] leading-snug text-muted-foreground"
-                          >
-                            Fixed after creation — it links this master to its email template.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </section>
-
-                  {/* -------------------------- statements ------------------------- */}
-                  <section className="space-y-3 border-t pt-5">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex h-[72vh] min-h-[320px] flex-col overflow-y-auto px-6 py-5">
+                  <TabsContent value="configuration" className="mt-0 flex-1 space-y-6">
+                    {/* ------------------------ master details ----------------------- */}
+                    <section className="space-y-4">
                       <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        <ListChecks className="h-4 w-4 shrink-0" />
-                        Statements
+                        <Settings2 className="h-4 w-4 shrink-0" />
+                        Master details
                       </p>
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="h-9 bg-purple-600 text-white hover:bg-purple-700"
-                        onClick={addStatement}
-                      >
-                        <PlusCircle className="mr-1 h-4 w-4" />
-                        Add statement
-                      </Button>
-                    </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2 min-w-0">
+                          <Label htmlFor="dm-name">Name</Label>
+                          <Input
+                            id="dm-name"
+                            value={masterForm.name}
+                            onChange={(e) => setMasterForm((f) => ({ ...f, name: e.target.value }))}
+                            placeholder="Fee Due Declaration"
+                            autoComplete="off"
+                            className="h-10 w-full"
+                          />
+                        </div>
+                        <div className="space-y-2 min-w-0">
+                          <Label htmlFor="dm-context">Context</Label>
+                          <Select
+                            value={masterForm.context}
+                            onValueChange={(v) =>
+                              setMasterForm((f) => ({ ...f, context: v as DeclarationContext }))
+                            }
+                          >
+                            <SelectTrigger id="dm-context" className="h-10 w-full">
+                              <SelectValue placeholder="Select context" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {DECLARATION_CONTEXTS.map((c) => (
+                                <SelectItem key={c} value={c}>
+                                  {c}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2 min-w-0">
+                          <Label htmlFor="dm-template">Template</Label>
+                          <Input
+                            id="dm-template"
+                            value={masterForm.template}
+                            onChange={(e) =>
+                              setMasterForm((f) => ({ ...f, template: e.target.value }))
+                            }
+                            placeholder="fee-due-declaration"
+                            autoComplete="off"
+                            disabled={editingMasterId != null}
+                            readOnly={editingMasterId != null}
+                            aria-describedby={
+                              editingMasterId != null ? "dm-template-hint" : undefined
+                            }
+                            className={`h-10 w-full ${
+                              editingMasterId != null
+                                ? "cursor-not-allowed bg-muted text-muted-foreground"
+                                : ""
+                            }`}
+                          />
+                          {editingMasterId != null && (
+                            <p
+                              id="dm-template-hint"
+                              className="text-[11px] leading-snug text-muted-foreground"
+                            >
+                              Fixed after creation — it links this master to its email template.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </section>
 
-                    {/*
+                    {/* -------------------------- statements ------------------------- */}
+                    <section className="space-y-3 border-t pt-5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          <ListChecks className="h-4 w-4 shrink-0" />
+                          Statements
+                        </p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-9 bg-purple-600 text-white hover:bg-purple-700"
+                          onClick={addStatement}
+                        >
+                          <PlusCircle className="mr-1 h-4 w-4" />
+                          Add statement
+                        </Button>
+                      </div>
+
+                      {/*
                       One line only — the per-row badge and the notice inside the
                       statement editor carry the full explanation.
                     */}
-                    {lockedStatementCount > 0 ? (
-                      <p className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
-                        <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                        <span>
-                          {lockedStatementCount} locked{" "}
-                          {lockedStatementCount === 1 ? "statement is" : "statements are"} already
-                          declared by students and can only be deactivated or reordered — use{" "}
-                          <strong>Add statement</strong> to introduce new wording.
-                        </span>
-                      </p>
-                    ) : null}
+                      {lockedStatementCount > 0 ? (
+                        <p className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
+                          <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                          <span>
+                            {lockedStatementCount} locked{" "}
+                            {lockedStatementCount === 1 ? "statement is" : "statements are"} already
+                            declared by students and can only be deactivated or reordered — use{" "}
+                            <strong>Add statement</strong> to introduce new wording.
+                          </span>
+                        </p>
+                      ) : null}
 
-                    <div className="rounded-md border">
-                      <Table containerClassName="min-w-0 !overflow-visible w-full">
-                        <TableHeader>
-                          <TableRow className="hover:bg-transparent">
-                            <TableHead style={{ width: 70 }}>Sr No</TableHead>
-                            <TableHead className="min-w-0">Statement</TableHead>
-                            <TableHead style={{ width: 110 }}>Required</TableHead>
-                            <TableHead style={{ width: 240 }}>Fields</TableHead>
-                            <TableHead className="text-right" style={{ width: 170 }}>
-                              Actions
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {draft.length === 0 ? (
+                      <div className="rounded-md border">
+                        <Table containerClassName="min-w-0 !overflow-visible w-full">
+                          <TableHeader>
                             <TableRow className="hover:bg-transparent">
-                              <TableCell
-                                colSpan={5}
-                                className="py-10 text-center text-sm text-muted-foreground"
-                              >
-                                No statements yet. Click <strong>Add statement</strong> to start.
-                              </TableCell>
+                              <TableHead style={{ width: 70 }}>Sr No</TableHead>
+                              <TableHead className="min-w-0">Statement</TableHead>
+                              <TableHead style={{ width: 110 }}>Required</TableHead>
+                              <TableHead style={{ width: 240 }}>Fields</TableHead>
+                              <TableHead className="text-right" style={{ width: 170 }}>
+                                Actions
+                              </TableHead>
                             </TableRow>
-                          ) : (
-                            draft.map((s, idx) => (
-                              <StatementRow
-                                key={s.key}
-                                value={s}
-                                index={idx}
-                                total={draft.length}
-                                onEdit={() => {
-                                  setNewStatementKey(null);
-                                  setEditingStatementKey(s.key);
-                                }}
-                                onChange={(patch) => patchStatementTracked(s.key, patch)}
-                                onRemove={() => removeStatement(s)}
-                                onMove={(direction) => moveStatement(idx, direction)}
-                              />
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </section>
-                </TabsContent>
+                          </TableHeader>
+                          <TableBody>
+                            {draft.length === 0 ? (
+                              <TableRow className="hover:bg-transparent">
+                                <TableCell
+                                  colSpan={5}
+                                  className="py-10 text-center text-sm text-muted-foreground"
+                                >
+                                  No statements yet. Click <strong>Add statement</strong> to start.
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              draft.map((s, idx) => (
+                                <StatementRow
+                                  key={s.key}
+                                  value={s}
+                                  index={idx}
+                                  total={draft.length}
+                                  onEdit={() => {
+                                    setNewStatementKey(null);
+                                    setEditingStatementKey(s.key);
+                                  }}
+                                  onChange={(patch) => patchStatementTracked(s.key, patch)}
+                                  onRemove={() => removeStatement(s)}
+                                  onMove={(direction) => moveStatement(idx, direction)}
+                                />
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </section>
+                  </TabsContent>
 
-                {/*
+                  {/*
                   Every state below fills the same box, so the dialog never
                   resizes. A re-render never blanks what is already on screen
                   either: the previous html stays put and an "Updating…" pill is
                   overlaid on top of it while the new one is fetched.
                 */}
-                <TabsContent value="preview" className="mt-0 flex min-h-0 flex-1 flex-col">
-                  <div className="relative flex min-h-0 flex-1 flex-col">
-                    {previewState?.kind === "error" ? (
-                      <div className="flex flex-1 items-center justify-center rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-                        {previewState.message}
-                      </div>
-                    ) : previewState?.kind === "ready" ? (
-                      previewState.data.kind === "EMAIL" ? (
-                        <iframe
-                          title="Email template preview"
-                          srcDoc={previewState.data.html}
-                          className="h-full min-h-0 w-full flex-1 rounded-md border bg-white"
-                          sandbox=""
-                        />
-                      ) : (
-                        <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-md border border-dashed p-6 text-center">
-                          <p className="text-sm text-muted-foreground">
-                            The &quot;{previewState.data.templateKey ?? masterForm.template.trim()}
-                            &quot; template could not be rendered.
-                          </p>
-                          {previewState.data.error ? (
-                            <p className="max-w-lg text-xs text-muted-foreground/80">
-                              {previewState.data.error}
-                            </p>
-                          ) : null}
+                  <TabsContent value="preview" className="mt-0 flex min-h-0 flex-1 flex-col">
+                    <div className="relative flex min-h-0 flex-1 flex-col">
+                      {previewState?.kind === "error" ? (
+                        <div className="flex flex-1 items-center justify-center rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                          {previewState.message}
                         </div>
-                      )
-                    ) : (
-                      // first render of this dialog — nothing to keep on screen yet
-                      <div className="flex flex-1 items-center justify-center rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-                        {previewLoading ? "Rendering the email preview…" : ""}
-                      </div>
-                    )}
+                      ) : previewState?.kind === "ready" ? (
+                        previewState.data.kind === "EMAIL" ? (
+                          <iframe
+                            title="Email template preview"
+                            srcDoc={previewState.data.html}
+                            className="h-full min-h-0 w-full flex-1 rounded-md border bg-white"
+                            sandbox=""
+                          />
+                        ) : (
+                          <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-md border border-dashed p-6 text-center">
+                            <p className="text-sm text-muted-foreground">
+                              The &quot;
+                              {previewState.data.templateKey ?? masterForm.template.trim()}
+                              &quot; template could not be rendered.
+                            </p>
+                            {previewState.data.error ? (
+                              <p className="max-w-lg text-xs text-muted-foreground/80">
+                                {previewState.data.error}
+                              </p>
+                            ) : null}
+                          </div>
+                        )
+                      ) : (
+                        // first render of this dialog — nothing to keep on screen yet
+                        <div className="flex flex-1 items-center justify-center rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                          {previewLoading ? "Rendering the email preview…" : ""}
+                        </div>
+                      )}
 
-                    {previewLoading && previewState != null ? (
-                      <div className="pointer-events-none absolute right-3 top-3 flex items-center gap-1.5 rounded-full border bg-background/90 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-sm backdrop-blur-sm">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        Updating…
-                      </div>
-                    ) : null}
-                  </div>
-                </TabsContent>
-              </div>
-            </Tabs>
+                      {previewLoading && previewState != null ? (
+                        <div className="pointer-events-none absolute right-3 top-3 flex items-center gap-1.5 rounded-full border bg-background/90 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-sm backdrop-blur-sm">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Updating…
+                        </div>
+                      ) : null}
+                    </div>
+                  </TabsContent>
+                </div>
+              </Tabs>
 
-            <DialogFooter className="shrink-0 flex-row items-center justify-between gap-2 border-t px-6 py-4 sm:justify-between">
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="dm-active"
-                  checked={masterForm.isActive}
-                  onCheckedChange={(c) => setMasterForm((f) => ({ ...f, isActive: c }))}
-                />
-                <Label htmlFor="dm-active" className="cursor-pointer text-sm font-normal">
-                  Active
-                </Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => void saveMaster()}
-                  disabled={saving}
-                  className="bg-purple-600 hover:bg-purple-700"
-                >
-                  {saving ? "Saving…" : "Save master"}
-                </Button>
-              </div>
-            </DialogFooter>
+              <DialogFooter className="shrink-0 flex-row items-center justify-between gap-2 border-t px-6 py-4 sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="dm-active"
+                    checked={masterForm.isActive}
+                    onCheckedChange={(c) => setMasterForm((f) => ({ ...f, isActive: c }))}
+                  />
+                  <Label htmlFor="dm-active" className="cursor-pointer text-sm font-normal">
+                    Active
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => void saveMaster()}
+                    disabled={saving}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    {saving ? "Saving…" : "Save master"}
+                  </Button>
+                </div>
+              </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
 

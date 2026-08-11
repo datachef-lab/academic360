@@ -22,7 +22,7 @@ export default function SubjectSelection() {
     cvac?: boolean;
   }>({});
 
-  // Check if student's program course contains "BBA"
+  // Check if student's programme course contains "BBA"
   const blocked = new Set(["BBA", "MA", "MCOM"]);
 
   const rawName = student?.programCourse?.course?.name ?? "";

@@ -78,7 +78,7 @@ export type ChallansByProgramRow = {
 export type EnrollmentMatrixCell = {
   paid: number;
   notPaid: number;
-  /** Students with a fee mapping in scope for this program course × semester. */
+  /** Students with a fee mapping in scope for this programme course × semester. */
   eligible: number;
 };
 

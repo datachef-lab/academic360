@@ -625,6 +625,20 @@ let firstTickTimer: NodeJS.Timeout | null = null;
  * early is safe (the first ticks just skip until the marker lands).
  */
 export function startLibrarySyncScheduler(): void {
+  // Only tick against the legacy IRP MySQL in production. Develop / staging
+  // point at the same read-only IRP replica, so a running dev scheduler
+  // races the prod one for the shared advisory lock and (worse) hammers
+  // legacy MySQL with duplicate queries. The paytm-downtime scheduler uses
+  // the same pattern — grep for "scheduler skipped: NODE_ENV is not
+  // production". Companion to the `library-legacy-load` skip in
+  // boot-migrations.ts, which turned off the one-time initial walk but
+  // left the periodic delta tick running.
+  if (process.env.NODE_ENV !== "production") {
+    log.info(
+      "library-legacy-sync scheduler skipped: NODE_ENV is not production",
+    );
+    return;
+  }
   if ((process.env.LIBRARY_LEGACY_SYNC ?? "").toLowerCase() === "off") {
     log.info("LIBRARY_LEGACY_SYNC=off — scheduler not started");
     return;

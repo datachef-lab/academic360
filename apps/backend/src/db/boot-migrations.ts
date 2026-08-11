@@ -14,13 +14,29 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { pool } from "@/db/index.js";
 import { createLogger } from "@/config/logger.js";
 import { runRegistrationYearDriftMigration } from "@/features/subject-selection/services/registration-year-drift-migration.service.js";
 import { runCuAdmitCardSemVSemVILoader } from "@/features/subject-selection/services/cu-admitcard-loader.service.js";
 import { runStreamMismatchHeal } from "@/features/subject-selection/services/stream-mismatch-heal.service.js";
 import { runLegacyFeesAmountHeal } from "@/features/fees/services/legacy-fees-amount-heal.service.js";
-import { runLibraryLegacyLoad } from "@/features/library/services/library-legacy-load.service.js";
+import {
+  loadDefaultDocuments,
+  loadDocumentTypesV2,
+} from "@/features/academics/services/document.service.js";
+import { runBoardSubjectDedupe } from "@/features/admissions/services/board-subject-dedupe.service.js";
+import { runIdCardLedgerBackfill } from "@/features/documents/services/idcard-ledger-backfill.service.js";
+import { runCuRegUploadLedgerBackfill } from "@/features/documents/services/cureg-upload-ledger-backfill.service.js";
+import { runTempAdmitCardLedgerBackfill } from "@/features/documents/services/temp-admit-card-ledger-backfill.service.js";
+import { runCuRegMissingUploadsBackfill } from "@/features/documents/services/cureg-missing-uploads-backfill.service.js";
+import { runCuRegPdfLedgerBackfill } from "@/features/documents/services/cureg-pdf-ledger-backfill.service.js";
+import { runLedgerTimestampHeal } from "@/features/documents/services/ledger-timestamp-heal.service.js";
+// TEMPORARILY DISABLED 2026-08-10 (ADR 0034) — re-enable together with the
+// commented boot-migration entry below when the timeout fix is proven stable.
+// import { runLibraryLegacyLoad } from "@/features/library/services/library-legacy-load.service.js";
 import { runLibraryMastersSeed } from "@/features/library/services/library-masters-seed.service.js";
+import { runSubjectGroupMnHeal } from "@/features/subject-selection/services/subject-group-mn-heal.service.js";
+import { reconcileStaleLegacyImportJobs } from "@/features/user/services/legacy-import-jobs.service.js";
 
 const log = createLogger("boot-migrations");
 
@@ -91,13 +107,141 @@ const MIGRATIONS: Migration[] = [
     run: async () => runStreamMismatchHeal({ commit: true }),
   },
   {
-    // Legacy fee-amount heal — reconciles fee_student_mappings /
-    // payments.amount against IRP's `Installment Total Amount To Pay`
-    // for every mapping outside the 2025-26 / 2026-27 Sem I fresh-admit
-    // scope. Idempotent: a mapping already matching IRP is skipped.
-    // See legacy-fees-amount-heal.service.ts for the exact rule.
-    name: "legacy-fees-amount-heal",
-    run: async () => runLegacyFeesAmountHeal({ commit: true, sampleLimit: 20 }),
+    // Consolidates BCom (H)/(G) Minor 3 (Sem III-VI) subject-based
+    // selections into single SUBJECT_GROUP rows for students whose
+    // registration academic year is 2023-24 or 2024-25. Picks were
+    // synced from the old DB as per-semester per-subject rows before
+    // SUBJECT_GROUP existed (ADR 0027). Runs AFTER stream-mismatch-heal
+    // so the meta assignment is already correct. State-based (skips
+    // students who already have an active SUBJECT_GROUP row for the
+    // same meta); ambiguous / no-match cases log and skip.
+    name: "subject-group-mn-heal",
+    run: async () => runSubjectGroupMnHeal(),
+  },
+  {
+    // Legacy fee-slab heal — re-points fee_student_mappings at the concession
+    // slab IRP actually granted (resolved from studentfeesconcessiontab,
+    // section-less, including students IRP has not billed yet) and reconciles
+    // total_payable / payments.amount, for every mapping outside the 2025-26 /
+    // 2026-27 Sem I fresh-admit scope. Idempotent: a matching mapping is
+    // skipped, and an admin's MANUAL edit is never reverted. See
+    // legacy-fees-amount-heal.service.ts for the exact rule.
+    //
+    // Multi-instance: a fleet-wide restart boots every instance at once. Take a
+    // session-scoped advisory lock so exactly ONE instance runs the (full,
+    // legacy-DB-scanning) heal; the rest skip. The winner writes the marker, so
+    // once it completes no instance re-runs it on a later restart.
+    name: "legacy-fees-slab-heal",
+    run: async () => {
+      const HEAL_LOCK_KEY = 918360007;
+      const lockClient = await pool.connect();
+      try {
+        const { rows } = await lockClient.query<{ locked: boolean }>(
+          "SELECT pg_try_advisory_lock($1) AS locked",
+          [HEAL_LOCK_KEY],
+        );
+        if (rows[0]?.locked !== true) {
+          return { skipped: "another instance holds the fee-slab heal lock" };
+        }
+        try {
+          return await runLegacyFeesAmountHeal({
+            commit: true,
+            sampleLimit: 20,
+          });
+        } finally {
+          await lockClient.query("SELECT pg_advisory_unlock($1)", [
+            HEAL_LOCK_KEY,
+          ]);
+        }
+      } finally {
+        lockClient.release();
+      }
+    },
+  },
+  {
+    // Seeds document_types and back-fills the classification columns on the
+    // six upload rows that predate the documents module. Marker-guarded, so
+    // unlike the state-based migrations above it runs on exactly one boot —
+    // a type an admin later renames, edits or deletes must stay that way.
+    name: "document-types-seed",
+    run: async () => loadDefaultDocuments(),
+  },
+  {
+    // Collapses duplicate board_subjects and installs the unique constraint that
+    // makes the duplication impossible. Normally migration 0179 has already done
+    // it; this self-heals a database where migrations were skipped. Takes its
+    // OWN advisory lock, so it is multi-instance safe on its own.
+    name: "board-subject-dedupe",
+    run: async () => runBoardSubjectDedupe(),
+  },
+  {
+    // Second document-types step: the three university-issued types
+    // (marksheet / degree / registration certificate) and the "Exam Admit Card"
+    // -> "University Admit Card" rename. Separate marker because the seed above
+    // has already run everywhere and returns on its own marker before it ever
+    // reads the list. Matches on `code`, so an admin-renamed row is still found,
+    // and the rename only touches a name still reading the original.
+    name: "document-types-seed-v2",
+    run: async () => loadDocumentTypesV2(),
+  },
+  {
+    // Gives every existing ID card issue its document_ledger entry. Runs after
+    // the seed above, which is what creates the ID_CARD document type. State-based
+    // (the work item is "issues with a NULL ledger FK"), so a second boot does
+    // nothing and it self-heals as the legacy sync adds rows.
+    name: "idcard-ledger-backfill",
+    run: async () => runIdCardLedgerBackfill(),
+  },
+  {
+    // Same treatment for the documents students upload during CU registration.
+    // State-based for the same reason: the rows are derived from
+    // cu_registration_document_uploads, so re-deriving them is always correct.
+    name: "cureg-upload-ledger-backfill",
+    run: async () => runCuRegUploadLedgerBackfill(),
+  },
+  {
+    // Projects `temp_admit_card_distributions` into `document_batch_receipts` +
+    // `document_ledger` — the exam admit card flow was the last of the five
+    // documents (per decisions/models/documents.md) still keeping its own
+    // private record. State-based via a new document_ledger_id_fk back-link
+    // column on temp; live writes on either side keep both tables in step.
+    name: "temp-admit-card-ledger-backfill",
+    run: async () => runTempAdmitCardLedgerBackfill(),
+  },
+  {
+    // Adds PENDING document_ledger rows for CU-registration uploads a student
+    // was REQUIRED to submit but hasn't — so the passbook shows the omission
+    // instead of a silent gap. Real uploads (already handled by
+    // cureg-upload-ledger-backfill) block a duplicate PENDING insert via a
+    // NOT EXISTS on (promotion, docType, isSelfSourced=true, batch IS NULL).
+    // Scoped to the two most recent academic years to keep mutable-field
+    // evaluation (EWS status, family membership) point-in-time-honest.
+    name: "cureg-missing-uploads-backfill",
+    run: async () => runCuRegMissingUploadsBackfill(),
+  },
+  {
+    // Backfills CU_REGISTRATION_PDF upload + ledger rows for correction
+    // requests that reached ONLINE_REGISTRATION_DONE BEFORE the
+    // `recordGeneratedCuRegPdf` helper shipped. Those PDFs were generated,
+    // uploaded to S3 and emailed to students, but were never written to
+    // cu_registration_document_uploads (so cureg-upload-ledger-backfill
+    // above had nothing to project). Reconstructs the canonical S3 URL
+    // from the deterministic path helper — no re-upload. State-based:
+    // skips any request whose upload row is already present.
+    name: "cureg-pdf-ledger-backfill",
+    run: async () => runCuRegPdfLedgerBackfill(),
+  },
+  {
+    // Reconciles document_ledger.created_at / collected_at with the source
+    // table's back-link timestamps. Earlier versions of the three backfills
+    // above wrote NOW() at insert-time; the document_ledger_id_fk back-link
+    // then blocked a re-write. This heal is state-based (only UPDATEs rows
+    // where the two timestamps still diverge), so a second boot after
+    // everything reconciles is a zero-row no-op. Also pulls synthetic
+    // "University Admit Card Distribution" batches back to their earliest
+    // child ledger row's clock.
+    name: "ledger-timestamp-heal",
+    run: async () => runLedgerTimestampHeal(),
   },
   {
     // Seeds the library masters — branch, patron & item categories, zones,
@@ -110,25 +254,100 @@ const MIGRATIONS: Migration[] = [
     run: async () => runLibraryMastersSeed(),
   },
   {
-    // Loads the library data from IRP. Unlike everything above it is a long
-    // walk (~200k legacy rows), so it takes its OWN advisory lock: the
-    // resolvers are find-or-create, which makes a sequential re-run safe but
-    // not two instances running at once, and no legacy id column carries a
-    // unique constraint to catch the collision. Marker-guarded once it
-    // completes; LIBRARY_LEGACY_LOAD=off disables it.
-    name: "library-legacy-load",
-    run: async () => runLibraryLegacyLoad(),
+    // Time-based reconcile of stale legacy-import jobs. Any row still marked
+    // queued/running whose updated_at is older than 15 min is dead (a healthy
+    // job's persistProgress bumps updated_at every ~1s). Safe under a rolling
+    // deploy — an actively-running peer's row is never stale, so this cannot
+    // kill a live job. See legacy-import-jobs.service.ts for the query.
+    name: "legacy-import-boot-reconcile",
+    run: async () => reconcileStaleLegacyImportJobs(),
   },
+  // TEMPORARILY DISABLED 2026-08-10 (ADR 0034): the legacy load is a multi-
+  // hour walk that competes for DB connections while the excel-UID importer
+  // is running. Combined with the withAdvisoryXactLock hang we hit today, it
+  // amplified the deadlock's blast radius. Re-enable by uncommenting once the
+  // timeout fix is proven stable and the initial load is confirmed complete
+  // (boot_migration_markers row 'library-legacy-load-v1' present).
+  // {
+  //   name: "library-legacy-load",
+  //   run: async () => runLibraryLegacyLoad(),
+  // },
 ];
+
+/**
+ * Advisory-lock key for the whole boot-migration run.
+ *
+ * Production runs MULTIPLE backend instances, and every one of them calls this
+ * on startup. Without a lock they interleave: two instances both see the same
+ * "work item" (a NULL FK, a missing marker), both act on it, and the loser's
+ * write is duplicated or orphaned. That is not theoretical — it produced 2,412
+ * orphaned document_ledger rows on dev when a manual backfill overlapped a boot.
+ *
+ * `pg_try_advisory_lock` returns immediately rather than queueing: the instance
+ * that wins runs the migrations, the others skip and move on with their startup.
+ * Nothing is lost — every migration here is state-based or marker-guarded, so
+ * whatever the winner does not finish is picked up on the next boot.
+ *
+ * The lock is session-scoped, so it is released automatically if an instance
+ * crashes mid-run. Arbitrary but fixed constant; do not reuse it elsewhere.
+ */
+const BOOT_MIGRATION_ADVISORY_LOCK_KEY = 918360001;
 
 export async function runBootMigrations(): Promise<void> {
   if ((process.env.BACKEND_BOOT_MIGRATIONS ?? "").toLowerCase() === "off") {
     log.info("BACKEND_BOOT_MIGRATIONS=off — skipping boot migrations");
     return;
   }
+
+  // Held on a dedicated connection for the whole run — advisory locks belong to
+  // a session, so it must be the same client that unlocks.
+  const lockClient = await pool.connect();
+  let holdsLock = false;
+  try {
+    const res = await lockClient.query<{ locked: boolean }>(
+      "SELECT pg_try_advisory_lock($1) AS locked",
+      [BOOT_MIGRATION_ADVISORY_LOCK_KEY],
+    );
+    holdsLock = res.rows[0]?.locked === true;
+
+    if (!holdsLock) {
+      log.info(
+        "another instance is running boot migrations — skipping (they are state-based; the next boot picks up anything unfinished)",
+      );
+      return;
+    }
+
+    await runMigrationList();
+  } finally {
+    if (holdsLock) {
+      await lockClient
+        .query("SELECT pg_advisory_unlock($1)", [
+          BOOT_MIGRATION_ADVISORY_LOCK_KEY,
+        ])
+        .catch((err) =>
+          log.warn(
+            `failed to release the boot-migration advisory lock: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+    }
+    lockClient.release();
+  }
+}
+
+async function runMigrationList(): Promise<void> {
   for (const m of MIGRATIONS) {
     const started = Date.now();
     try {
+      if (
+        process.env.NODE_ENV &&
+        process.env.NODE_ENV === "development" &&
+        m.name === "library-legacy-load"
+      ) {
+        log.info(
+          `[${m.name}] skipping library-legacy-load in development mode`,
+        );
+        continue;
+      }
       const result = await m.run();
       const ms = Date.now() - started;
       log.info(`[${m.name}] done in ${ms}ms`, result);

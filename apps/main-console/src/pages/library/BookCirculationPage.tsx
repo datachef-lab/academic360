@@ -1122,7 +1122,7 @@ export default function BookCirculationPage() {
                       <span className="font-medium">{previewUser.uid || "-"}</span>
                     </div>
                     <div className="flex gap-2">
-                      <span className="min-w-[120px] text-slate-500">Program Course:</span>
+                      <span className="min-w-[120px] text-slate-500">Programme Course:</span>
                       <span className="font-medium">{previewBatchProgram}</span>
                     </div>
                     <div className="flex gap-2">

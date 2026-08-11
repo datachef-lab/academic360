@@ -1067,7 +1067,7 @@ function CatalogueGroupTab({
 
 /**
  * Holidays tab — three tables in one view:
- *  1. Top stat cards (total holidays, active class assignments, program courses,
+ *  1. Top stat cards (total holidays, active class assignments, programme courses,
  *     semesters covered).
  *  2. Holiday calendar — one row per holiday, with the dd/mm/yyyy range and
  *     how many class assignments mark it as a holiday.
@@ -1105,7 +1105,7 @@ function HolidaysTab() {
         <GradientStatCard
           gradient={GRADIENTS.violet}
           icon={Boxes}
-          label="Program courses"
+          label="Programme courses"
           value={formatCompactIN(report?.totals.programCourses ?? 0)}
           hint="with a holiday mapping"
         />

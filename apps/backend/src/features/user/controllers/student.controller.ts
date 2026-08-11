@@ -31,6 +31,18 @@ import {
   getStudentShiftChangePreview,
 } from "../services/student-shift-change.service.js";
 import { updateActivePromotionFields } from "../services/student-active-promotion-fields.service.js";
+import {
+  computeFileHash,
+  createLegacyImportJob,
+  markLegacyImportJobRunning,
+  completeLegacyImportJob,
+  failLegacyImportJob,
+  getLegacyImportJob,
+  getLegacyImportJobFile,
+  findActiveJobByFileHash,
+  downloadPathForJob,
+  LegacyImportJobDuplicateError,
+} from "../services/legacy-import-jobs.service.js";
 
 export const createStudent = async (
   req: Request,
@@ -365,6 +377,7 @@ export const updateStudentStatus = async (
       alumni,
       rfidNumber,
       quotaTypeId,
+      noShowRemarks,
     } = req.body as any;
 
     // If cancelled and no explicit user id provided, take from auth context
@@ -402,6 +415,8 @@ export const updateStudentStatus = async (
       rfidNumber,
       // Pass through quota type so service can persist it
       quotaTypeId,
+      // Registrar free-text captured when NO_SHOW is chosen.
+      noShowRemarks,
     });
 
     if (!result) {
@@ -846,6 +861,14 @@ export const precheckImportStudentsController = async (
 };
 
 // Import students from Excel (UID column) and run legacy processStudent
+//
+// Multi-instance shape (ADR 0030): the job is a `legacy_import_jobs` row in
+// Postgres — createed here, updated by the orchestrator, terminal-stated on
+// completion / failure. Socket carries live progress; the status endpoint
+// (`GET /status/:jobId`) is the poll-fallback served by ANY instance; the
+// error-report download reads the `bytea` column (also any instance). All
+// three used to live in per-process memory + local disk and 404'd behind
+// the ALB.
 export const importStudentsFromExcelController = async (
   req: Request,
   res: Response,
@@ -862,42 +885,110 @@ export const importStudentsFromExcelController = async (
       return;
     }
 
-    const progressUserId = (req as any).user?.id
-      ? String((req as any).user.id)
-      : undefined;
+    const uploaderUserIdRaw = (req as any).user?.id ?? null;
+    const uploaderUserId =
+      typeof uploaderUserIdRaw === "number"
+        ? uploaderUserIdRaw
+        : uploaderUserIdRaw != null && !Number.isNaN(Number(uploaderUserIdRaw))
+          ? Number(uploaderUserIdRaw)
+          : null;
+    const progressUserId =
+      uploaderUserIdRaw != null ? String(uploaderUserIdRaw) : undefined;
     // Shown to OTHER uploaders who hit the same UID while this import runs.
     const uploaderName = (req as any).user?.name
       ? String((req as any).user.name)
       : (req as any).user?.email
         ? String((req as any).user.email)
         : null;
+
+    // Dedupe double-submit (accidental double-click on the Import button OR
+    // the same file uploaded from two different tabs / machines): if a row
+    // for the same file bytes is already `queued`/`running` we reject with
+    // 409 pointing at the in-flight job instead of spawning a rival run.
+    // The Postgres row is the multi-instance-safe lock.
+    const fileHash = computeFileHash(file.buffer);
+    const active = await findActiveJobByFileHash(fileHash);
+    if (active) {
+      res.status(409).json(
+        new ApiResponse(
+          409,
+          "ALREADY_IN_PROGRESS",
+          {
+            jobId: active.jobId,
+            status: active.status,
+            startedAt: active.startedAt,
+            uploaderName: active.uploaderName,
+          },
+          `This file is already being imported by ${active.uploaderName ?? "another user"} (started ${active.startedAt}). Refresh to see progress.`,
+        ),
+      );
+      return;
+    }
+
+    let job;
+    try {
+      job = await createLegacyImportJob({
+        uploaderUserId,
+        uploaderName,
+        fileName: file.originalname ?? null,
+        fileHash,
+        totalUids: 0, // set after parse inside processStudentsFromExcelBuffer
+      });
+    } catch (e) {
+      // Rival instance won the race between our findActiveJobByFileHash
+      // check and INSERT — the UNIQUE partial index on file_hash caught
+      // it. Same 409 shape as the pre-check path.
+      if (e instanceof LegacyImportJobDuplicateError) {
+        res.status(409).json(
+          new ApiResponse(
+            409,
+            "ALREADY_IN_PROGRESS",
+            {
+              jobId: e.winner.jobId,
+              status: e.winner.status,
+              startedAt: e.winner.startedAt,
+              uploaderName: e.winner.uploaderName,
+            },
+            `This file is already being imported by ${e.winner.uploaderName ?? "another user"} (started ${e.winner.startedAt}). Refresh to see progress.`,
+          ),
+        );
+        return;
+      }
+      throw e;
+    }
+
     // Run the import in the BACKGROUND and respond immediately: the ALB cuts
-    // idle HTTP connections (~60s) long before a big import finishes, which
-    // used to surface as "Network Error" and swallow the final summary. The
-    // per-student progress is already socket-driven; the final summary (incl.
-    // the per-uid error list) is now delivered the same way.
+    // idle HTTP connections (~60s) long before a big import finishes.
+    // Per-student progress: socket to the uploader. Terminal state: written
+    // to the job row so any instance can serve status + error-report
+    // download (multi-instance behind the ALB, no sticky sessions).
     const operation = "student_import_legacy_students";
-    void processStudentsFromExcelBuffer(file.buffer, {
-      progressUserId,
-      uploaderName,
-    })
-      .then(async (summary) => {
-        if (!progressUserId) return;
-        // Failed / not-found UIDs must survive the popup: write them to an
-        // Excel the UI can download and hand back for review + re-upload.
-        // The popup used to show only the first 10 errors with no way to get
-        // the rest.
-        let errorReportFileName: string | null = null;
+    void (async () => {
+      try {
+        await markLegacyImportJobRunning(job.jobId);
+        const summary = await processStudentsFromExcelBuffer(file.buffer, {
+          progressUserId,
+          uploaderName,
+          jobId: job.jobId,
+        });
+        // Failed / not-found UIDs must survive the popup: build the XLSX
+        // IN-MEMORY and persist as `bytea` on the job row. The old flow
+        // wrote it under `logs/import-error-reports/` and 404'd when the
+        // download landed on a sibling instance.
+        let errorReport: { name: string; bytes: Buffer } | null = null;
         if (summary.errors.length > 0 || summary.notFoundUids.length > 0) {
           try {
-            errorReportFileName = await writeImportErrorReport(summary);
+            errorReport = buildImportErrorReport(summary);
           } catch (e) {
             console.error(
-              "[import-legacy-students] error report write failed:",
+              "[import-legacy-students] error report build failed:",
               (e as Error)?.message,
             );
           }
         }
+        await completeLegacyImportJob(job.jobId, summary, errorReport);
+
+        if (!progressUserId) return;
         socketService.sendProgressUpdate(
           progressUserId,
           socketService.createExportProgressUpdate(
@@ -908,14 +999,29 @@ export const importStudentsFromExcelController = async (
             undefined,
             undefined,
             undefined,
-            { operation, summary, errorReportFileName },
+            {
+              operation,
+              // Deliberately NOT named `jobId` — the main-console progress
+              // handler treats `meta.jobId` as the active REPORT-download
+              // identifier (activeJobIdRef.current), and would drop events
+              // whose jobId doesn't match. Legacy-import uses its own key.
+              importJobId: job.jobId,
+              summary,
+              errorReportAvailable: Boolean(errorReport),
+              errorReportUrl: errorReport
+                ? downloadPathForJob(job.jobId)
+                : null,
+            },
           ),
         );
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error(
           "[import-legacy-students] background import failed:",
           error,
+        );
+        await failLegacyImportJob(
+          job.jobId,
+          (error as Error)?.message || "Import failed",
         );
         if (!progressUserId) return;
         socketService.sendProgressUpdate(
@@ -928,17 +1034,18 @@ export const importStudentsFromExcelController = async (
             undefined,
             undefined,
             (error as Error)?.message,
-            { operation },
+            { operation, importJobId: job.jobId },
           ),
         );
-      });
+      }
+    })();
     res
       .status(202)
       .json(
         new ApiResponse(
           202,
           "SUCCESS",
-          { status: "started" },
+          { jobId: job.jobId, status: "queued" },
           "Import started; progress and the final summary arrive via socket",
         ),
       );
@@ -948,17 +1055,17 @@ export const importStudentsFromExcelController = async (
 };
 
 /**
- * Writes the failed / not-found UIDs of a legacy import run to an Excel under
- * logs/import-error-reports and returns the file name. The completion popup
- * offers it for download so users can review — and re-upload — exactly the
- * UIDs that did not land, instead of seeing only the first 10 in a popup.
+ * Build the failed / not-found error report as an in-memory XLSX Buffer.
+ * The buffer is persisted to `legacy_import_jobs.error_report_bytes` and
+ * served from any instance — replaces the old local-disk write under
+ * `logs/import-error-reports/` which 404'd behind the ALB.
  */
-async function writeImportErrorReport(summary: {
+function buildImportErrorReport(summary: {
   processed: number;
   notFound: number;
   notFoundUids: string[];
   errors: Array<{ uid: string; error: string }>;
-}): Promise<string> {
+}): { name: string; bytes: Buffer } {
   const rows = [
     ...summary.errors.map((e) => ({
       UID: e.uid,
@@ -975,38 +1082,91 @@ async function writeImportErrorReport(summary: {
   ws["!cols"] = [{ wch: 14 }, { wch: 11 }, { wch: 80 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Import Errors");
-
-  const fs = await import("fs").then((m) => m.promises);
-  const dir = "./logs/import-error-reports";
-  await fs.mkdir(dir, { recursive: true });
-  const fileName = `import-errors-${new Date().toISOString().replace(/[:.]/g, "-")}.xlsx`;
-  const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
-  await fs.writeFile(`${dir}/${fileName}`, buffer);
-  return fileName;
+  const name = `import-errors-${new Date().toISOString().replace(/[:.]/g, "-")}.xlsx`;
+  const bytes = XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
+  return { name, bytes };
 }
 
+// GET /api/students/import-legacy-students/error-report/:jobId
+//   Streams the error-report XLSX from `legacy_import_jobs.error_report_bytes`.
+//   Any instance can serve it — no local-disk dependency, no 404s behind
+//   the ALB. (The old route path `:fileName` is intentionally the same
+//   segment so an existing bookmark hitting an old-format name will 400
+//   cleanly at the UUID check rather than opening a filesystem lookup.)
 export const downloadImportErrorReportController = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-    const fileName = String(req.params.fileName || "");
-    // Strict allowlist: these names are generated by writeImportErrorReport
-    // only — anything else (path traversal, other files) is rejected.
-    if (!/^import-errors-[\w-]+\.xlsx$/.test(fileName)) {
-      res.status(400).json(new ApiError(400, "Invalid file name"));
+    const jobId = String(req.params.jobId || req.params.fileName || "");
+    if (!/^[0-9a-fA-F-]{36}$/.test(jobId)) {
+      res
+        .status(400)
+        .json(
+          new ApiError(
+            400,
+            "Invalid job id — the error-report URL is now keyed on the import jobId (uuid). Please re-run the import to get a fresh URL.",
+          ),
+        );
       return;
     }
-    const filePath = `./logs/import-error-reports/${fileName}`;
-    const fs = await import("fs").then((m) => m.promises);
-    try {
-      await fs.access(filePath);
-    } catch {
-      res.status(404).json(new ApiError(404, "Report not found"));
+    const file = await getLegacyImportJobFile(jobId);
+    if (!file) {
+      res.status(404).json(new ApiError(404, "Report not found or expired"));
       return;
     }
-    res.download(filePath, fileName);
+    const filename = file.name ?? `import-errors-${jobId}.xlsx`;
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(file.bytes);
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+// GET /api/students/import-legacy-students/status/:jobId
+//   Fallback for the socket stream — if the user's browser missed the
+//   completion event (drop / reconnect on a different instance), the UI
+//   polls this to reach a terminal state. Served by ANY instance.
+export const getImportJobStatusController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const jobId = String(req.params.jobId || "");
+    if (!/^[0-9a-fA-F-]{36}$/.test(jobId)) {
+      res.status(400).json(new ApiError(400, "Invalid job id"));
+      return;
+    }
+    const job = await getLegacyImportJob(jobId);
+    if (!job) {
+      res.status(404).json(new ApiError(404, "Job not found or expired"));
+      return;
+    }
+    res.status(200).json(
+      new ApiResponse(200, "SUCCESS", {
+        jobId: job.jobId,
+        status: job.status,
+        totalUids: job.totalUids,
+        processed: job.processed,
+        notFound: job.notFound,
+        errorCount: job.errorCount,
+        uploaderName: job.uploaderName,
+        startedAt: job.startedAt,
+        updatedAt: job.updatedAt,
+        finishedAt: job.finishedAt,
+        summary: job.summary,
+        errorReportAvailable: job.hasErrorReport,
+        errorReportUrl: job.hasErrorReport
+          ? downloadPathForJob(job.jobId)
+          : null,
+      }),
+    );
   } catch (error) {
     handleError(error, res, next);
   }

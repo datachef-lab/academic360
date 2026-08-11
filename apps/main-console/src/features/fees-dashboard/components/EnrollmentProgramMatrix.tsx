@@ -54,7 +54,7 @@ export function EnrollmentProgramMatrix() {
   });
 
   return (
-    <CompactPanel title="Program course × semester (paid / due / eligible students)" noPadding>
+    <CompactPanel title="Programme course × semester (paid / due / eligible students)" noPadding>
       {rows.length === 0 && !dashboardLoading ? (
         <DashboardEmptyState message="No enrollment fee mappings found." />
       ) : (
@@ -62,7 +62,7 @@ export function EnrollmentProgramMatrix() {
           <FeesTableHeader multiRow>
             <FeesTableHeaderRow>
               <FeesTableHead rowSpan={2} className="w-[22%] align-bottom">
-                Program course
+                Programme course
               </FeesTableHead>
               {semesters.map((sem) => (
                 <FeesTableHead key={sem} colSpan={3} className="border-b-0 text-center">

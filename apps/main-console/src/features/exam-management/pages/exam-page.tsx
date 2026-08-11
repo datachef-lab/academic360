@@ -696,7 +696,7 @@ export default function ExamPage() {
                 className="flex-shrink-0 text-gray-500 font-bold p-1 border-r flex items-center justify-center"
                 style={{ width: "45%" }}
               >
-                Program Courses
+                Programme Courses
               </div>
 
               <div

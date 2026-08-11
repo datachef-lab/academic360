@@ -226,6 +226,7 @@ import statusRouter from "@/features/library/routes/status.route.js";
 import journalTypeRouter from "@/features/library/routes/journal-type.route.js";
 import libraryArticleRouter from "@/features/library/routes/library-article.route.js";
 import libraryDocumentTypeRouter from "@/features/library/routes/library-document-type.route.js";
+import documentBatchReceiptRouter from "@/features/documents/routes/document-batch-receipt.route.js";
 import bindingRouter from "@/features/library/routes/binding.route.js";
 import borrowingTypeRouter from "@/features/library/routes/borrowing-type.route.js";
 import enclosureRouter from "@/features/library/routes/enclosure.route.js";
@@ -645,6 +646,12 @@ app.use("/api/countries", countryRouter);
 app.use("/api/states", stateRouter);
 
 app.use("/api/cities", cityRouter);
+
+// Batch receipts: bundles of university-issued documents, and the ledger
+// entries their ADMINISTRATIVE step creates. Mounted BEFORE the document-types
+// router: both live under /api/documents, and the more specific prefix has to
+// be matched first.
+app.use("/api/documents/batch-receipts", documentBatchReceiptRouter);
 
 app.use("/api/documents", documentRouter);
 

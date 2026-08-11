@@ -12,8 +12,8 @@ import {
   personModel,
   familyModel,
 } from "@repo/db/schemas/models/user";
+import { documentTypeModel } from "@repo/db/schemas/models/documents";
 import {
-  documentModel,
   sessionModel,
   academicYearModel,
 } from "@repo/db/schemas/models/academics";
@@ -69,6 +69,11 @@ import { getCuRegPdfPathDynamic } from "./cu-registration-document-path.service.
 import { getSignedUrlForFile } from "@/services/s3.service.js";
 import axios from "axios";
 import { UserDto } from "@repo/db/index.js";
+import {
+  deleteCuRegUploadLedgerEntry,
+  upsertCuRegUploadLedgerEntry,
+} from "@/features/documents/services/document-ledger.service.js";
+import { recordGeneratedCuRegPdf } from "./cu-registration-document-upload.service.js";
 
 // Environment detection helpers
 const shouldRedirectToDeveloper = () => {
@@ -977,6 +982,18 @@ export async function updateCuRegistrationCorrectionRequest(
               applicationNumber,
             },
           );
+
+          // Record it. Until now this path generated the PDF and emailed it but
+          // wrote nothing down, so a staff submission left no upload row and no
+          // passbook entry.
+          await recordGeneratedCuRegPdf(
+            {
+              correctionRequestId: id,
+              applicationNumber,
+              documentUrl: pdfResult.s3Url || pdfResult.pdfPath || "",
+            },
+            tx,
+          );
         } else {
           console.error("[CU-REG CORRECTION][UPDATE] PDF generation failed", {
             error: pdfResult.error,
@@ -1376,7 +1393,36 @@ export async function updateCuRegistrationCorrectionRequest(
     if (Array.isArray(docs) && docs.length > 0) {
       for (const d of docs) {
         if (!d?.documentId) continue;
-        // Replace existing record for this request+documentId with latest metadata
+        // Replace existing record for this request+documentId with latest metadata.
+        // This is a hard delete + insert, so the row id changes — the passbook
+        // entry has to be dropped with the old row and recreated for the new one,
+        // or the FK would be left pointing at a deleted upload.
+        const [outgoing] = await tx
+          .select({
+            id: cuRegistrationDocumentUploadModel.id,
+            documentLedgerId:
+              cuRegistrationDocumentUploadModel.documentLedgerId,
+          })
+          .from(cuRegistrationDocumentUploadModel)
+          .where(
+            and(
+              eq(
+                cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
+                id,
+              ),
+              eq(cuRegistrationDocumentUploadModel.documentId, d.documentId),
+            ),
+          )
+          .limit(1);
+
+        if (outgoing) {
+          await deleteCuRegUploadLedgerEntry(
+            outgoing.id,
+            outgoing.documentLedgerId,
+            tx,
+          );
+        }
+
         await tx
           .delete(cuRegistrationDocumentUploadModel)
           .where(
@@ -1389,16 +1435,30 @@ export async function updateCuRegistrationCorrectionRequest(
             ),
           );
 
-        await tx.insert(cuRegistrationDocumentUploadModel).values({
-          cuRegistrationCorrectionRequestId: id,
-          documentId: d.documentId,
-          fileName: d.fileName ?? null,
-          fileType: d.fileType ?? null,
-          fileSize: (d as any).fileSize ?? null,
-          path: (d as any).path ?? null,
-          documentUrl: (d as any).documentUrl ?? null,
-          remarks: d.remarks ?? null,
-        });
+        const [reinserted] = await tx
+          .insert(cuRegistrationDocumentUploadModel)
+          .values({
+            cuRegistrationCorrectionRequestId: id,
+            documentId: d.documentId,
+            fileName: d.fileName ?? null,
+            fileType: d.fileType ?? null,
+            fileSize: (d as any).fileSize ?? null,
+            path: (d as any).path ?? null,
+            documentUrl: (d as any).documentUrl ?? null,
+            remarks: d.remarks ?? null,
+          })
+          .returning();
+
+        if (reinserted) {
+          await upsertCuRegUploadLedgerEntry(
+            {
+              ...reinserted,
+              studentId: existing.studentId,
+              academicYearId: existing.academicYearId ?? null,
+            },
+            tx,
+          );
+        }
       }
     }
 
@@ -1564,6 +1624,14 @@ export async function updateCuRegistrationCorrectionRequest(
             note: "Application number unchanged - PDF contains updated student data",
           },
         );
+
+        // A regeneration keeps the same application number, so this updates the
+        // existing row and refreshes its passbook entry rather than adding one.
+        await recordGeneratedCuRegPdf({
+          correctionRequestId: id,
+          applicationNumber: existingApplicationNumber,
+          documentUrl: pdfResult.s3Url || pdfResult.pdfPath || "",
+        });
 
         // Send email notification with PDF attachment (same as student console)
         // Only send notifications if CU application number is not null
@@ -2210,19 +2278,22 @@ async function modelToDto(
       createdAt: cuRegistrationDocumentUploadModel.createdAt,
       updatedAt: cuRegistrationDocumentUploadModel.updatedAt,
       document: {
-        id: documentModel.id,
-        name: documentModel.name,
-        description: documentModel.description,
-        sequence: documentModel.sequence,
-        isActive: documentModel.isActive,
-        createdAt: documentModel.createdAt,
-        updatedAt: documentModel.updatedAt,
+        id: documentTypeModel.id,
+        code: documentTypeModel.code,
+        name: documentTypeModel.name,
+        description: documentTypeModel.description,
+        sequence: documentTypeModel.sequence,
+        isActive: documentTypeModel.isActive,
+        bgColor: documentTypeModel.bgColor,
+        textColor: documentTypeModel.textColor,
+        createdAt: documentTypeModel.createdAt,
+        updatedAt: documentTypeModel.updatedAt,
       },
     })
     .from(cuRegistrationDocumentUploadModel)
     .leftJoin(
-      documentModel,
-      eq(cuRegistrationDocumentUploadModel.documentId, documentModel.id),
+      documentTypeModel,
+      eq(cuRegistrationDocumentUploadModel.documentId, documentTypeModel.id),
     )
     .where(
       eq(
@@ -4488,6 +4559,14 @@ async function tmptriggerNotif(
       );
 
     if (pdfResult.success) {
+      // Same recording gap here — this helper regenerates and emails without
+      // writing anything down.
+      await recordGeneratedCuRegPdf({
+        correctionRequestId: cuRegReqCorrection.id!,
+        applicationNumber: existingApplicationNumber,
+        documentUrl: pdfResult.s3Url || pdfResult.pdfPath || "",
+      });
+
       console.info(
         "[CU-REG CORRECTION][UPDATE] PDF regenerated successfully with updated data",
         {

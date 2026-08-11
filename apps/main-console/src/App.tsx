@@ -537,6 +537,18 @@ const router = createBrowserRouter(
               path: "declaration-masters",
               element: <documentIssuanceModule.DeclarationMastersPage />,
             },
+            {
+              path: "batch-receipt",
+              element: <documentIssuanceModule.DocumentBatchReceiptPage />,
+            },
+            {
+              path: "student-ledger",
+              element: <documentIssuanceModule.StudentLedgerPage />,
+            },
+            {
+              path: "requests",
+              element: <documentIssuanceModule.DocumentRequestsPage />,
+            },
           ],
         },
         {

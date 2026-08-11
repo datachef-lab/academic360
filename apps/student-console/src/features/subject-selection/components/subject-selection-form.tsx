@@ -23,7 +23,7 @@ import { fetchRestrictedGroupings } from "@/services/restricted-grouping";
 
 /**
  * One dropdown, derived from one subject-selection meta. The server decides
- * which metas apply to this student (stream / program course / academic year)
+ * which metas apply to this student (stream / programme course / academic year)
  * and which subjects each offers, so the form no longer hardcodes
  * minor1/minor2/idc1/... slots.
  */
@@ -40,6 +40,19 @@ interface MetaView {
   subjectIdByName: Record<string, number>;
   /** Subjects that must end up selected somewhere in this category. */
   autoAssignSubjects: string[];
+  /**
+   * Where the options came from. PRIOR_SELECTION metas (Minor 3/4) offer the
+   * student's OWN earlier picks, so uniqueness rules must not apply — see
+   * `optionsForMeta`.
+   */
+  optionSource: "ELECTIVE_SUBJECTS" | "PRIOR_SELECTION" | "SUBJECT_GROUP";
+  /** PRIOR_SELECTION only: the metas whose live picks feed this slot. */
+  sourceMetaIds: number[];
+  /**
+   * SUBJECT_GROUP only: option name → group id. Kept alongside subjectIdByName
+   * so subject-based sources are unaffected.
+   */
+  subjectGroupingMainIdByName?: Record<string, number>;
 }
 
 const romanMap: Record<string, string> = {
@@ -67,13 +80,15 @@ function toMetaViews(perMetaOptions: PerMetaOptionsDto[]): MetaView[] {
     .map((m) => {
       const options: string[] = [];
       const subjectIdByName: Record<string, number> = {};
+      const subjectGroupingMainIdByName: Record<string, number> = {};
       const autoAssignSubjects: string[] = [];
       for (const o of m.options ?? []) {
         if (!o?.subjectName) continue;
-        if (!(o.subjectName in subjectIdByName)) {
-          subjectIdByName[o.subjectName] = o.subjectId;
-          options.push(o.subjectName);
-        }
+        if (options.includes(o.subjectName)) continue;
+        options.push(o.subjectName);
+        if (o.subjectId != null) subjectIdByName[o.subjectName] = o.subjectId;
+        if (o.subjectGroupingMainId != null)
+          subjectGroupingMainIdByName[o.subjectName] = o.subjectGroupingMainId;
         if (o.autoAssign && !autoAssignSubjects.includes(o.subjectName)) {
           autoAssignSubjects.push(o.subjectName);
         }
@@ -88,7 +103,10 @@ function toMetaViews(perMetaOptions: PerMetaOptionsDto[]): MetaView[] {
         ),
         options,
         subjectIdByName,
+        subjectGroupingMainIdByName,
         autoAssignSubjects,
+        optionSource: m.optionSource ?? "ELECTIVE_SUBJECTS",
+        sourceMetaIds: m.sourceMetaIds ?? [],
       };
     })
     .sort((a, b) => a.sequence - b.sequence || a.metaId - b.metaId);
@@ -162,7 +180,18 @@ export default function SubjectSelectionForm({
     setSelectionsByMeta((prev) => ({ ...prev, [metaId]: value }));
 
   /** Metas that actually have something to offer — these are the dropdowns. */
-  const visibleMetas = useMemo(() => metaViews.filter((v) => v.options.length > 0), [metaViews]);
+  // PRIOR_SELECTION metas (Minor 3/4) legitimately start with `options = []` —
+  // they draw from the source metas' current picks (see ADR 0014). The live-
+  // recompute inside the option-render path fills them in as Minor 1/2 are
+  // filled, but only if the row is rendered. Hiding them on
+  // `options.length === 0` was what stopped admins/students from seeing
+  // Minor 3/4 for fresh students. Keep them visible so the fallback path
+  // can render an empty dropdown that populates the instant Minor 1/2 is
+  // picked.
+  const visibleMetas = useMemo(
+    () => metaViews.filter((v) => v.options.length > 0 || v.optionSource === "PRIOR_SELECTION"),
+    [metaViews],
+  );
 
   /** Consecutive metas of the same subject type render together on one row. */
   const metaRows = useMemo(() => {
@@ -217,7 +246,7 @@ export default function SubjectSelectionForm({
 
         // The dropdowns and their options come straight from the server now:
         // one entry per applicable meta, already scoped to this student's
-        // stream / program course and the meta's own semesters, and already
+        // stream / programme course and the meta's own semesters, and already
         // filtered by the 12th-board eligibility rules.
         setMetaViews(toMetaViews(resp.perMetaOptions ?? []));
 
@@ -484,7 +513,23 @@ export default function SubjectSelectionForm({
     for (const v of visibleMetas) {
       const subjectName = selectionsByMeta[v.metaId];
       if (!subjectName) continue;
-      const subjectId = v.subjectIdByName[subjectName];
+      // SUBJECT_GROUP picks resolve to a subject-group id, not a subject id.
+      if (v.optionSource === "SUBJECT_GROUP") {
+        const groupId = v.subjectGroupingMainIdByName?.[subjectName];
+        if (!groupId) continue;
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: session.id },
+          subjectSelectionMeta: { id: v.metaId },
+          subjectGroupingMain: { id: groupId, name: subjectName },
+        });
+        continue;
+      }
+      // A PRIOR_SELECTION slot can offer a subject only just chosen in its
+      // source dropdown, so it may be absent from this meta's own map.
+      const subjectId =
+        v.subjectIdByName[subjectName] ??
+        metaViews.find((m) => m.subjectIdByName[subjectName])?.subjectIdByName[subjectName];
       if (!subjectId) continue;
       selectionsToSave.push({
         studentId: student.id,
@@ -764,6 +809,46 @@ export default function SubjectSelectionForm({
       // a category filter, and the CVAC list itself carried no excludes either
       // (other categories still exclude the CVAC pick via getGlobalExcludes).
       if (v.code === "AEC" || v.code === "CVAC") return convertToComboboxData(v.options);
+      // SUBJECT_GROUP options are already backend-filtered (subject type +
+      // meta semesters + has-elective-papers). No client-side category or
+      // restricted-grouping check applies — groups aren't papers. But a group
+      // that's already picked in a SIBLING SUBJECT_GROUP meta of the SAME
+      // subject type is excluded — a student shouldn't hold the same group in
+      // two different semester metas.
+      if (v.optionSource === "SUBJECT_GROUP") {
+        const normSg = (s: string) =>
+          String(s || "")
+            .trim()
+            .toUpperCase();
+        const heldBySiblingGroupMetas = metaViews
+          .filter(
+            (o) => o.optionSource === "SUBJECT_GROUP" && o.metaId !== v.metaId && o.code === v.code,
+          )
+          .map((o) => selectionsByMeta[o.metaId])
+          .filter((x): x is string => Boolean(x) && normSg(x) !== normSg(current));
+        return convertToComboboxData(v.options, heldBySiblingGroupMetas);
+      }
+      // PRIOR_SELECTION metas (Minor 3/4) carry their own uniqueness rule: their
+      // options ARE the Minor 1/2 picks, so getGlobalExcludes would remove every
+      // one and the slot would show "0 options available" — but the two
+      // continuation slots must still not duplicate each other. (Across 619
+      // students loaded from the CU admit-card Excel, Minor 3 and Minor 4 never
+      // hold the same subject, while either may continue either prior minor.)
+      if (v.optionSource === "PRIOR_SELECTION") {
+        // Follow the source dropdowns LIVE: the server list is a snapshot of the
+        // SAVED Minor 1/2, so changing Minor 1 here must re-drive Minor 3/4 at
+        // once. Falls back to the server list while the sources are empty.
+        const liveFromSources = v.sourceMetaIds
+          .map((id) => selectionsByMeta[id])
+          .filter((x): x is string => Boolean(x));
+        const base = liveFromSources.length > 0 ? [...new Set(liveFromSources)] : v.options;
+
+        const heldBySiblingContinuations = metaViews
+          .filter((o) => o.optionSource === "PRIOR_SELECTION" && o.metaId !== v.metaId)
+          .map((o) => selectionsByMeta[o.metaId])
+          .filter((x): x is string => Boolean(x) && x !== current);
+        return convertToComboboxData(base, heldBySiblingContinuations);
+      }
 
       const filtered = getFilteredByCategory(v.options, current, v.code, v.semesters, v.metaId);
       return convertToComboboxData(
@@ -771,7 +856,7 @@ export default function SubjectSelectionForm({
         getGlobalExcludes(v.metaId),
       );
     },
-    [selectionsByMeta, getFilteredByCategory, getGlobalExcludes, preserveAecIfPresent],
+    [selectionsByMeta, metaViews, getFilteredByCategory, getGlobalExcludes, preserveAecIfPresent],
   );
 
   /**
@@ -786,7 +871,15 @@ export default function SubjectSelectionForm({
     for (const selection of actualSelections ?? []) {
       if (!selection || typeof selection !== "object") continue;
       const metaId = selection.metaId ?? selection.subjectSelectionMeta?.id;
-      const subjectName = selection.subjectName ?? selection.subject?.name;
+      const subjectName =
+        selection.subjectName ??
+        selection.subject?.name ??
+        // SUBJECT_GROUP selections carry the group's name instead of a
+        // subject. The API returns it as flat `subjectGroupingMainName`
+        // (from the LEFT JOIN in actualStudentSelections); the nested
+        // shape is a defensive fallback for older payloads.
+        selection.subjectGroupingMainName ??
+        selection.subjectGroupingMain?.name;
       if (!metaId || !subjectName) continue;
       // Keep the label that came with the saved row. A student who submitted in
       // an earlier academic year (or whose stream changed) may have metas that
@@ -966,7 +1059,7 @@ export default function SubjectSelectionForm({
                 />
               </svg>
             </div>
-            <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Program Course</label>
+            <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Programme Course</label>
             <p className="text-base font-semibold text-white">B.A. English (H)</p>
           </div>
           <div className="space-y-3 text-center">
@@ -1022,7 +1115,7 @@ export default function SubjectSelectionForm({
             <p className="text-base font-semibold text-white">{student?.currentPromotion?.rollNumber}</p>
           </div>
           <div className="space-y-3 text-center">
-            <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Program Course</label>
+            <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Programme Course</label>
             <p className="text-base font-semibold text-white">{student?.currentPromotion?.programCourse?.name}</p>
           </div>
           <div className="space-y-3 text-center">

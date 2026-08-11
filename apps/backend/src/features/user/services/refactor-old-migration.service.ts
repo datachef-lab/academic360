@@ -40,9 +40,14 @@ import ExcelJS from "exceljs";
 import pLimit from "p-limit";
 import { getOrCreateWithLock } from "@/utils/db-concurrency";
 import {
-  acquireImportUidLock,
   getImportUidLockHolders,
+  waitForImportUidLock,
 } from "@/utils/import-uid-lock";
+import { acquireFleetSlot } from "@/utils/redis-semaphore";
+import {
+  updateLegacyImportJobProgress,
+  setLegacyImportJobTotal,
+} from "./legacy-import-jobs.service";
 
 const BATCH_SIZE = 500;
 
@@ -448,35 +453,18 @@ export async function precheckStudentsFromExcelBuffer(
 
   // Number-typed cells that didn't match exactly may have lost a leading
   // zero (Excel/Sheets silently strips it from plain numeric cells, e.g.
-  // "0304250034" -> 304250034). Check for an existing student under a
-  // zero-padded version of the same digits before giving up on it — but
-  // only ever act when there's exactly one such student; ambiguity is
-  // surfaced, never guessed.
-  const autoCorrectedUids: Array<{ fileValue: string; matchedUid: string }> =
-    [];
-  const ambiguousNumericUids: string[] = [];
+  // "0304250034" -> 304250034). Look these up under a zero-padded version.
+  // Extracted so the import path (processStudentsFromExcelBuffer) can apply
+  // the same fixup instead of counting recoverable UIDs as `notFound`.
   const numericCandidates = [...new Set(parsed.numericTypedUids)].filter(
     (uid) => !existingSet.has(uid),
   );
-  await Promise.all(
-    numericCandidates.map(async (candidate) => {
-      const rows = await db
-        .select({ uid: studentModel.uid })
-        .from(studentModel)
-        .where(sql`${studentModel.uid} ~ ('^0+' || ${candidate} || '$')`)
-        .limit(2);
-      if (rows.length === 1) {
-        autoCorrectedUids.push({
-          fileValue: candidate,
-          matchedUid: rows[0].uid,
-        });
-        existingSet.add(candidate);
-        existingUidsDisplay.add(rows[0].uid);
-      } else if (rows.length > 1) {
-        ambiguousNumericUids.push(candidate);
-      }
-    }),
-  );
+  const { autoCorrectedUids, ambiguousNumericUids } =
+    await resolveNumericAutoCorrections(numericCandidates);
+  for (const { fileValue, matchedUid } of autoCorrectedUids) {
+    existingSet.add(fileValue);
+    existingUidsDisplay.add(matchedUid);
+  }
   // Which of these UIDs are locked by a running import right now (any
   // process/instance). Best-effort — a lock read failure must not block the
   // pre-check.
@@ -514,12 +502,72 @@ export async function precheckStudentsFromExcelBuffer(
 
 // ONE limiter for the whole process, shared by every upload: N simultaneous
 // uploads must not multiply the concurrency, they queue into the same pool.
-// Default 35 workers per file (measured ~2s/uid vs 41.6s sequential); pool
-// sizes in db/index.ts are sized to match. IMPORT_CONCURRENCY=1 restores the
-// old strictly-sequential behavior.
+// Default 50 workers per file (bumped from 35 for ~40% solo-upload speedup;
+// still comfortably under PG_POOL_MAX=70 for a single container, and under
+// the fleet cap of 60 the semaphore enforces across multiple containers).
+// IMPORT_CONCURRENCY=1 restores strictly-sequential behavior; ops can tune
+// this env alongside PG_POOL_MAX / OLD_DB_POOL_LIMIT to trade pool headroom
+// for throughput.
+//
+// PROCESS-LOCAL bound. Fleet-wide bound is enforced INSIDE processOneUid via
+// `acquireFleetSlot` (redis-semaphore), so N containers × per-container
+// workers cannot exceed the shared PG pool budget.
 const importLimit = pLimit(
-  Math.max(1, Number(process.env.IMPORT_CONCURRENCY) || 35),
+  Math.max(1, Number(process.env.IMPORT_CONCURRENCY) || 50),
 );
+
+// Fleet-wide concurrent-worker ceiling across ALL backend instances (Redis
+// semaphore). Sized just below PG_POOL_MAX × instance count so no single
+// instance can starve its own or a peer's pool. Falls back to the local
+// `importLimit` above when Redis is unavailable (single-node dev/staging).
+const FLEET_CAPACITY = Math.max(
+  1,
+  Number(process.env.LEGACY_IMPORT_FLEET_CAPACITY) || 60,
+);
+const FLEET_SLOT_KEY = "a360:sem:legacy-import-workers";
+// TTL is a safety net if a worker crashes mid-slot. Sized to cover the
+// slowest observed single-UID + fees-heal chain (up to ~5 min under DB
+// contention) with wide headroom, and aligned with the boot-reconcile's
+// 15-min staleness cutoff so a truly-stuck slot corresponds to a truly-stuck
+// job. Shorter TTLs risk a scanner grabbing an occupied slot mid-work and
+// silently overshooting the fleet cap.
+const FLEET_SLOT_TTL_SEC = 900;
+
+/**
+ * Resolve numeric-typed UIDs whose leading zeros Excel dropped.
+ * Returns which UIDs matched exactly one existing student under a zero-padded
+ * form (auto-corrected) and which matched more than one (ambiguous — refused).
+ * Used by both the pre-check (report) and the import path (apply fixup).
+ */
+async function resolveNumericAutoCorrections(candidates: string[]): Promise<{
+  autoCorrectedUids: Array<{ fileValue: string; matchedUid: string }>;
+  ambiguousNumericUids: string[];
+}> {
+  const autoCorrectedUids: Array<{ fileValue: string; matchedUid: string }> =
+    [];
+  const ambiguousNumericUids: string[] = [];
+  if (candidates.length === 0) {
+    return { autoCorrectedUids, ambiguousNumericUids };
+  }
+  await Promise.all(
+    candidates.map(async (candidate) => {
+      const rows = await db
+        .select({ uid: studentModel.uid })
+        .from(studentModel)
+        .where(sql`${studentModel.uid} ~ ('^0+' || ${candidate} || '$')`)
+        .limit(2);
+      if (rows.length === 1) {
+        autoCorrectedUids.push({
+          fileValue: candidate,
+          matchedUid: rows[0].uid,
+        });
+      } else if (rows.length > 1) {
+        ambiguousNumericUids.push(candidate);
+      }
+    }),
+  );
+  return { autoCorrectedUids, ambiguousNumericUids };
+}
 
 export async function processStudentsFromExcelBuffer(
   file: Buffer | ArrayBuffer | Uint8Array,
@@ -527,6 +575,9 @@ export async function processStudentsFromExcelBuffer(
     progressUserId?: string | null;
     /** Shown to OTHER uploaders who hit the same UID ("Being imported by <name>"). */
     uploaderName?: string | null;
+    /** When set, per-uid progress is also persisted to `legacy_import_jobs`
+     *  so any instance can serve the status polling endpoint. */
+    jobId?: string | null;
   },
 ): Promise<{
   totalRows: number;
@@ -536,6 +587,10 @@ export async function processStudentsFromExcelBuffer(
   /** UIDs with no legacy row — listed so the UI can hand them back for review. */
   notFoundUids: string[];
   errors: Array<{ uid: string; error: string }>;
+  /** UIDs that were remapped from a leading-zero-stripped numeric cell to
+   *  their canonical zero-padded form before import. Non-fatal — surfaced so
+   *  the operator sees what was corrected instead of it looking like a skip. */
+  autoCorrectedUids: Array<{ fileValue: string; matchedUid: string }>;
 }> {
   const parsed = await parseUidsFromExcelBuffer(file);
   if (parsed.error) {
@@ -546,43 +601,135 @@ export async function processStudentsFromExcelBuffer(
       notFound: 0,
       notFoundUids: [],
       errors: [{ uid: "", error: parsed.error }],
+      autoCorrectedUids: [],
     };
   }
 
   // Dedupe within the file: a UID listed twice must not race against itself.
-  const uids: string[] = [...new Set(parsed.uids)];
+  let uids: string[] = [...new Set(parsed.uids)];
+
+  // Apply the SAME leading-zero fixup the pre-check reports. Without this,
+  // an Excel cell that Excel/Sheets typed as Number ("0304250034" → 304250034)
+  // would be looked up in the legacy DB verbatim and land as `notFoundUids`
+  // even though the student exists under the zero-padded form. Ambiguous
+  // candidates (>1 match) surface as terminal errors so we never guess.
+  const numericCandidates = [...new Set(parsed.numericTypedUids)];
+  const existingSet = uids.length
+    ? new Set(
+        (
+          await db
+            .select({ uid: studentModel.uid })
+            .from(studentModel)
+            .where(inArray(studentModel.uid, uids))
+        )
+          .map((r) => String(r.uid))
+          .filter(Boolean),
+      )
+    : new Set<string>();
+  const correctionCandidates = numericCandidates.filter(
+    (uid) => !existingSet.has(uid),
+  );
+  const { autoCorrectedUids, ambiguousNumericUids } =
+    await resolveNumericAutoCorrections(correctionCandidates);
+  const importErrors: Array<{ uid: string; error: string }> = [];
+  if (autoCorrectedUids.length > 0) {
+    const corrMap = new Map(
+      autoCorrectedUids.map((c) => [c.fileValue, c.matchedUid]),
+    );
+    uids = uids.map((u) => corrMap.get(u) ?? u);
+    // Re-dedupe: two file rows could collapse onto the same canonical uid.
+    uids = [...new Set(uids)];
+  }
+  for (const ambiguous of ambiguousNumericUids) {
+    importErrors.push({
+      uid: ambiguous,
+      error:
+        "Numeric UID matches more than one existing student under leading-zero variants — resolve manually and re-upload",
+    });
+  }
+  if (opts?.jobId) {
+    // The dedupe + auto-correction can change total after parse, so update
+    // the persisted total once we know the final count.
+    void setLegacyImportJobTotal(opts.jobId, uids.length);
+  }
 
   let processed = 0;
   let notFound = 0;
   let done = 0;
   const notFoundUids: string[] = [];
-  const errors: Array<{ uid: string; error: string }> = [];
+  const errors: Array<{ uid: string; error: string }> = [...importErrors];
+  // Persistent-progress throttling: at most one DB UPDATE per second per job
+  // regardless of how many UIDs land — cheap for the poller, no hot writes.
+  let lastProgressWriteMs = 0;
+  const persistProgress = (): void => {
+    if (!opts?.jobId) return;
+    const now = Date.now();
+    if (now - lastProgressWriteMs < 1000 && done < total) return;
+    lastProgressWriteMs = now;
+    void updateLegacyImportJobProgress(opts.jobId, {
+      processed,
+      notFound,
+      errorCount: errors.length,
+    });
+  };
 
   // Live progress to the uploading user via socket (the main-console upload dialog
   // listens for `progress_update` scoped by this operation). Each update carries
-  // elapsed/ETA so the dialog can show expected duration and finish time —
-  // computed from the overall average rate, which self-corrects as waves land.
+  // elapsed/ETA.
+  //
+  // ETA uses an EWMA (exponentially weighted moving average) of the recent
+  // per-UID rate instead of the overall average — the overall-average version
+  // caused the ETA to "balloon" in the middle of a run: a fast first wave
+  // (fresh pools + master rows already cached) set a rosy average, then
+  // slower middle UIDs (fee-load chain, master-data misses) revealed the
+  // truth all at once and the ETA jumped. EWMA reacts to the recent rate
+  // gradually so the operator sees a stable, slowly-adjusting number.
   const total = uids.length;
   const progressOperation = "student_import_legacy_students";
   const importStartedAtMs = Date.now();
+  const EWMA_ALPHA = 0.15; // smoothing factor: 15% weight on the most recent tick, 85% on history
+  let ewmaMsPerUid = 0;
+  let lastDoneCount = 0;
+  let lastTickMs = importStartedAtMs;
   const emitProgress = (
     doneCount: number,
     status: "started" | "in_progress" | "completed",
+    messageOverride?: string,
   ) => {
     if (!opts?.progressUserId) return;
     const progress = total > 0 ? Math.round((doneCount / total) * 100) : 100;
-    const elapsedMs = Date.now() - importStartedAtMs;
+    const nowMs = Date.now();
+    const elapsedMs = nowMs - importStartedAtMs;
+
+    // Update EWMA from the delta since the last tick. Skip the very first
+    // tick (doneCount=0) and skip when nothing landed since last tick.
+    const deltaDone = doneCount - lastDoneCount;
+    const deltaMs = nowMs - lastTickMs;
+    if (deltaDone > 0 && deltaMs > 0) {
+      const instantMsPerUid = deltaMs / deltaDone;
+      ewmaMsPerUid =
+        ewmaMsPerUid === 0
+          ? instantMsPerUid
+          : EWMA_ALPHA * instantMsPerUid + (1 - EWMA_ALPHA) * ewmaMsPerUid;
+      lastDoneCount = doneCount;
+      lastTickMs = nowMs;
+    }
+
+    const remaining = Math.max(0, total - doneCount);
     const etaMs =
-      doneCount > 0 && doneCount < total
-        ? Math.round((elapsedMs / doneCount) * (total - doneCount))
-        : doneCount >= total
-          ? 0
-          : null;
+      remaining === 0
+        ? 0
+        : ewmaMsPerUid > 0
+          ? Math.round(ewmaMsPerUid * remaining)
+          : doneCount > 0
+            ? Math.round((elapsedMs / doneCount) * remaining) // pre-EWMA fallback
+            : null;
+
     socketService.sendProgressUpdate(
       String(opts.progressUserId),
       socketService.createExportProgressUpdate(
         String(opts.progressUserId),
-        `Imported ${doneCount}/${total} students`,
+        messageOverride ?? `Imported ${doneCount}/${total} students`,
         progress,
         status,
         undefined,
@@ -601,11 +748,31 @@ export async function processStudentsFromExcelBuffer(
 
   emitProgress(0, "started");
 
+  // Heartbeat: keep the ETA "live" between UID emissions. If a single UID
+  // takes ~60s (slow legacy DB), the socket would otherwise show the same
+  // stale ETA for the whole 60s. The heartbeat re-emits at the current
+  // `done` count every 3s — EWMA stays the same (no new deltaDone), but
+  // elapsedMs updates and `etaMs` is recomputed from the current EWMA
+  // against the current time. Ref-unref'd so it never keeps Node alive
+  // past the workers.
+  const heartbeatMs = Math.max(
+    1000,
+    Number(process.env.LEGACY_IMPORT_HEARTBEAT_MS) || 3000,
+  );
+  const heartbeat: ReturnType<typeof setInterval> = setInterval(() => {
+    if (done >= total) return; // main loop is finishing; end emit handles it
+    emitProgress(done, "in_progress");
+  }, heartbeatMs);
+  heartbeat.unref?.();
+
   const processOneUid = async (uid: string): Promise<void> => {
-    // Cross-upload guard: if another import (this process or another backend
-    // instance) is already working on this UID, skip it and tell the uploader
-    // who holds it — never process the same UID twice at once.
-    const lock = await acquireImportUidLock(uid, {
+    // Cross-upload guard with bounded retry: if a partner import (this
+    // process or another backend instance) is already working on this UID,
+    // back off and try a few times before giving up. This closes the silent
+    // skip where instance A crashes mid-run and instance B's overlapping
+    // UIDs would otherwise be terminal-errored on the first attempt while
+    // A's Redis lock TTL was still counting down.
+    const lock = await waitForImportUidLock(uid, {
       userId: opts?.progressUserId ?? null,
       userName: opts?.uploaderName ?? null,
     });
@@ -616,12 +783,22 @@ export async function processStudentsFromExcelBuffer(
         : "";
       errors.push({
         uid,
-        error: `Being imported by ${who}${since} — remove this UID and reupload`,
+        error: `Being imported by ${who}${since} after ${lock.attempts} attempt(s) — remove this UID and reupload`,
       });
       done++;
       emitProgress(done, done >= total ? "completed" : "in_progress");
+      persistProgress();
       return;
     }
+
+    // Fleet-wide slot. Fleet cap keeps N instances × per-instance workers
+    // from blowing the shared PG pool. Null = Redis unavailable → the
+    // process-local `importLimit` (pLimit) is the only bound (dev/single node).
+    const fleetSlot = await acquireFleetSlot({
+      key: FLEET_SLOT_KEY,
+      capacity: FLEET_CAPACITY,
+      slotTtlSec: FLEET_SLOT_TTL_SEC,
+    });
 
     try {
       const oldStudent = await getOldStudentByUid(uid);
@@ -711,6 +888,7 @@ export async function processStudentsFromExcelBuffer(
         e?.message || "Unknown error",
       );
     } finally {
+      if (fleetSlot) await fleetSlot.release();
       await lock.release();
       // Yield event loop to let socket heartbeats and timer callbacks drain
       // between each UID, preventing disconnect-on-timeout during heavy imports
@@ -718,14 +896,22 @@ export async function processStudentsFromExcelBuffer(
       // Always emit after each uid completes, regardless of outcome.
       done++;
       emitProgress(done, done >= total ? "completed" : "in_progress");
+      persistProgress();
     }
   };
 
   // Workers share the process-wide limiter; allSettled + the worker's own
   // try/catch guarantee one UID's failure never aborts its siblings.
-  await Promise.allSettled(
-    uids.map((uid) => importLimit(() => processOneUid(uid))),
-  );
+  try {
+    await Promise.allSettled(
+      uids.map((uid) => importLimit(() => processOneUid(uid))),
+    );
+  } finally {
+    // Stop the heartbeat before the finalize/heal phase (which has its own
+    // emit) so we don't race an in-flight tick. try/finally ensures we
+    // never leak the interval if the caller aborts unexpectedly.
+    clearInterval(heartbeat);
+  }
 
   // This import creates promotions (affiliation stats) and loads legacy fees
   // (fee_mis stats), so nudge both Real Time Tracker tabs once at the end.
@@ -745,6 +931,43 @@ export async function processStudentsFromExcelBuffer(
     }
   }
 
+  // Once every student in this batch is imported and their fee mappings exist,
+  // heal the fee slab for just these UIDs. The fresh loader points a
+  // concession student at the default full-fee slab whenever it cannot see the
+  // concession — the section on studentfeesconcessiontab differs from the
+  // enrollment section, or IRP has not raised an installment for the term yet
+  // (the 0017 Sem IV case). This targeted heal re-points those mappings to the
+  // real concession slab (reading the concession tab directly, section-less),
+  // so the console never shows full fee for a waived student. It is scoped to
+  // this batch, never touches the global heal marker, and — like the fee load
+  // itself — a failure here is logged but never fails the import.
+  if (processed > 0) {
+    // Emit a "Finalizing…" tick so the operator doesn't see the bar hit
+    // 100% and then hang for ~30s while the heal runs. Progress stays at
+    // done=total (bar is full), but the message tells the truth about what
+    // the backend is doing.
+    emitProgress(done, "in_progress", "Finalizing (fee-slab heal)…");
+    try {
+      const { runLegacyFeesAmountHeal } =
+        await import("@/features/fees/services/legacy-fees-amount-heal.service.js");
+      const healResult = await runLegacyFeesAmountHeal({
+        commit: true,
+        uids,
+        onProgress: (msg) => console.log(`[LegacyImport][fees-heal] ${msg}`),
+      });
+      console.log(
+        `[LegacyImport][fees-heal] reassigned=${healResult.mappingsReassigned} ` +
+          `unresolved=${healResult.mappingsUnresolved} checked=${healResult.mappingsChecked} ` +
+          `paymentsUpdated=${healResult.paymentsUpdated}`,
+      );
+    } catch (e) {
+      console.error(
+        "[LegacyImport][fees-heal] post-import heal failed:",
+        (e as Error)?.message,
+      );
+    }
+  }
+
   return {
     totalRows: parsed.totalRows,
     totalUids: uids.length,
@@ -752,6 +975,7 @@ export async function processStudentsFromExcelBuffer(
     notFound,
     notFoundUids,
     errors,
+    autoCorrectedUids,
   };
 }
 

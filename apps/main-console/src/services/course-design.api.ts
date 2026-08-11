@@ -391,7 +391,7 @@ export const bulkUploadRegulationTypes = async (file: File): Promise<BulkUploadR
   return res.data.payload;
 };
 
-// Program Courses
+// Programme Courses
 export const getProgramCourses = async () => {
   const res = await axiosInstance.get<ApiResponse<ProgramCourse[]>>(`${BASE}/program-courses`);
   return res.data.payload;
@@ -428,7 +428,7 @@ export const deleteProgramCourse = async (id: number) => {
   return res.data.payload;
 };
 
-// Bulk upload program courses
+// Bulk upload programme courses
 export const bulkUploadProgramCourses = async (file: File): Promise<BulkUploadResult> => {
   const formData = new FormData();
   formData.append("file", file);

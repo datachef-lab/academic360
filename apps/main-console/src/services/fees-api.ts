@@ -100,7 +100,7 @@ export async function createFeesStructure(
   return response.data;
 }
 
-// Create fee structures by DTO (bulk creation for multiple program courses and shifts)
+// Create fee structures by DTO (bulk creation for multiple programme courses and shifts)
 export async function createFeeStructureByDto(
   createFeeStructureDto: CreateFeeStructureDto,
 ): Promise<ApiResponse<FeeStructureDto[]>> {
@@ -994,7 +994,7 @@ export async function getFilteredFeeGroupPromotionMappings(
 export interface BulkUploadRow {
   UID?: string;
   "Student Name"?: string;
-  "Program Course Name"?: string;
+  "Programme Course Name"?: string;
   "Academic Year"?: string;
   Semester?: string;
   Shift?: string;

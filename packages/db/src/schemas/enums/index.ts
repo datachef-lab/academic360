@@ -488,6 +488,49 @@ export const idCardIssueStatusEnum = pgEnum("id_card_issue_status", [
     "REISSUED",
 ]);
 
+export const documentDomainEnum = pgEnum("document_domain", [
+    "ADMISSION",
+    "ENROLMENT",
+    "PRE_CU_REGISTRATION",
+    "POST_CU_REGISTRATION",
+    "EXAM",
+    "FEES",
+    "LIBRARY",
+    "OTHER",
+]);
+
+export const documentCategoryEnum = pgEnum("document_category", [
+    "EXAM_LINKED",
+    "ADMINISTRATIVE",
+    "UPLOAD",
+    "SYSTEM_GENERATED",
+]);
+
+export const documentBatchReceiptModeEnum = pgEnum("document_batch_receipt_mode", [
+    "EXAM_LINKED",
+    "ADMINISTRATIVE",
+]);
+
+export const documentLedgerStatusEnum = pgEnum("document_ledger_status", [
+    "UPLOADED", // Document uploaded to the system.
+    "PENDING", // Document physically available at counter, not yet collected. Never expires.
+    "ON_HOLD", // Derived at tap time: PENDING but blocked by a failed clearance check (fee due / library due). Not issuable until cleared or overridden
+    "COLLECTED", // Issued/Downloaded against an RFID scan — timestamp, staff, scan log captured. Carries override details if clearance was overridden.
+    "WAIVED", // Administratively closed (e.g., student left institution); requires remark. Bulk waive supported at year-end with authorisation.
+    "EXPECTED", // (Optional, via Document Calendar) Document anticipated but batch not yet received — answers "has my marksheet come?" without footfall.
+    "NO_CHANGE", // Derived display state for Revised Marksheet: RCSI filed but no revised document received for this student.
+]);
+
+export const documentEligibilityRuleEnum = pgEnum("document_eligibility_rule", [
+    "FORM_FILLUP_RECORDED",
+    "RCSI_RECORDED",
+]);
+
+export const issuingAuthorityEnum = pgEnum("issuing_authority", [
+    "UNIVERSITY",
+    "COLLEGE",
+]);
+
 export const declarationMasterContextEnum = pgEnum("declaration_master_context", [
     "ADMISSION",
     "EXAM",
@@ -495,6 +538,10 @@ export const declarationMasterContextEnum = pgEnum("declaration_master_context",
     "LIBRARY",
     "OTHER",
 ]);
+
+
+
+
 /**
  * Where a subject-selection meta draws its selectable subject options from.
  *
@@ -505,11 +552,18 @@ export const declarationMasterContextEnum = pgEnum("declaration_master_context",
  * PRIOR_SELECTION  - the subjects the student already chose in other configured
  *   metas (subject_selection_meta_sources). e.g. a Semester 5 "Minor 5" meta can
  *   offer only what the student picked in Minor 1 / Minor 2.
+ * SUBJECT_GROUP    - the subject groups (subject_grouping_main) whose subjectType
+ *   matches this meta's subjectTypeId and that contain at least one elective
+ *   (isOptional=true) paper for the student's programCourse + registration
+ *   academic year in the meta's semesters. The student picks a whole group as
+ *   the terminal selection; storage keys on subject_grouping_main_id_fk rather
+ *   than subject_id_fk.
  */
 export const subjectSelectionOptionSourceEnum = pgEnum(
     "subject_selection_option_source",
     [
         "ELECTIVE_SUBJECTS",
         "PRIOR_SELECTION",
+        "SUBJECT_GROUP",
     ],
 );

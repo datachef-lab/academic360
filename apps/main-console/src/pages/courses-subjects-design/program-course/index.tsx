@@ -206,9 +206,9 @@ const ProgramCoursesPage = () => {
       setProgramCourses(Array.isArray(res) ? res : []);
       setError(null);
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to fetch program courses";
+      const errorMessage = err instanceof Error ? err.message : "Failed to fetch programme courses";
       setError(errorMessage);
-      toast.error("Failed to fetch program courses");
+      toast.error("Failed to fetch programme courses");
     } finally {
       setLoading(false);
     }
@@ -226,7 +226,7 @@ const ProgramCoursesPage = () => {
     try {
       const result: DeleteResult = await deleteProgramCourse(id);
       if (result.success) {
-        toast.success(result.message || "Program course deleted successfully");
+        toast.success(result.message || "Programme course deleted successfully");
         fetchProgramCourses();
       } else {
         const details = (result.records || [])
@@ -237,7 +237,7 @@ const ProgramCoursesPage = () => {
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      toast.error(`Failed to delete program course: ${errorMessage}`);
+      toast.error(`Failed to delete programme course: ${errorMessage}`);
     }
   };
 
@@ -254,15 +254,15 @@ const ProgramCoursesPage = () => {
         // Some APIs return null on duplicate; handle that explicitly
         if (!updated) {
           toast.error(
-            "Duplicate program course: same stream, course, type, level, affiliation, regulation, duration and semesters already exists.",
+            "Duplicate programme course: same stream, course, type, level, affiliation, regulation, duration and semesters already exists.",
           );
           return;
         }
-        toast.success("Program course updated successfully");
+        toast.success("Programme course updated successfully");
       } else {
         const created = await createProgramCourse(data);
         console.log("created", created);
-        toast.success("Program course created successfully");
+        toast.success("Programme course created successfully");
       }
       setIsFormOpen(false);
       fetchProgramCourses();
@@ -270,7 +270,7 @@ const ProgramCoursesPage = () => {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       setTimeout(() => {
         toast.error(
-          `Failed to ${selectedProgramCourse ? "update" : "create"} program course: ${errorMessage}`,
+          `Failed to ${selectedProgramCourse ? "update" : "create"} programme course: ${errorMessage}`,
         );
       }, 2000);
     } finally {
@@ -482,11 +482,11 @@ const ProgramCoursesPage = () => {
       const result = await bulkUploadProgramCourses(bulkFile);
       setBulkUploadResult(result);
       if (result.summary.successful > 0) {
-        toast.success(`Successfully uploaded ${result.summary.successful} program courses`);
+        toast.success(`Successfully uploaded ${result.summary.successful} programme courses`);
         fetchProgramCourses();
       }
       if (result.summary.failed > 0) {
-        toast.error(`${result.summary.failed} program courses failed to upload`);
+        toast.error(`${result.summary.failed} programme courses failed to upload`);
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -569,7 +569,7 @@ const ProgramCoursesPage = () => {
 
     const ws = XLSX.utils.json_to_sheet(templateData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Program Courses Template");
+    XLSX.utils.book_append_sheet(wb, ws, "Programme Courses Template");
     XLSX.writeFile(wb, "program-course-bulk-upload-template.xlsx");
   };
 
@@ -595,10 +595,10 @@ const ProgramCoursesPage = () => {
       }));
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Program Courses");
+      XLSX.utils.book_append_sheet(wb, ws, "Programme Courses");
       XLSX.writeFile(wb, "program-courses.xlsx");
     } catch {
-      toast.error("Failed to download program courses");
+      toast.error("Failed to download programme courses");
     }
   };
 
@@ -624,7 +624,7 @@ const ProgramCoursesPage = () => {
       }));
       const ws = XLSX.utils.json_to_sheet(failedData);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Failed Program Courses");
+      XLSX.utils.book_append_sheet(wb, ws, "Failed Programme Courses");
       XLSX.writeFile(wb, "failed-program-courses-upload.xlsx");
       toast.success("Failed data downloaded successfully");
     } catch {
@@ -660,7 +660,7 @@ const ProgramCoursesPage = () => {
       );
       const ws = XLSX.utils.json_to_sheet(unprocessedData);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Unprocessed Program Courses");
+      XLSX.utils.book_append_sheet(wb, ws, "Unprocessed Programme Courses");
       XLSX.writeFile(wb, "unprocessed-program-courses-upload.xlsx");
       toast.success("Unprocessed data downloaded successfully");
     } catch {
@@ -693,7 +693,7 @@ const ProgramCoursesPage = () => {
       <div className="p-2 sm:p-4">
         <Card className="border-none">
           <CardContent className="flex items-center justify-center h-64">
-            <div className="text-center">Loading program courses...</div>
+            <div className="text-center">Loading programme courses...</div>
           </CardContent>
         </Card>
       </div>
@@ -719,10 +719,10 @@ const ProgramCoursesPage = () => {
           <div className="flex-1 min-w-0">
             <CardTitle className="flex items-center text-lg sm:text-xl">
               <Library className="mr-2 h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400 flex-shrink-0" />
-              <span className="truncate">Program Courses</span>
+              <span className="truncate">Programme Courses</span>
             </CardTitle>
             <div className="text-xs sm:text-sm text-muted-foreground mt-1">
-              A list of all program courses.
+              A list of all programme courses.
             </div>
           </div>
           <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
@@ -736,7 +736,7 @@ const ProgramCoursesPage = () => {
               </DialogTrigger>
               <DialogContent className="w-[95vw] sm:w-full max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle>Bulk Upload Program Courses</DialogTitle>
+                  <DialogTitle>Bulk Upload Programme Courses</DialogTitle>
                 </DialogHeader>
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center gap-2">
@@ -899,7 +899,7 @@ const ProgramCoursesPage = () => {
               <AlertDialogContent className="w-[95vw] sm:w-full max-w-2xl">
                 <AlertDialogHeader>
                   <AlertDialogTitle>
-                    {selectedProgramCourse ? "Edit Program Course" : "Add New Program Course"}
+                    {selectedProgramCourse ? "Edit Programme Course" : "Add New Programme Course"}
                   </AlertDialogTitle>
                 </AlertDialogHeader>
                 <ProgramCourseForm
@@ -946,7 +946,7 @@ const ProgramCoursesPage = () => {
                   {filteredProgramCourses.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center">
-                        No program courses found.
+                        No programme courses found.
                       </TableCell>
                     </TableRow>
                   ) : (

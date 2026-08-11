@@ -48,7 +48,7 @@ interface UISubjectGroupingRow {
   code: string | null;
   academicYearId: number | null;
   subjectTypeId: number | null;
-  /** IDs of the mapped program courses; used by the Filters dialog cascade. */
+  /** IDs of the mapped programme courses; used by the Filters dialog cascade. */
   programCourseIds: number[];
   programCourses: string[];
   subjectType: string;
@@ -155,7 +155,7 @@ function SubjectGroupingsPage() {
   }, [availableAcademicYears]);
 
   // Load master lists on mount — the Filters dialog needs affiliations,
-  // regulation types, subject types AND program courses to render without
+  // regulation types, subject types AND programme courses to render without
   // waiting for the Add dialog to open.
   useEffect(() => {
     let cancelled = false;
@@ -367,7 +367,7 @@ function SubjectGroupingsPage() {
             {/* <div className="text-xs sm: text-muted-foreground mt-1">
               {currentAcademicYear
                 ? `Configure subject groupings for ${currentAcademicYear.year}.`
-                : "Configure subject groupings for program courses."}
+                : "Configure subject groupings for programme courses."}
             </div> */}
           </div>
           <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
@@ -501,12 +501,12 @@ function SubjectGroupingsPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-3">
-                    {/* Program Courses box */}
+                    {/* Programme Courses box */}
                     <div className="border rounded-md">
                       <div className=" font-semibold tracking-wide py-3 text-slate-800 bg-slate-50 border-b border-slate-200 px-3 rounded-t">
-                        Program Courses
+                        Programme Courses
                       </div>
-                      {/* Available program courses */}
+                      {/* Available programme courses */}
                       <div className="flex items-center justify-between gap-2 py-2 px-3 mb-2 ">
                         <Input
                           value={programCourseSearch}
@@ -557,7 +557,7 @@ function SubjectGroupingsPage() {
                               ))}
                           </div>
                         </div>
-                        {/* Selected program courses */}
+                        {/* Selected programme courses */}
                         <div className="h-full pl-1 md:pl-3 flex flex-col">
                           <div className=" font-medium text-slate-600 py-2 mb-2">Selected</div>
                           <div className="flex-1 overflow-y-auto space-y-2">
@@ -595,7 +595,7 @@ function SubjectGroupingsPage() {
                               ))}
                             {selectedProgramCourseIds.length === 0 && (
                               <div className=" text-slate-400 italic">
-                                No program courses selected
+                                No programme courses selected
                               </div>
                             )}
                           </div>
@@ -906,7 +906,7 @@ function SubjectGroupingsPage() {
                 <div className="space-y-1 sm:col-span-2">
                   <div className="flex items-center justify-between min-h-6">
                     <div className="text-xs text-muted-foreground">
-                      Program Courses (cascaded from affiliation + regulation)
+                      Programme Courses (cascaded from affiliation + regulation)
                     </div>
                     {/* Always rendered so ticking a box doesn't push the list down by
                         the button's height. Hidden (not display:none) when count=0. */}
@@ -922,7 +922,7 @@ function SubjectGroupingsPage() {
                     </Button>
                   </div>
                   <Input
-                    placeholder="Search program courses…"
+                    placeholder="Search programme courses…"
                     value={filterProgramCourseSearch}
                     onChange={(e) => setFilterProgramCourseSearch(e.target.value)}
                   />
@@ -1008,7 +1008,7 @@ function SubjectGroupingsPage() {
                     className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
                     style={{ width: "24%" }}
                   >
-                    Program Courses
+                    Programme Courses
                   </div>
                   <div
                     className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
@@ -1083,7 +1083,7 @@ function SubjectGroupingsPage() {
                         <div className="flex flex-wrap gap-1">
                           {row.programCourses.length === 0 ? (
                             <span className=" text-muted-foreground">
-                              No program courses mapped
+                              No programme courses mapped
                             </span>
                           ) : (
                             row.programCourses.map((name) => (

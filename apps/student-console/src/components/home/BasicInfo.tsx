@@ -11,7 +11,7 @@ export default function BasicInfo({ student }: { student: StudentDto | null }) {
       </CardHeader>
       <CardContent className="px-5 pb-2 pt-0 space-y-0">
         <div className="flex items-center justify-between py-2 border-b border-gray-100">
-          <span className="text-gray-500 text-sm">Program Course</span>
+          <span className="text-gray-500 text-sm">Programme Course</span>
           <span className="font-semibold text-gray-800 text-base">
             {student?.currentPromotion?.programCourse?.name}
           </span>

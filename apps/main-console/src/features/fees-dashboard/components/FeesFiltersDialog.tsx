@@ -351,9 +351,9 @@ export function FeesFiltersDialog({
             />
           </FilterField>
 
-          <FilterField label="Program course">
+          <FilterField label="Programme course">
             <MultiSelectDropdown
-              placeholder="All program courses"
+              placeholder="All programme courses"
               options={programCourseOptions}
               selectedOptions={form.programCourseIds}
               onChange={(selected) => updateForm("programCourseIds", selected)}

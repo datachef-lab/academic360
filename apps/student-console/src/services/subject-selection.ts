@@ -30,9 +30,15 @@ export interface StudentSubjectSelectionGroupDto {
 
 /** One selectable option inside a meta's dropdown. */
 export interface PerMetaOptionDto {
-  subjectId: number;
+  /**
+   * Null when this option represents a subject group (SUBJECT_GROUP source).
+   * Exactly one of subjectId / subjectGroupingMainId is set per option.
+   */
+  subjectId: number | null;
   subjectName: string;
   subjectCode: string | null;
+  /** SUBJECT_GROUP only: the picked group's id. */
+  subjectGroupingMainId?: number | null;
   classId: number | null;
   className: string | null;
   paperId: number | null;
@@ -43,17 +49,19 @@ export interface PerMetaOptionDto {
 /**
  * Server-resolved options per subject-selection meta. This is what drives the
  * dropdowns: one entry = one dropdown, already scoped to the student's stream,
- * program course and the meta's own semesters.
+ * programme course and the meta's own semesters.
  */
 export interface PerMetaOptionsDto {
   metaId: number;
   metaLabel: string;
-  optionSource: "ELECTIVE_SUBJECTS" | "PRIOR_SELECTION";
+  optionSource: "ELECTIVE_SUBJECTS" | "PRIOR_SELECTION" | "SUBJECT_GROUP";
   subjectTypeCode: string | null;
   subjectTypeName: string | null;
   sequence: number | null;
   classIds: number[];
   classNames: string[];
+  /** PRIOR_SELECTION only: the metas feeding this one's options. */
+  sourceMetaIds?: number[];
   options: PerMetaOptionDto[];
 }
 
@@ -88,12 +96,16 @@ export interface SubjectSelectionMetaResponse {
   availableSubjects: AvailableSubjects;
 }
 
-// For saving - simplified version of StudentSubjectSelectionDto
+// For saving - simplified version of StudentSubjectSelectionDto.
+// Exactly one of `subject` / `subjectGroupingMain` is set per row:
+// SUBJECT_GROUP metas populate the group; every other source populates the
+// subject. Mirrors the backend CHECK constraint.
 export interface StudentSubjectSelectionForSave {
   studentId: number;
   session: { id: number };
   subjectSelectionMeta: { id: number };
-  subject: { id: number; name: string };
+  subject?: { id: number; name: string };
+  subjectGroupingMain?: { id: number; name?: string };
 }
 
 export interface SaveSelectionsResponse {

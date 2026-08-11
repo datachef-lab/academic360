@@ -52,6 +52,7 @@ import {
 import type { RegulationType, Affiliation, ProgramCourse } from "@repo/db/index";
 import { getAllClasses } from "@/services/classes.service";
 import type { Class } from "@/types/academics/class";
+import exportFiltersIllustration from "@/features/reports/assets/export-filters-illustration.svg?raw";
 import {
   Dialog,
   DialogContent,
@@ -215,23 +216,38 @@ export default function ReportsPage() {
         setIsExporting(false);
         // The modal will auto-close due to the completed status in ExportProgressDialog
 
-        // Legacy student import: show the final summary (incl. per-uid errors)
+        // Legacy student import: show the final summary (incl. per-uid errors).
+        // Field is deliberately `importJobId`, NOT `jobId` — the guard above
+        // treats `meta.jobId` as a REPORT-download identifier and would drop
+        // legacy-import events whose jobId doesn't match a report ref.
         const meta = data.meta as
           | {
               operation?: string;
+              importJobId?: string;
               summary?: {
                 processed: number;
                 notFound: number;
                 notFoundUids?: string[];
                 errors: Array<{ uid: string; error: string }>;
               };
-              /** Server-written Excel of every failed / not-found UID. */
-              errorReportFileName?: string | null;
+              /** Whether the server persisted an error-report XLSX (bytea in DB). */
+              errorReportAvailable?: boolean;
+              /** Download URL — jobId-keyed since ADR 0030. Any instance serves it. */
+              errorReportUrl?: string | null;
             }
           | undefined;
         if (meta?.operation === "student_import_legacy_students" && meta.summary) {
           const { processed, notFound, errors } = meta.summary;
-          const reportFile = meta.errorReportFileName;
+          const importJobId = meta.importJobId;
+          const reportAvailable = Boolean(meta.errorReportAvailable);
+          const reportUrl =
+            meta.errorReportUrl ??
+            (importJobId && reportAvailable
+              ? `/api/students/import-legacy-students/error-report/${importJobId}`
+              : null);
+          const suggestedFileName = importJobId
+            ? `import-errors-${importJobId}.xlsx`
+            : "import-errors.xlsx";
           if (errors?.length || notFound > 0) {
             const list = (errors ?? [])
               .slice(0, 10)
@@ -245,26 +261,25 @@ export default function ReportsPage() {
                 (errors.length > 10
                   ? `<p style="font-size:12px;color:#6b7280">…and ${errors.length - 10} more</p>`
                   : "") +
-                (reportFile
+                (reportUrl
                   ? `<p style="font-size:12px;color:#4f46e5">The full list (every failed and not-found UID) is in the error report.</p>`
                   : "") +
                 `</div>`,
               icon: "warning",
-              showCancelButton: Boolean(reportFile),
-              confirmButtonText: reportFile ? "Download error report" : "OK",
+              showCancelButton: Boolean(reportUrl),
+              confirmButtonText: reportUrl ? "Download error report" : "OK",
               cancelButtonText: "Close",
               confirmButtonColor: "#4f46e5",
             }).then(async (r) => {
-              if (!r.isConfirmed || !reportFile) return;
+              if (!r.isConfirmed || !reportUrl) return;
               try {
-                const resp = await axiosInstance.get(
-                  `/api/students/import-legacy-students/error-report/${reportFile}`,
-                  { responseType: "blob" },
-                );
+                const resp = await axiosInstance.get(reportUrl, {
+                  responseType: "blob",
+                });
                 const url = URL.createObjectURL(resp.data as Blob);
                 const a = document.createElement("a");
                 a.href = url;
-                a.download = reportFile;
+                a.download = suggestedFileName;
                 a.click();
                 URL.revokeObjectURL(url);
               } catch {
@@ -326,10 +341,12 @@ export default function ReportsPage() {
 
   const selectedAcademicYear = useMemo(
     () =>
+      availableAcademicYears.find((year) => year.id === currentAcademicYear?.id) ||
+      currentAcademicYear ||
       availableAcademicYears.find((year) => year.isCurrentYear) ||
       availableAcademicYears[0] ||
       null,
-    [availableAcademicYears],
+    [availableAcademicYears, currentAcademicYear],
   );
   const selectedAcademicYearId = selectedAcademicYear?.id?.toString() || "";
   const effectiveAcademicYearId = exportAcademicYearId.trim() || selectedAcademicYearId;
@@ -1280,100 +1297,134 @@ export default function ReportsPage() {
                 ) : null}
               </Button>
             </DialogTrigger>
-            <DialogContent className="flex max-h-[min(90vh,720px)] max-w-md flex-col overflow-hidden sm:max-w-lg">
-              <DialogHeader className="shrink-0">
-                <DialogTitle>Export filters</DialogTitle>
-                <DialogDescription className="text-left text-slate-600">
-                  Optional narrowers for supported downloads (Enrolment exports, CU corrections,
-                  exam form). For CU Registration PDFs / Documents ZIP, pick exactly one regulation
-                  here.
-                </DialogDescription>
-              </DialogHeader>
+            <DialogContent className="flex h-[min(88vh,720px)] max-h-[92vh] w-[min(96vw,1280px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[1280px] sm:flex-row">
+              {/*
+                Decorative rail. Inlined rather than <img src> so the accent can
+                resolve `--brand-400` and follow the environment palette; the svg
+                carries preserveAspectRatio="slice" and a trimmed viewBox so it
+                fills top to bottom with no blank band.
+                "Filter" by Storyset — see assets/ATTRIBUTION.txt.
+              */}
+              <aside
+                aria-hidden="true"
+                className="relative hidden w-[420px] shrink-0 overflow-hidden border-r-2 border-purple-200 bg-purple-50/60 sm:block"
+              >
+                <div
+                  className="absolute inset-0 [&>svg]:h-full [&>svg]:w-full"
+                  dangerouslySetInnerHTML={{ __html: exportFiltersIllustration }}
+                />
+              </aside>
 
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-2">
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-slate-800">Academic year</Label>
-                  <Select value={exportAcademicYearId} onValueChange={setExportAcademicYearId}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableAcademicYears.map((y) => (
-                        <SelectItem key={y.id} value={String(y.id)}>
-                          {y.year}
-                          {currentAcademicYear?.id === y.id ? " (current)" : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {/* Header, body and footer share one column so the row above is rail | form. */}
+              <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+                <DialogHeader className="shrink-0 space-y-1.5 border-b bg-muted/40 px-6 py-3">
+                  <DialogTitle>Export filters</DialogTitle>
+                  <DialogDescription className="text-left text-slate-600">
+                    Optional narrowers for supported downloads (Enrolment exports, CU corrections,
+                    exam form). For CU Registration PDFs / Documents ZIP, pick exactly one
+                    regulation here.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-slate-800">Academic year</Label>
+                    <Select value={exportAcademicYearId} onValueChange={setExportAcademicYearId}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableAcademicYears.map((y) => (
+                          <SelectItem key={y.id} value={String(y.id)}>
+                            <span className="flex items-center gap-2">
+                              {y.year}
+                              {currentAcademicYear?.id === y.id && (
+                                <Badge
+                                  variant="outline"
+                                  className="border-green-200 bg-green-50 px-1.5 py-0 text-[10px] font-medium text-green-700"
+                                >
+                                  Current
+                                </Badge>
+                              )}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/*
+                    Affiliation and regulation feed the program-course list, so
+                    the three sit on one row in that order — the dependency reads
+                    left to right.
+                  */}
+                  <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-3">
+                    <div className="min-w-0 space-y-2">
+                      <Label className="text-xs font-semibold text-slate-800">Affiliation</Label>
+                      <DialogMultiSelect
+                        placeholder="All affiliations"
+                        options={affiliationFilterOptions}
+                        selectedOptions={filterAffiliationIds.map(String)}
+                        onChange={(s) => setFilterAffiliationIds(parseIdStrings(s))}
+                        contentClassName="min-w-[280px]"
+                      />
+                    </div>
+
+                    <div className="min-w-0 space-y-2">
+                      <Label className="text-xs font-semibold text-slate-800">Regulation</Label>
+                      <DialogMultiSelect
+                        placeholder="All regulations"
+                        options={regulationFilterOptions}
+                        selectedOptions={filterRegulationIds.map(String)}
+                        onChange={(s) => setFilterRegulationIds(parseIdStrings(s))}
+                        contentClassName="min-w-[280px]"
+                      />
+                    </div>
+
+                    <div className="min-w-0 space-y-2">
+                      <Label className="text-xs font-semibold text-slate-800">
+                        Programme course
+                      </Label>
+                      <DialogMultiSelect
+                        placeholder="All programme courses"
+                        options={programCourseFilterOptions}
+                        selectedOptions={filterProgramCourseIds.map(String)}
+                        onChange={(s) => setFilterProgramCourseIds(parseIdStrings(s))}
+                        contentClassName="min-w-[280px]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-slate-800">Semester</Label>
+                    <DialogMultiSelect
+                      placeholder="All semesters"
+                      options={semesterClassFilterOptions}
+                      selectedOptions={filterClassIds.map(String)}
+                      onChange={(s) => setFilterClassIds(parseIdStrings(s))}
+                      contentClassName="min-w-[280px]"
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-slate-800">Regulation</Label>
-                  <DialogMultiSelect
-                    placeholder="All regulations"
-                    options={regulationFilterOptions}
-                    selectedOptions={filterRegulationIds.map(String)}
-                    onChange={(s) => setFilterRegulationIds(parseIdStrings(s))}
-                    contentClassName="min-w-[280px]"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-slate-800">Affiliation</Label>
-                  <DialogMultiSelect
-                    placeholder="All affiliations"
-                    options={affiliationFilterOptions}
-                    selectedOptions={filterAffiliationIds.map(String)}
-                    onChange={(s) => setFilterAffiliationIds(parseIdStrings(s))}
-                    contentClassName="min-w-[280px]"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-slate-800">Program course</Label>
-                  <p className="text-[11px] text-slate-500">
-                    List follows affiliation and regulation above (leave those empty for all
-                    courses).
-                  </p>
-                  <DialogMultiSelect
-                    placeholder="All program courses"
-                    options={programCourseFilterOptions}
-                    selectedOptions={filterProgramCourseIds.map(String)}
-                    onChange={(s) => setFilterProgramCourseIds(parseIdStrings(s))}
-                    contentClassName="min-w-[280px]"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-slate-800">Semester (class)</Label>
-                  <DialogMultiSelect
-                    placeholder="All semesters"
-                    options={semesterClassFilterOptions}
-                    selectedOptions={filterClassIds.map(String)}
-                    onChange={(s) => setFilterClassIds(parseIdStrings(s))}
-                    contentClassName="min-w-[280px]"
-                  />
-                </div>
+                <DialogFooter className="shrink-0 gap-2 border-t bg-muted/40 px-6 py-3 sm:gap-0 flex-col sm:flex-row">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setFilterRegulationIds([]);
+                      setFilterAffiliationIds([]);
+                      setFilterProgramCourseIds([]);
+                      setFilterClassIds([]);
+                    }}
+                  >
+                    Clear narrowers
+                  </Button>
+                  <Button type="button" onClick={() => setFilterDialogOpen(false)}>
+                    Done
+                  </Button>
+                </DialogFooter>
               </div>
-
-              <DialogFooter className="shrink-0 gap-2 sm:gap-0 flex-col sm:flex-row">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setFilterRegulationIds([]);
-                    setFilterAffiliationIds([]);
-                    setFilterProgramCourseIds([]);
-                    setFilterClassIds([]);
-                  }}
-                >
-                  Clear narrowers
-                </Button>
-                <Button type="button" onClick={() => setFilterDialogOpen(false)}>
-                  Done
-                </Button>
-              </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>

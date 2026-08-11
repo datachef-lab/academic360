@@ -396,7 +396,7 @@ function ModuleConfigDialog({
           {type === "CONDITIONAL" ? (
             <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
               <div className="flex items-center justify-between gap-4 shrink-0">
-                <Label>Program Courses & Classes</Label>
+                <Label>Programme Courses & Classes</Label>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <Select
                     value={affiliationFilterId ? String(affiliationFilterId) : "__all__"}
@@ -450,7 +450,7 @@ function ModuleConfigDialog({
                               onCheckedChange={handleSelectAllProgramCourses}
                               className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 data-[state=indeterminate]:bg-purple-600 data-[state=indeterminate]:border-purple-600"
                             />
-                            Program Course
+                            Programme Course
                           </div>
                         </TableHead>
                         <TableHead className="border-r font-medium sticky top-0 z-10 bg-slate-50 dark:bg-slate-800 shadow-[0_1px_0_0_hsl(var(--border))]">
@@ -473,7 +473,7 @@ function ModuleConfigDialog({
                       {filteredProgramCourses.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={2} className="text-center text-muted-foreground py-4">
-                            No program courses available.
+                            No programme courses available.
                           </TableCell>
                         </TableRow>
                       ) : (

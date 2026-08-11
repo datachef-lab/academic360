@@ -4,7 +4,7 @@ import {
   BoardSubject,
   BoardSubjectT,
 } from "@repo/db/schemas/models/admissions/board-subject.model";
-import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
+import { and, countDistinct, eq, ilike, ne, or } from "drizzle-orm";
 import { boardModel, degreeModel } from "@repo/db/schemas/models/resources";
 // import { addressModel } from "@repo/db/schemas/models/user";
 import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions";
@@ -25,6 +25,38 @@ export interface BulkUploadResult {
 export async function createBoardSubject(
   data: BoardSubject,
 ): Promise<BoardSubjectDto> {
+  // (board, subject) is the natural key. Nothing enforced it — not this
+  // service, not the controller, not the schema — so a re-run of the bulk
+  // upload, or a second admin adding the same pair, silently duplicated it.
+  // Upsert instead: the caller's intent is "this pair should have these
+  // marks", which an update satisfies exactly.
+  const [existing] = await db
+    .select({ id: boardSubjectModel.id })
+    .from(boardSubjectModel)
+    .where(
+      and(
+        eq(boardSubjectModel.boardId, data.boardId as number),
+        eq(
+          boardSubjectModel.boardSubjectNameId,
+          data.boardSubjectNameId as number,
+        ),
+      ),
+    )
+    .limit(1);
+
+  if (existing) {
+    const [updated] = await db
+      .update(boardSubjectModel)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(boardSubjectModel.id, existing.id))
+      .returning();
+    const existingResult = await getBoardSubjectById(updated!.id);
+    if (!existingResult) {
+      throw new Error("Failed to retrieve updated board subject");
+    }
+    return existingResult;
+  }
+
   const [created] = await db.insert(boardSubjectModel).values(data).returning();
 
   // Get related data for the created record
@@ -40,6 +72,7 @@ export async function getAllBoardSubjects(
   pageSize: number = 10,
   search?: string,
   degreeId?: number,
+  boardId?: number,
 ): Promise<{
   data: BoardSubjectDto[];
   total: number;
@@ -52,12 +85,25 @@ export async function getAllBoardSubjects(
   const whereConditions = [];
 
   if (search) {
-    whereConditions.push(ilike(boardModel.name, `%${search}%`));
-    whereConditions.push(ilike(boardSubjectNameModel.name, `%${search}%`));
+    // These were pushed as two separate conditions and then AND-ed, so a search
+    // only matched when the board name AND the subject name both contained the
+    // term — i.e. almost never. The placeholder promises either.
+    whereConditions.push(
+      or(
+        ilike(boardModel.name, `%${search}%`),
+        ilike(boardSubjectNameModel.name, `%${search}%`),
+      )!,
+    );
   }
 
   if (degreeId) {
     whereConditions.push(eq(degreeModel.id, degreeId));
+  }
+
+  // Board filtering used to happen client-side over the current page of 10 rows,
+  // so picking a board that did not appear on that page returned nothing.
+  if (boardId) {
+    whereConditions.push(eq(boardSubjectModel.boardId, boardId));
   }
 
   // Get total count

@@ -74,6 +74,7 @@ export const boardSubjectService = {
     pageSize: number = 10,
     search?: string,
     degreeId?: number,
+    boardId?: number,
   ): Promise<PaginatedResponse<BoardSubjectDto>> {
     try {
       const params: Record<string, string> = {
@@ -87,6 +88,9 @@ export const boardSubjectService = {
 
       if (degreeId) {
         params.degreeId = degreeId.toString();
+      }
+      if (boardId) {
+        params.boardId = boardId.toString();
       }
 
       const response = await axiosInstance.get(API_BASE_URL, { params });

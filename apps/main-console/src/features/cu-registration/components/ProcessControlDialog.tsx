@@ -57,7 +57,7 @@ export default function ProcessControlDialog({
   const [action, setAction] = useState<"ACTIVATE" | "DEACTIVATE">("ACTIVATE");
   const [loading, setLoading] = useState(false);
 
-  // Load program courses
+  // Load programme courses
   useEffect(() => {
     const loadProgramCourses = async () => {
       // Mock data - replace with actual API call
@@ -420,7 +420,7 @@ export default function ProcessControlDialog({
                   <thead className="bg-slate-50 border-b sticky top-0 z-10">
                     <tr>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 w-1/2">
-                        Program Courses
+                        Programme Courses
                       </th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 w-1/2">
                         Semesters

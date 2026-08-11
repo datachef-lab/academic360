@@ -17,6 +17,7 @@ import {
 import { idCardIssueStatusEnum } from "@/schemas/enums";
 import { studentModel } from "@/schemas/models/user/student.model";
 import { userModel } from "@/schemas/models/user/user.model";
+import { documentLedgerModel } from "@/schemas/models/documents/document-ledger.model";
 import { idCardTemplateModel } from "./id-card-template.model";
 
 export const idCardIssueModel = pgTable(
@@ -30,6 +31,12 @@ export const idCardIssueModel = pgTable(
             .references(() => studentModel.id),
         templateId: integer("template_id_fk").references(() => idCardTemplateModel.id),
         issueStatus: idCardIssueStatusEnum().notNull().default("ISSUED"),
+        // The card's entry in the student's document passbook. The issue is the
+        // system of record; the ledger row is its projection, so the link lives
+        // here and `document_ledger` stays generic for the other flows.
+        documentLedgerId: integer("document_ledger_id_fk")
+            .references(() => documentLedgerModel.id)
+            .unique(),
         renewedFromIssueId: integer("renewed_from_issue_id_fk").references(
             (): AnyPgColumn => idCardIssueModel.id,
         ),
@@ -83,6 +90,10 @@ export const idCardIssueRelations = relations(idCardIssueModel, ({ one }) => ({
     issuedBy: one(userModel, {
         fields: [idCardIssueModel.issuedByUserId],
         references: [userModel.id],
+    }),
+    documentLedger: one(documentLedgerModel, {
+        fields: [idCardIssueModel.documentLedgerId],
+        references: [documentLedgerModel.id],
     }),
 }));
 

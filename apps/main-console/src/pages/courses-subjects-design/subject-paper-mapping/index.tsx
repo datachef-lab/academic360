@@ -536,7 +536,7 @@ const SubjectPaperMappingPage = () => {
 
         return {
           "Sr. No.": index + 1,
-          "Program Course": programCourse?.name || "-",
+          "Programme Course": programCourse?.name || "-",
           "Subject & Paper": paper.name || "-",
           "Subject Name": subject?.name || "-",
           "Paper Code": paper.code || "-",
@@ -563,7 +563,7 @@ const SubjectPaperMappingPage = () => {
       // Set column widths
       const colWidths = [
         { wch: 8 }, // Sr. No.
-        { wch: 30 }, // Program Course
+        { wch: 30 }, // Programme Course
         { wch: 25 }, // Subject & Paper
         { wch: 25 }, // Subject Name
         { wch: 15 }, // Paper Code
@@ -835,7 +835,7 @@ const SubjectPaperMappingPage = () => {
   //         rowErrors.push("Academic Year not found");
   //       }
 
-  //       // Program Course
+  //       // Programme Course
   //       const programCourse = programCourses.find(
   //         (pc) =>
   //           (
@@ -843,7 +843,7 @@ const SubjectPaperMappingPage = () => {
   //           )
   //       );
   //       if (!programCourse) {
-  //         rowErrors.push("Program Course not found");
+  //         rowErrors.push("Programme Course not found");
   //       }
 
   //       // Class
@@ -1333,7 +1333,7 @@ const SubjectPaperMappingPage = () => {
                       />
                     </div>
                     <div>
-                      <div className="mb-1 text-sm text-muted-foreground">Program Course</div>
+                      <div className="mb-1 text-sm text-muted-foreground">Programme Course</div>
                       <Combobox
                         value={filtersObj.programCourseId?.toString() ?? "all"}
                         onChange={(value) =>
@@ -1342,9 +1342,9 @@ const SubjectPaperMappingPage = () => {
                             programCourseId: value === "all" ? null : Number(value),
                           }))
                         }
-                        placeholder="All Program Courses"
+                        placeholder="All Programme Courses"
                         dataArr={[
-                          { value: "all", label: "All Program Courses" },
+                          { value: "all", label: "All Programme Courses" },
                           ...programCourses
                             .filter((pc) => pc.isActive !== false)
                             .map((pc) => ({
@@ -1565,9 +1565,9 @@ const SubjectPaperMappingPage = () => {
                     className="text-xs border-blue-300 text-blue-700 bg-blue-50 flex items-center gap-1"
                   >
                     {programCourses.find((pc) => pc.id === filtersObj.programCourseId)?.name ||
-                      "Program Course"}
+                      "Programme Course"}
                     <button
-                      aria-label="Clear program course filter"
+                      aria-label="Clear programme course filter"
                       className="ml-1 hover:text-blue-900"
                       onClick={() => {
                         setFiltersObj((prev) => ({ ...prev, programCourseId: null }));
@@ -1690,7 +1690,7 @@ const SubjectPaperMappingPage = () => {
                     className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
                     style={{ width: "14%" }}
                   >
-                    Program Course
+                    Programme Course
                   </div>
                   <div
                     className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"

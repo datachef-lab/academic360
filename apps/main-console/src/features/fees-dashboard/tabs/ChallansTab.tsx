@@ -32,7 +32,7 @@ export function ChallansTab() {
         title="Receipts by program"
         description="Student count"
         config={CHALLAN_CHART_CONFIG}
-        xAxisTitle="Program course"
+        xAxisTitle="Programme course"
         yAxisTitle="Student count"
         xTickLabels={chartData.map((d) => d.program)}
         yTickLabels={buildYTickLabels(yMax)}

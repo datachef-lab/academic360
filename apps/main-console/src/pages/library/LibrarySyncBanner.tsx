@@ -19,9 +19,14 @@ function formatDuration(ms: number): string {
   if (!Number.isFinite(ms) || ms <= 0) return "0s";
   const s = Math.round(ms / 1000);
   if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  const rest = s % 60;
-  return rest === 0 ? `${m}m` : `${m}m ${rest}s`;
+  const totalMin = Math.floor(s / 60);
+  const restSec = s % 60;
+  if (totalMin < 60) {
+    return restSec === 0 ? `${totalMin}m` : `${totalMin}m ${restSec}s`;
+  }
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
 
 function humaniseAgo(iso: string | null): string {
@@ -105,13 +110,32 @@ export function LibrarySyncBanner() {
     const historicalExpected =
       lastDurationMs && lastDurationMs > 0 ? formatDuration(lastDurationMs) : null;
 
+    // Show a "remaining" number that ALWAYS shrinks over time, even before
+    // we've recorded a real completed tick. The raw formula
+    // `elapsed × (planned - processed) / processed` is extrapolated from
+    // the overall pace so far, and the tick alternates between fast-
+    // processing phases and multi-minute silent remote-fetch phases — during
+    // a fetch the pace collapses and the raw extrapolation blows up
+    // (users saw 2h+ ETAs that were pure math artefact). We defend the
+    // number by clamping it against a ceiling that shrinks with elapsed:
+    //   - When we have a real prior tick duration: clamp to (lastDurationMs - elapsed)
+    //   - When we don't: clamp to (FIRST_TICK_CEILING - elapsed)
+    // Either way, `remainingMs` is monotonically bounded above by a
+    // shrinking value, so the displayed number can never grow unboundedly.
+    // 45 min is a reasonable heuristic for a sync tick's upper bound on
+    // develop / prod (individual big tables can take 15-30 min end-to-end).
+    const FIRST_TICK_CEILING_MS = 45 * 60_000;
     let liveRemainingLabel: string | null = null;
     let livePercent: number | null = null;
     if (plannedRows && plannedRows > 0 && processedRows != null) {
       livePercent = Math.min(100, Math.round((processedRows / plannedRows) * 100));
       if (processedRows > 0) {
         const rate = processedRows / Math.max(1, elapsedMs); // rows per ms
-        const remainingMs = Math.max(0, (plannedRows - processedRows) / rate);
+        const rawRemaining = Math.max(0, (plannedRows - processedRows) / rate);
+        const ceilingMs =
+          lastDurationMs && lastDurationMs > 0 ? lastDurationMs : FIRST_TICK_CEILING_MS;
+        const ceilingRemaining = Math.max(0, ceilingMs - elapsedMs);
+        const remainingMs = Math.min(rawRemaining, ceilingRemaining);
         liveRemainingLabel =
           remainingMs > 0 ? `~${formatDuration(remainingMs)} remaining` : "wrapping up…";
       }

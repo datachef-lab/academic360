@@ -1,6 +1,6 @@
 import { db } from "@/db/index.js";
 import { cuRegistrationDocumentUploadModel } from "@repo/db/schemas/models/admissions/cu-registration-document-upload.model.js";
-import { documentModel } from "@repo/db/schemas/models/academics";
+import { documentTypeModel } from "@repo/db/schemas/models/documents";
 import { eq, and, desc, count } from "drizzle-orm";
 import { cuRegistrationDocumentUploadInsertTypeT } from "@repo/db/schemas/models/admissions/cu-registration-document-upload.model.js";
 import { CuRegistrationDocumentUploadDto } from "@repo/db/dtos/admissions/index.js";
@@ -11,6 +11,142 @@ import {
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { ApiError } from "@/utils/index.js";
 import JSZip from "jszip";
+import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions";
+import {
+  DOCUMENT_TYPE_CODES,
+  deleteCuRegUploadLedgerEntry,
+  getDocumentTypeIdByCode,
+  refreshCuRegUploadLedgerEntry,
+  upsertCuRegUploadLedgerEntry,
+} from "@/features/documents/services/document-ledger.service.js";
+
+/**
+ * The upload row has no student or academic year of its own — both live on the
+ * parent correction request, which is the join every ledger write needs.
+ */
+async function loadRequestOwner(
+  correctionRequestId: number,
+  executor:
+    | typeof db
+    | Parameters<Parameters<typeof db.transaction>[0]>[0] = db,
+) {
+  const [req] = await executor
+    .select({
+      studentId: cuRegistrationCorrectionRequestModel.studentId,
+      academicYearId: cuRegistrationCorrectionRequestModel.academicYearId,
+    })
+    .from(cuRegistrationCorrectionRequestModel)
+    .where(eq(cuRegistrationCorrectionRequestModel.id, correctionRequestId))
+    .limit(1);
+  return req ?? null;
+}
+
+/**
+ * Record a generated adm-reg PDF against its correction request.
+ *
+ * The PDF is produced on every final submission and emailed to the student, but
+ * only the batch-submit path ever wrote it down — a staff submission from
+ * main-console left it existing in S3 and in the student's inbox with no record
+ * at all. This is the shared recorder for all of those paths.
+ *
+ * Keyed on (request, CU_REGISTRATION_PDF) like every other upload, so a
+ * regeneration updates the row in place and refreshes the passbook entry rather
+ * than piling up duplicates — there is only ever one current PDF per request.
+ *
+ * Never throws: a bookkeeping failure must not fail a submission that has
+ * already succeeded.
+ */
+export async function recordGeneratedCuRegPdf(
+  input: {
+    correctionRequestId: number;
+    applicationNumber: string;
+    documentUrl: string;
+    /**
+     * Override the row's createdAt/updatedAt when the caller knows the
+     * true generation moment (e.g. a backfill that re-writes a PDF row
+     * for a submission that finished months ago — the ledger's "Recorded"
+     * timestamp must reflect the CU-reg submission date, not the boot's
+     * clock). Live callers omit this and get defaultNow() as before.
+     */
+    generatedAt?: Date | null;
+  },
+  executor:
+    | typeof db
+    | Parameters<Parameters<typeof db.transaction>[0]>[0] = db,
+): Promise<void> {
+  try {
+    const documentTypeId = await getDocumentTypeIdByCode(
+      DOCUMENT_TYPE_CODES.CU_REGISTRATION_PDF,
+      executor,
+    );
+
+    const [existing] = await executor
+      .select()
+      .from(cuRegistrationDocumentUploadModel)
+      .where(
+        and(
+          eq(
+            cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
+            input.correctionRequestId,
+          ),
+          eq(cuRegistrationDocumentUploadModel.documentId, documentTypeId),
+        ),
+      )
+      .limit(1);
+
+    const values = {
+      documentUrl: input.documentUrl,
+      path: input.documentUrl,
+      fileName: `CU_${input.applicationNumber}.pdf`,
+      fileType: "application/pdf",
+      remarks: "Generated CU Registration PDF",
+    };
+
+    if (existing) {
+      const [updated] = await executor
+        .update(cuRegistrationDocumentUploadModel)
+        .set({
+          ...values,
+          updatedAt: input.generatedAt ?? new Date(),
+          ...(input.generatedAt ? { createdAt: input.generatedAt } : {}),
+        })
+        .where(eq(cuRegistrationDocumentUploadModel.id, existing.id))
+        .returning();
+
+      if (updated!.documentLedgerId != null) {
+        await refreshCuRegUploadLedgerEntry(updated!, executor);
+        return;
+      }
+      const owner = await loadRequestOwner(input.correctionRequestId, executor);
+      if (owner) {
+        await upsertCuRegUploadLedgerEntry({ ...updated!, ...owner }, executor);
+      }
+      return;
+    }
+
+    const [created] = await executor
+      .insert(cuRegistrationDocumentUploadModel)
+      .values({
+        cuRegistrationCorrectionRequestId: input.correctionRequestId,
+        documentId: documentTypeId,
+        ...values,
+        ...(input.generatedAt
+          ? { createdAt: input.generatedAt, updatedAt: input.generatedAt }
+          : {}),
+      })
+      .returning();
+
+    const owner = await loadRequestOwner(input.correctionRequestId, executor);
+    if (owner) {
+      await upsertCuRegUploadLedgerEntry({ ...created!, ...owner }, executor);
+    }
+  } catch (err) {
+    console.error(
+      "[CU-REG PDF] failed to record the generated PDF — the submission itself is unaffected",
+      err,
+    );
+  }
+}
 
 // CREATE
 export async function createCuRegistrationDocumentUpload(
@@ -48,6 +184,19 @@ export async function createCuRegistrationDocumentUpload(
       })
       .where(eq(cuRegistrationDocumentUploadModel.id, (existing as any).id))
       .returning();
+
+    // A re-upload replaces the file in place — same row id — so the passbook
+    // entry is refreshed, not duplicated. If the row predates the ledger (or its
+    // entry was skipped), create one now.
+    if (updated!.documentLedgerId != null) {
+      await refreshCuRegUploadLedgerEntry(updated!);
+    } else {
+      const owner = await loadRequestOwner(
+        updated!.cuRegistrationCorrectionRequestId,
+      );
+      if (owner) await upsertCuRegUploadLedgerEntry({ ...updated!, ...owner });
+    }
+
     return await modelToDto(updated);
   }
 
@@ -55,6 +204,11 @@ export async function createCuRegistrationDocumentUpload(
     .insert(cuRegistrationDocumentUploadModel)
     .values(documentData)
     .returning();
+
+  const owner = await loadRequestOwner(
+    created!.cuRegistrationCorrectionRequestId,
+  );
+  if (owner) await upsertCuRegUploadLedgerEntry({ ...created!, ...owner });
 
   return await modelToDto(created);
 }
@@ -166,6 +320,9 @@ export async function updateCuRegistrationDocumentUpload(
 
   if (!updatedDocument) return null;
 
+  // Keep the passbook entry's link in step with the file it points at.
+  await refreshCuRegUploadLedgerEntry(updatedDocument);
+
   return await modelToDto(updatedDocument);
 }
 
@@ -173,9 +330,23 @@ export async function updateCuRegistrationDocumentUpload(
 export async function deleteCuRegistrationDocumentUpload(
   id: number,
 ): Promise<boolean> {
-  const result = await db
-    .delete(cuRegistrationDocumentUploadModel)
-    .where(eq(cuRegistrationDocumentUploadModel.id, id));
+  const [existing] = await db
+    .select({
+      id: cuRegistrationDocumentUploadModel.id,
+      documentLedgerId: cuRegistrationDocumentUploadModel.documentLedgerId,
+    })
+    .from(cuRegistrationDocumentUploadModel)
+    .where(eq(cuRegistrationDocumentUploadModel.id, id))
+    .limit(1);
+
+  // The FK lives on the upload row, so the ledger entry has to be cleared and
+  // deleted together with it or it orphans.
+  const result = await db.transaction(async (tx) => {
+    await deleteCuRegUploadLedgerEntry(id, existing?.documentLedgerId, tx);
+    return await tx
+      .delete(cuRegistrationDocumentUploadModel)
+      .where(eq(cuRegistrationDocumentUploadModel.id, id));
+  });
 
   return (result.rowCount ?? 0) > 0;
 }
@@ -184,14 +355,32 @@ export async function deleteCuRegistrationDocumentUpload(
 export async function deleteCuRegistrationDocumentUploadsByRequestId(
   requestId: number,
 ): Promise<boolean> {
-  const result = await db
-    .delete(cuRegistrationDocumentUploadModel)
+  const existing = await db
+    .select({
+      id: cuRegistrationDocumentUploadModel.id,
+      documentLedgerId: cuRegistrationDocumentUploadModel.documentLedgerId,
+    })
+    .from(cuRegistrationDocumentUploadModel)
     .where(
       eq(
         cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
         requestId,
       ),
     );
+
+  const result = await db.transaction(async (tx) => {
+    for (const row of existing) {
+      await deleteCuRegUploadLedgerEntry(row.id, row.documentLedgerId, tx);
+    }
+    return await tx
+      .delete(cuRegistrationDocumentUploadModel)
+      .where(
+        eq(
+          cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
+          requestId,
+        ),
+      );
+  });
 
   return (result.rowCount ?? 0) > 0;
 }
@@ -203,8 +392,8 @@ async function modelToDto(
   // Get document details
   const [documentDetails] = await db
     .select()
-    .from(documentModel)
-    .where(eq(documentModel.id, document.documentId));
+    .from(documentTypeModel)
+    .where(eq(documentTypeModel.id, document.documentId));
 
   return {
     id: document.id,
@@ -218,10 +407,13 @@ async function modelToDto(
     updatedAt: document.updatedAt,
     document: {
       id: documentDetails!.id,
+      code: documentDetails!.code,
       name: documentDetails!.name,
       description: documentDetails!.description,
       sequence: documentDetails!.sequence,
       isActive: documentDetails!.isActive,
+      bgColor: documentDetails!.bgColor,
+      textColor: documentDetails!.textColor,
       createdAt: documentDetails!.createdAt,
       updatedAt: documentDetails!.updatedAt,
     },
