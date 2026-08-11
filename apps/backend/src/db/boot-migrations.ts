@@ -20,9 +20,12 @@ import { runRegistrationYearDriftMigration } from "@/features/subject-selection/
 import { runCuAdmitCardSemVSemVILoader } from "@/features/subject-selection/services/cu-admitcard-loader.service.js";
 import { runStreamMismatchHeal } from "@/features/subject-selection/services/stream-mismatch-heal.service.js";
 import { runLegacyFeesAmountHeal } from "@/features/fees/services/legacy-fees-amount-heal.service.js";
-import { runLibraryLegacyLoad } from "@/features/library/services/library-legacy-load.service.js";
+// TEMPORARILY DISABLED 2026-08-10 (ADR 0034) — re-enable together with the
+// commented boot-migration entry below when the timeout fix is proven stable.
+// import { runLibraryLegacyLoad } from "@/features/library/services/library-legacy-load.service.js";
 import { runLibraryMastersSeed } from "@/features/library/services/library-masters-seed.service.js";
 import { runSubjectGroupMnHeal } from "@/features/subject-selection/services/subject-group-mn-heal.service.js";
+import { reconcileStaleLegacyImportJobs } from "@/features/user/services/legacy-import-jobs.service.js";
 
 const log = createLogger("boot-migrations");
 
@@ -155,15 +158,24 @@ const MIGRATIONS: Migration[] = [
     run: async () => runLibraryMastersSeed(),
   },
   {
-    // Loads the library data from IRP. Unlike everything above it is a long
-    // walk (~200k legacy rows), so it takes its OWN advisory lock: the
-    // resolvers are find-or-create, which makes a sequential re-run safe but
-    // not two instances running at once, and no legacy id column carries a
-    // unique constraint to catch the collision. Marker-guarded once it
-    // completes; LIBRARY_LEGACY_LOAD=off disables it.
-    name: "library-legacy-load",
-    run: async () => runLibraryLegacyLoad(),
+    // Time-based reconcile of stale legacy-import jobs. Any row still marked
+    // queued/running whose updated_at is older than 15 min is dead (a healthy
+    // job's persistProgress bumps updated_at every ~1s). Safe under a rolling
+    // deploy — an actively-running peer's row is never stale, so this cannot
+    // kill a live job. See legacy-import-jobs.service.ts for the query.
+    name: "legacy-import-boot-reconcile",
+    run: async () => reconcileStaleLegacyImportJobs(),
   },
+  // TEMPORARILY DISABLED 2026-08-10 (ADR 0034): the legacy load is a multi-
+  // hour walk that competes for DB connections while the excel-UID importer
+  // is running. Combined with the withAdvisoryXactLock hang we hit today, it
+  // amplified the deadlock's blast radius. Re-enable by uncommenting once the
+  // timeout fix is proven stable and the initial load is confirmed complete
+  // (boot_migration_markers row 'library-legacy-load-v1' present).
+  // {
+  //   name: "library-legacy-load",
+  //   run: async () => runLibraryLegacyLoad(),
+  // },
 ];
 
 export async function runBootMigrations(): Promise<void> {
