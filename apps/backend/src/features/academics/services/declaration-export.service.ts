@@ -104,6 +104,7 @@ async function fetchDeclarationRows(
       affiliationId: "pc.affiliation_id_fk",
       regulationTypeId: "pc.regulation_type_id_fk",
       classId: "pr.class_id_fk",
+      activeId: "u.is_active",
     }),
   );
 

@@ -7,6 +7,7 @@ export type ReportExportQueryFilters = {
   affiliationIds?: number[];
   regulationTypeIds?: number[];
   classIds?: number[];
+  isActive?: boolean;
 };
 
 function appendReportFilters(params: URLSearchParams, filters?: ReportExportQueryFilters) {
@@ -25,6 +26,9 @@ function appendReportFilters(params: URLSearchParams, filters?: ReportExportQuer
   }
   if (filters.classIds?.length) {
     params.set("classIds", filters.classIds.join(","));
+  }
+  if (filters.isActive !== undefined) {
+    params.set("isActive", String(filters.isActive));
   }
 }
 

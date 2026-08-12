@@ -279,7 +279,8 @@ export function hasAnyReportExportFilter(
     filters?.programCourseIds?.length ||
     filters?.affiliationIds?.length ||
     filters?.regulationTypeIds?.length ||
-    filters?.classIds?.length,
+    filters?.classIds?.length ||
+    typeof filters?.isActive === "boolean",
   );
 }
 
@@ -300,12 +301,15 @@ export async function findStudentIdsMatchingReportFilters(
     affiliationId: "pc.affiliation_id_fk",
     regulationTypeId: "pc.regulation_type_id_fk",
     classId: "pr.class_id_fk",
+    activeId: "u.is_active",
   });
 
   const { rows } = await db.execute(sql`
     SELECT DISTINCT pr.student_id_fk AS student_id
     FROM promotions pr
     JOIN program_courses pc ON pc.id = pr.program_course_id_fk
+    JOIN students std ON std.id = pr.student_id_fk
+    JOIN users u ON u.id = std.user_id_fk
     LEFT JOIN sessions s ON s.id = pr.session_id_fk
     WHERE COALESCE(pr.is_deprecated, false) = false
     ${academicYearId ? sql` AND s.academic_id_fk = ${academicYearId}` : sql``}

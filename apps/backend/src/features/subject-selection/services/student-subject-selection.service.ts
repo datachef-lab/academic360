@@ -2873,6 +2873,11 @@ export function buildStudentSubjectsExportSql(
     values.push(filters.regulationTypeIds);
     idx++;
   }
+  if (typeof filters.isActive === "boolean") {
+    baseParts.push(`AND u.is_active = $${idx}::boolean`);
+    values.push(filters.isActive);
+    idx++;
+  }
   const baseExtra = baseParts.length ? `\n    ${baseParts.join("\n    ")}` : "";
   let classCl = "";
   let classClAll = "";
@@ -4404,6 +4409,9 @@ export async function exportStudentSubjectSelections(
           : []),
         ...(filters.classIds?.length
           ? [inArray(promotionModel.classId, filters.classIds)]
+          : []),
+        ...(typeof filters.isActive === "boolean"
+          ? [eq(userModel.isActive, filters.isActive)]
           : []),
       ),
     );

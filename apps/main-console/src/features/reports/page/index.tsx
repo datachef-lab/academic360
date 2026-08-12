@@ -179,6 +179,7 @@ export default function ReportsPage() {
   const [filterAffiliationIds, setFilterAffiliationIds] = useState<number[]>([]);
   const [filterProgramCourseIds, setFilterProgramCourseIds] = useState<number[]>([]);
   const [filterClassIds, setFilterClassIds] = useState<number[]>([]);
+  const [filterStatus, setFilterStatus] = useState<"All" | "Active" | "Inactive">("All");
 
   // Authenticated user id for scoping socket room
   const { user } = useAuth();
@@ -363,6 +364,7 @@ export default function ReportsPage() {
       affiliationIds: filterAffiliationIds.length ? filterAffiliationIds : undefined,
       programCourseIds: filterProgramCourseIds.length ? filterProgramCourseIds : undefined,
       classIds: filterClassIds.length ? filterClassIds : undefined,
+      isActive: filterStatus === "All" ? undefined : filterStatus === "Active",
     };
   }, [
     effectiveAcademicYearId,
@@ -370,6 +372,7 @@ export default function ReportsPage() {
     filterAffiliationIds,
     filterProgramCourseIds,
     filterClassIds,
+    filterStatus,
   ]);
 
   const cuZipRegulationShortName = useMemo(() => {
@@ -428,6 +431,7 @@ export default function ReportsPage() {
       affiliationIds: f.affiliationIds?.length ? f.affiliationIds.join(",") : undefined,
       regulationTypeIds: f.regulationTypeIds?.length ? f.regulationTypeIds.join(",") : undefined,
       classIds: f.classIds?.length ? f.classIds.join(",") : undefined,
+      isActive: f.isActive === undefined ? undefined : String(f.isActive),
     };
   }, [buildReportFilters]);
 
@@ -1132,7 +1136,8 @@ export default function ReportsPage() {
     filterRegulationIds.length +
     filterAffiliationIds.length +
     filterProgramCourseIds.length +
-    filterClassIds.length;
+    filterClassIds.length +
+    (filterStatus !== "All" ? 1 : 0);
 
   const semesterClasses = useMemo(
     () =>
@@ -1308,7 +1313,7 @@ export default function ReportsPage() {
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold text-slate-800">Academic year</Label>
                   <Select value={exportAcademicYearId} onValueChange={setExportAcademicYearId}>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full focus:ring-0 focus:ring-offset-0">
                       <SelectValue placeholder="Select year" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1369,6 +1374,22 @@ export default function ReportsPage() {
                     contentClassName="min-w-[280px]"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-slate-800">Status</Label>
+                  <Select
+                    value={filterStatus}
+                    onValueChange={(v) => setFilterStatus(v as "All" | "Active" | "Inactive")}
+                  >
+                    <SelectTrigger className="w-full focus:ring-0 focus:ring-offset-0">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All</SelectItem>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <DialogFooter className="shrink-0 gap-2 sm:gap-0 flex-col sm:flex-row">
@@ -1380,6 +1401,7 @@ export default function ReportsPage() {
                     setFilterAffiliationIds([]);
                     setFilterProgramCourseIds([]);
                     setFilterClassIds([]);
+                    setFilterStatus("All");
                   }}
                 >
                   Clear narrowers

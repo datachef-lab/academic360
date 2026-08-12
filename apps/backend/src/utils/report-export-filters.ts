@@ -7,6 +7,8 @@ export type ReportExportFilters = {
   regulationTypeIds?: number[];
   /** Class / semester ids from `classes` */
   classIds?: number[];
+  /** Student active/inactive status (`students.active`). Omitted = both. */
+  isActive?: boolean;
 };
 
 function parseIdList(v: unknown): number[] | undefined {
@@ -19,6 +21,14 @@ function parseIdList(v: unknown): number[] | undefined {
   return ids.length ? [...new Set(ids)] : undefined;
 }
 
+function parseBoolean(v: unknown): boolean | undefined {
+  if (v == null || v === "") return undefined;
+  const s = String(v).trim().toLowerCase();
+  if (s === "true") return true;
+  if (s === "false") return false;
+  return undefined;
+}
+
 export function parseReportExportFilters(
   q: Record<string, unknown>,
 ): ReportExportFilters {
@@ -27,6 +37,7 @@ export function parseReportExportFilters(
     affiliationIds: parseIdList(q.affiliationIds),
     regulationTypeIds: parseIdList(q.regulationTypeIds),
     classIds: parseIdList(q.classIds),
+    isActive: parseBoolean(q.isActive),
   };
 }
 
@@ -50,6 +61,8 @@ export function buildReportFilterClauses(
     affiliationId?: string;
     regulationTypeId?: string;
     classId?: string;
+    /** SQL column expression for `students.active` (e.g. "std.active"). */
+    activeId?: string;
   },
 ): string {
   const parts: string[] = [];
@@ -65,5 +78,7 @@ export function buildReportFilterClauses(
   const cls = positiveInts(filters.classIds);
   if (cols.classId && cls.length)
     parts.push(` AND ${cols.classId} IN (${cls.join(",")})`);
+  if (cols.activeId && typeof filters.isActive === "boolean")
+    parts.push(` AND ${cols.activeId} = ${filters.isActive}`);
   return parts.join("");
 }

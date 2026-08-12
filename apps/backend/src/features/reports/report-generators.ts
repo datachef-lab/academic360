@@ -260,6 +260,7 @@ const DESCRIPTORS: ReportDescriptor[] = [
         affiliationIds: filters.affiliationIds,
         regulationTypeIds: filters.regulationTypeIds,
         classIds: filters.classIds,
+        isActive: filters.isActive,
       });
       return { buffer: res.buffer, fileName: res.fileName, contentType: XLSX };
     },

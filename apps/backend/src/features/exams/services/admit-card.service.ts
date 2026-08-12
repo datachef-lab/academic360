@@ -225,6 +225,7 @@ export interface AdmitCardReportFilters {
   affiliationIds?: number[];
   regulationTypeIds?: number[];
   classIds?: number[];
+  isActive?: boolean;
 }
 
 export async function listAdmitCardDistributions(
@@ -325,6 +326,9 @@ export async function listAdmitCardDistributions(
           : []),
         ...(filters?.classIds?.length
           ? [inArray(promotionModel.classId, filters.classIds)]
+          : []),
+        ...(typeof filters?.isActive === "boolean"
+          ? [eq(userModel.isActive, filters.isActive)]
           : []),
       ),
     )

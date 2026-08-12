@@ -259,6 +259,7 @@ export async function exportPromotionStudentsReport(params: {
   affiliationIds?: number[];
   regulationTypeIds?: number[];
   classIds?: number[];
+  isActive?: boolean;
 }) {
   const {
     sessionId,
@@ -268,6 +269,7 @@ export async function exportPromotionStudentsReport(params: {
     affiliationIds,
     regulationTypeIds,
     classIds,
+    isActive,
   } = params;
 
   const { rows } = await db.execute(sql`
@@ -335,6 +337,7 @@ pr.is_exam_form_submitted AS "is_exam_form_submitted?",
   ${sqlIntIn("pc.affiliation_id_fk", affiliationIds)}
   ${sqlIntIn("pc.regulation_type_id_fk", regulationTypeIds)}
   ${sqlIntIn("pr.class_id_fk", classIds)}
+  ${typeof isActive === "boolean" ? sql` AND u.is_active = ${isActive}` : sql``}
   ORDER BY pr.exam_form_submission_time_stamp
 `);
 

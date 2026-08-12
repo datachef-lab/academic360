@@ -3249,6 +3249,9 @@ export const exportCuRegistrationCorrectionRequests = async (
           if (filters.classIds?.length) {
             extras.push(inArray(classModel.id, filters.classIds));
           }
+          if (typeof filters.isActive === "boolean") {
+            extras.push(eq(userModel.isActive, filters.isActive));
+          }
           return extras.length ? and(baseCond, ...extras) : baseCond;
         })(),
       );

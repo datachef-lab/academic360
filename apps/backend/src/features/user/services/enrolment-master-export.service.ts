@@ -20,6 +20,8 @@ function rosterFilterSql(filters: ReportExportFilters): string {
     parts.push(` AND pc.regulation_type_id_fk IN (${reg.join(",")})`);
   const cls = ints(filters.classIds);
   if (cls.length) parts.push(` AND pr.class_id_fk IN (${cls.join(",")})`);
+  if (typeof filters.isActive === "boolean")
+    parts.push(` AND u.is_active = ${filters.isActive}`);
   return parts.join("");
 }
 
