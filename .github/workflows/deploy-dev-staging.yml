@@ -121,6 +121,13 @@ jobs:
             DBURL=$(grep -hE '^DATABASE_URL=' apps/backend/.env | tail -1 | cut -d= -f2- | tr -d '"\r')
             ( cd apps/backend && DATABASE_URL="$DBURL" npx drizzle-kit migrate )
 
+            # 4.1) Post-migrate guard (ADR 0028): drizzle-kit trusts a single
+            # high-water timestamp and silently skips entries below it — which
+            # happens after every prod-backup restore of this box's DB. Verify
+            # every tracked journal entry actually landed; heal any that were
+            # skipped; fail the deploy on real errors instead of lying green.
+            ( cd apps/backend && DATABASE_URL="$DBURL" node scripts/verify-migrations.cjs )
+
             # 5) Restart via PM2 (NODE_ENV sourced from .env so staging stays 'staging').
             NENV=$(grep -hE '^NODE_ENV=' apps/backend/.env | tail -1 | cut -d= -f2- | tr -d '"\r'); [ -z "$NENV" ] && NENV=development
             PM2="pm2"; command -v pm2 >/dev/null 2>&1 || PM2="npx pm2"
