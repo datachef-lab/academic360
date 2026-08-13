@@ -152,22 +152,6 @@ const parseDate = (value: string) => {
   return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
 };
 
-function FlagBadge({ value, label }: { value: boolean; label: string }) {
-  return (
-    <Badge
-      variant="outline"
-      className={[
-        "whitespace-nowrap text-xs",
-        value
-          ? "border-emerald-300 bg-emerald-50 text-emerald-800"
-          : "border-slate-200 bg-slate-50 text-slate-700",
-      ].join(" ")}
-    >
-      {label}: {value ? "Yes" : "No"}
-    </Badge>
-  );
-}
-
 // Row-level actions were removed — the whole row is now clickable and opens
 // the edit dialog. Delete lives inside the edit dialog (bottom-left button).
 

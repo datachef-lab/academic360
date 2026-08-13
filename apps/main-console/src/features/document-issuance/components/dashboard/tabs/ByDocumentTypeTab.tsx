@@ -46,8 +46,9 @@ function DonutTooltip({
   active?: boolean;
   payload?: { name: string; value: number; payload: { pct: number } }[];
 }) {
-  if (!active || !payload?.length) return null;
-  const p = payload[0];
+  if (!active) return null;
+  const p = payload?.[0];
+  if (!p) return null;
   return (
     <div className="rounded-md border border-[#d4d4d4] bg-white px-3 py-2 text-xs shadow-md">
       <p className="font-medium text-[#1a1a1a]">{p.name}</p>
