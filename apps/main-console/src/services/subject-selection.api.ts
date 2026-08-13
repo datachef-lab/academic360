@@ -30,7 +30,10 @@ export type CreateRelatedSubjectSubInput = {
 // service input (flat { id } arrays). academicYear/sequence are intentionally
 // omitted so they cannot be changed on update.
 /** Where a meta's student options come from (mirrors the backend enum). */
-export type SubjectSelectionOptionSource = "ELECTIVE_SUBJECTS" | "PRIOR_SELECTION";
+export type SubjectSelectionOptionSource =
+  | "ELECTIVE_SUBJECTS"
+  | "PRIOR_SELECTION"
+  | "SUBJECT_GROUP";
 
 export type UpdateSubjectSelectionMetaInput = {
   label?: string;

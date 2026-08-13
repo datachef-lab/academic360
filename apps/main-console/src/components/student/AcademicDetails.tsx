@@ -29,6 +29,8 @@ import { cityService } from "@/services/city.service";
 import axiosInstance from "@/utils/api";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
+import { deriveResultStatus } from "@/utils/resultStatus";
+import type { SubjectResultStatusType } from "@/types/enums";
 import { averageOfBestNTotals } from "@/utils/bestOfFourUtils";
 import { SearchableSelect } from "@/features/academic-year-setup/general/SearchableSelect";
 
@@ -204,6 +206,27 @@ export default function AcademicDetails({
     const list = (form?.subjects ?? []) as StudentAcademicSubjectsDto[];
     return [...list].sort((a, b) => Number(a?.id ?? 0) - Number(b?.id ?? 0));
   }, [form?.subjects]);
+  // Best of Four / Five are derived from the subject totals, not stored state.
+  // They used to be copied into `form` by a handler and an effect; whenever a
+  // marks edit took a path that missed one of them the displayed figure went
+  // stale. Deriving in render means they cannot lag the marks they come from.
+  const derivedBestOfFour = useMemo(() => averageOfBestNTotals(subjects, 4), [subjects]);
+  const derivedBestOfFive = useMemo(() => averageOfBestNTotals(subjects, 5), [subjects]);
+
+  /**
+   * Only active options are offered, but a record already pointing at a retired
+   * one must still show what it holds — otherwise opening the tab silently
+   * blanks the field and a save would wipe it.
+   */
+  const withSelected = (
+    options: Array<{ value: string; label: string }>,
+    selectedId: number | null | undefined,
+    selectedLabel: string,
+  ) => {
+    const id = Number(selectedId ?? 0);
+    if (!id || options.some((o) => o.value === String(id))) return options;
+    return [...options, { value: String(id), label: selectedLabel || `#${id} (retired)` }];
+  };
   const [boards, setBoards] = useState<Array<{ id: number; name: string }>>([]);
   const [languageMediums, setLanguageMediums] = useState<Array<{ id: number; name: string }>>([]);
   const [specializations, setSpecializations] = useState<Array<{ id: number; name: string }>>([]);
@@ -225,7 +248,15 @@ export default function AcademicDetails({
   const [cities, setCities] = useState<Array<{ id: number; name: string }>>([]);
   const [districts, setDistricts] = useState<Array<{ id: number; name: string }>>([]);
   const gradeOptions = ["A+", "A", "B+", "B", "C", "D", "E"];
-  const resultOptions = ["PASS", "FAIL", "ABSENT"];
+  // Must mirror board_result_status_type exactly: ABSENT was never a valid
+  // value (saving it fails), and the two component-specific failures were
+  // missing so they could not be set by hand either.
+  const resultOptions: SubjectResultStatusType[] = [
+    "PASS",
+    "FAIL IN THEORY",
+    "FAIL IN PRACTICAL",
+    "FAIL",
+  ];
 
   const formatKey = (key: string) =>
     key
@@ -239,18 +270,30 @@ export default function AcademicDetails({
   useEffect(() => {
     (async () => {
       try {
-        const r = await boardService.getAllBoards(1, 100);
-        setBoards((r?.data ?? []).map((b) => ({ id: b.id, name: b.name })));
+        // 100 was below the real count (66 boards today, but the page size was
+        // a silent ceiling), and retired boards were offered as choices — the
+        // legacy DB holds same-named active/inactive pairs.
+        const r = await boardService.getAllBoards(1, 1000);
+        setBoards(
+          (r?.data ?? [])
+            .filter((b) => (b as { isActive?: boolean }).isActive !== false)
+            .map((b) => ({ id: b.id, name: b.name })),
+        );
       } catch {
         setBoards([]);
       }
       try {
         const langs = await getAllLanguageMediums();
         setLanguageMediums(
-          (langs ?? []).map((l: { id?: number; name?: string }) => ({
-            id: Number(l?.id ?? 0),
-            name: String(l?.name ?? ""),
-          })),
+          (langs ?? [])
+            .filter(
+              (l: { isActive?: boolean; disabled?: boolean }) =>
+                l?.isActive !== false && l?.disabled !== true,
+            )
+            .map((l: { id?: number; name?: string }) => ({
+              id: Number(l?.id ?? 0),
+              name: String(l?.name ?? ""),
+            })),
         );
       } catch {
         setLanguageMediums([]);
@@ -258,10 +301,15 @@ export default function AcademicDetails({
       try {
         const specs = await getAllSpecializations();
         setSpecializations(
-          (specs ?? []).map((s: { id?: number; name?: string }) => ({
-            id: Number(s?.id ?? 0),
-            name: String(s?.name ?? ""),
-          })),
+          (specs ?? [])
+            .filter(
+              (s: { isActive?: boolean; disabled?: boolean }) =>
+                s?.isActive !== false && s?.disabled !== true,
+            )
+            .map((s: { id?: number; name?: string }) => ({
+              id: Number(s?.id ?? 0),
+              name: String(s?.name ?? ""),
+            })),
         );
       } catch {
         setSpecializations([]);
@@ -327,14 +375,18 @@ export default function AcademicDetails({
         if (form?.board?.id) {
           const list = await boardSubjectService.getByBoardId(form.board.id);
           setBoardSubjects(
-            (list ?? []).map((bs) => ({
-              id: bs.id,
-              name: bs.boardSubjectName?.name ?? "",
-              passingMarksTheory: Number(bs.passingMarksTheory ?? 0),
-              passingMarksPractical: Number(bs.passingMarksPractical ?? 0),
-              fullMarksTheory: Number(bs.fullMarksTheory ?? 0),
-              fullMarksPractical: Number(bs.fullMarksPractical ?? 0),
-            })),
+            // Retired mappings stay in the DB for historical rows but must not
+            // be offered as new choices.
+            (list ?? [])
+              .filter((bs) => (bs as { isActive?: boolean }).isActive !== false)
+              .map((bs) => ({
+                id: bs.id,
+                name: bs.boardSubjectName?.name ?? "",
+                passingMarksTheory: Number(bs.passingMarksTheory ?? 0),
+                passingMarksPractical: Number(bs.passingMarksPractical ?? 0),
+                fullMarksTheory: Number(bs.fullMarksTheory ?? 0),
+                fullMarksPractical: Number(bs.fullMarksPractical ?? 0),
+              })),
           );
         } else {
           setBoardSubjects([]);
@@ -407,25 +459,6 @@ export default function AcademicDetails({
       }
     })();
   }, [stateId, cityId]);
-
-  // Auto-calculate Best of Four / Best of Five (avg of best 4 / 5 subject totals)
-  // whenever the subjects change. These fields are read-only in the UI.
-  useEffect(() => {
-    if (!form?.subjects) return;
-    const bof = averageOfBestNTotals(form.subjects, 4);
-    const bo5 = averageOfBestNTotals(form.subjects, 5);
-    setForm((prev) => {
-      if (!prev) return prev;
-      const curBof = (prev as { bestOfFour?: number | null }).bestOfFour ?? null;
-      const curBo5 = (prev as { bestOfFive?: number | null }).bestOfFive ?? null;
-      if (bof === curBof && bo5 === curBo5) return prev;
-      return {
-        ...prev,
-        bestOfFour: bof ?? curBof,
-        bestOfFive: bo5 ?? curBo5,
-      } as AdmissionAcademicInfoDto;
-    });
-  }, [form?.subjects]);
 
   // Handlers
   const handleSelectChange = (key: string, id: number, displayName: string = "") => {
@@ -522,33 +555,25 @@ export default function AcademicDetails({
       const practical = Number(
         (current as unknown as { practicalMarks?: number }).practicalMarks ?? 0,
       );
-      const total = Number((current as unknown as { totalMarks?: number }).totalMarks ?? 0);
 
-      // If the subject has practical passing marks, student must meet both components;
-      // else fall back to total >= (theory pass + practical pass)
-      const hasTheoryRule = Number.isFinite(Number(bs?.passingMarksTheory ?? NaN));
-      const hasPracRule = Number.isFinite(Number(bs?.passingMarksPractical ?? NaN));
-      const requiredTotal =
-        Number(bs?.passingMarksTheory ?? 0) + Number(bs?.passingMarksPractical ?? 0);
-
-      if (hasTheoryRule || hasPracRule) {
-        const pass =
-          hasTheoryRule && hasPracRule
-            ? theory >= Number(bs?.passingMarksTheory ?? 0) &&
-              practical >= Number(bs?.passingMarksPractical ?? 0)
-            : total >= requiredTotal;
-        (current as unknown as { resultStatus?: string }).resultStatus = pass ? "PASS" : "FAIL";
+      // Result follows the board's own passing marks, and reports WHICH
+      // component failed — the enum has FAIL IN THEORY / FAIL IN PRACTICAL for
+      // exactly that. Returns null when the board states no pass mark, in which
+      // case whatever is already stored is left untouched rather than being
+      // overwritten with an invented PASS.
+      // Only re-derive when the inputs to the rule change. Running on every
+      // field change meant a staff member's manual Result pick was clobbered in
+      // the same setState that recorded it.
+      const derived =
+        field === "resultStatus" ? null : deriveResultStatus(theory, practical, bs ?? null);
+      if (derived) {
+        (current as unknown as { resultStatus?: string }).resultStatus = derived;
       }
       nextSubjects[targetIndex] = current as unknown as StudentAcademicSubjectsDto;
 
-      // Auto-calculate Best of Four / Five when subject marks change.
-      const updatedForm = { ...prev, subjects: nextSubjects } as AdmissionAcademicInfoDto;
-      const bof = averageOfBestNTotals(nextSubjects, 4);
-      const bo5 = averageOfBestNTotals(nextSubjects, 5);
-      if (bof !== null) (updatedForm as unknown as { bestOfFour?: number }).bestOfFour = bof;
-      if (bo5 !== null) (updatedForm as unknown as { bestOfFive?: number }).bestOfFive = bo5;
-
-      return updatedForm;
+      // Best of Four / Five are derived in render from these subjects, so there
+      // is nothing to copy into the form here.
+      return { ...prev, subjects: nextSubjects } as AdmissionAcademicInfoDto;
     });
   };
 
@@ -774,10 +799,14 @@ export default function AcademicDetails({
                   .studiedUpToClass ??
                   (original as unknown as { studiedUpToClass?: number }).studiedUpToClass ??
                   null) as number | null,
-                bestOfFour: ((f as unknown as { bestOfFour?: number }).bestOfFour ??
+                // Send exactly what the read-only inputs show. (The server
+                // recomputes both from the submitted subject totals anyway.)
+                bestOfFour: (derivedBestOfFour ??
+                  (f as unknown as { bestOfFour?: number }).bestOfFour ??
                   (original as unknown as { bestOfFour?: number }).bestOfFour ??
                   null) as number | null,
-                bestOfFive: ((f as unknown as { bestOfFive?: number }).bestOfFive ??
+                bestOfFive: (derivedBestOfFive ??
+                  (f as unknown as { bestOfFive?: number }).bestOfFive ??
                   (original as unknown as { bestOfFive?: number }).bestOfFive ??
                   null) as number | null,
                 oldBestOfFour: ((f as unknown as { oldBestOfFour?: number }).oldBestOfFour ??
@@ -860,7 +889,11 @@ export default function AcademicDetails({
                 const selected = boards.find((b) => String(b.id) === val);
                 handleSelectChange("board", Number(val), selected?.name);
               }}
-              options={boards.map((b) => ({ value: String(b.id), label: b.name ?? "" }))}
+              options={withSelected(
+                boards.map((b) => ({ value: String(b.id), label: b.name ?? "" })),
+                info?.board?.id ?? (info as unknown as { boardId?: number } | null)?.boardId,
+                info?.board?.name ?? "",
+              )}
               placeholder="Select board"
             />
           </div>
@@ -899,7 +932,12 @@ export default function AcademicDetails({
                 const selected = specializations.find((s) => String(s.id) === val);
                 handleSelectChange("specialization", Number(val), selected?.name);
               }}
-              options={specializations.map((s) => ({ value: String(s.id), label: s.name ?? "" }))}
+              options={withSelected(
+                specializations.map((sp) => ({ value: String(sp.id), label: sp.name ?? "" })),
+                info?.specialization?.id ??
+                  (info as unknown as { specializationId?: number } | null)?.specializationId,
+                info?.specialization?.name ?? "",
+              )}
               placeholder="Select specialization"
             />
           </div>
@@ -912,7 +950,12 @@ export default function AcademicDetails({
                 const selected = languageMediums.find((l) => String(l.id) === val);
                 handleSelectChange("languageMedium", Number(val), selected?.name);
               }}
-              options={languageMediums.map((l) => ({ value: String(l.id), label: l.name ?? "" }))}
+              options={withSelected(
+                languageMediums.map((l) => ({ value: String(l.id), label: l.name ?? "" })),
+                info?.languageMedium?.id ??
+                  (info as unknown as { languageMediumId?: number } | null)?.languageMediumId,
+                info?.languageMedium?.name ?? "",
+              )}
               placeholder="Select language medium"
             />
           </div>
@@ -1014,7 +1057,11 @@ export default function AcademicDetails({
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Best Of Four (auto)</Label>
             <Input
-              value={(info as unknown as { bestOfFour?: number } | null)?.bestOfFour ?? ""}
+              value={
+                derivedBestOfFour ??
+                (info as unknown as { bestOfFour?: number } | null)?.bestOfFour ??
+                ""
+              }
               type="number"
               readOnly
               title="Auto-calculated: average of the best 4 subject totals"
@@ -1024,7 +1071,11 @@ export default function AcademicDetails({
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Best Of Five (auto)</Label>
             <Input
-              value={(info as unknown as { bestOfFive?: number } | null)?.bestOfFive ?? ""}
+              value={
+                derivedBestOfFive ??
+                (info as unknown as { bestOfFive?: number } | null)?.bestOfFive ??
+                ""
+              }
               type="number"
               readOnly
               title="Auto-calculated: average of the best 5 subject totals"
@@ -1096,10 +1147,14 @@ export default function AcademicDetails({
                               Number(val),
                             )
                           }
-                          options={boardSubjects.map((bs) => ({
-                            value: String(bs.id),
-                            label: bs.name ?? "",
-                          }))}
+                          options={withSelected(
+                            boardSubjects.map((bs) => ({
+                              value: String(bs.id),
+                              label: bs.name ?? "",
+                            })),
+                            s.boardSubject?.id,
+                            s.boardSubject?.boardSubjectName?.name ?? "",
+                          )}
                           placeholder="Select subject"
                         />
                       </td>
@@ -1155,19 +1210,20 @@ export default function AcademicDetails({
                         })()}
                       </td>
                       <td className="px-3 py-2 text-gray-700">
+                        {/*
+                          Read-only: total is always theory + practical, kept in
+                          step by handleSubjectChangeById. Leaving it editable let
+                          it drift out of agreement with the marks it is derived
+                          from, and the drifted value is what got saved.
+                        */}
                         <Input
                           value={(s as unknown as { totalMarks?: number } | null)?.totalMarks ?? ""}
                           type="number"
-                          min={0}
-                          max={100}
-                          className="h-8"
-                          onChange={(e) =>
-                            handleSubjectChangeById(
-                              (s as unknown as { id?: number })?.id,
-                              "totalMarks",
-                              Number(e.target.value),
-                            )
-                          }
+                          readOnly
+                          tabIndex={-1}
+                          aria-label="Total marks (calculated from theory and practical)"
+                          title="Calculated from theory + practical"
+                          className="h-8 cursor-not-allowed bg-muted/50 text-muted-foreground"
                         />
                       </td>
                       <td className="px-3 py-2 text-gray-700">

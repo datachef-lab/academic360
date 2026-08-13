@@ -354,31 +354,64 @@ export async function updateAcademicInfo(
       : theory + practical;
 
     // Determine result status. If not provided, auto-calc from board subject's passing marks (if available)
-    let rs: "PASS" | "FAIL" | "ABSENT" | "COMPARTMENTAL" | undefined;
+    // board_result_status_type, not the two-value board_result_type. The wrong
+    // union here is what let ABSENT/COMPARTMENTAL through and blocked the two
+    // component-specific failures.
+    let rs:
+      | "PASS"
+      | "FAIL IN THEORY"
+      | "FAIL IN PRACTICAL"
+      | "FAIL"
+      | undefined;
     const rsRaw =
       typeof subject.resultStatus === "string"
         ? subject.resultStatus.trim().toUpperCase()
         : undefined;
-    const allowedResults = new Set(["PASS", "FAIL", "ABSENT", "COMPARTMENTAL"]);
+    // Must mirror board_result_status_type exactly. The old allowlist admitted
+    // ABSENT and COMPARTMENTAL — neither exists in this enum, so either would
+    // have raised a PG error — while rejecting FAIL IN THEORY and FAIL IN
+    // PRACTICAL, which do exist and which the console offers. Those two fell
+    // through to the else-branch and were silently downgraded to PASS/FAIL.
+    const allowedResults = new Set([
+      "PASS",
+      "FAIL IN THEORY",
+      "FAIL IN PRACTICAL",
+      "FAIL",
+    ]);
     if (rsRaw && allowedResults.has(rsRaw)) {
       rs = rsRaw as any;
     } else {
-      // Auto evaluate: fetch board subject's passing marks and compare with total
       const [bs] = await db
         .select()
         .from(boardSubjectModel)
         .where(eq(boardSubjectModel.id, resolvedBoardSubjectId));
-      // Use total passing marks as sum of theory and practical pass marks (if provided)
-      const hasTheoryRule = Number.isFinite(Number(bs?.passingMarksTheory));
-      const hasPracRule = Number.isFinite(Number(bs?.passingMarksPractical));
-      if (hasTheoryRule || hasPracRule) {
-        const theoryPass = Number(bs?.passingMarksTheory ?? 0);
-        const pracPass = Number(bs?.passingMarksPractical ?? 0);
-        const pass =
-          hasTheoryRule && hasPracRule
-            ? theory >= theoryPass && practical >= pracPass
-            : total >= theoryPass + pracPass;
-        rs = pass ? "PASS" : "FAIL";
+
+      // A component counts only if the board examines it (full marks > 0) AND
+      // states a pass mark for it. `Number.isFinite(0)` is true, so treating a
+      // pass mark of 0 as a live rule made `theory >= 0` pass everyone — most
+      // mappings carry 0 because the legacy importer never had real marks.
+      const theoryJudgeable =
+        Number(bs?.fullMarksTheory ?? 0) > 0 &&
+        Number(bs?.passingMarksTheory ?? 0) > 0;
+      const practicalJudgeable =
+        Number(bs?.fullMarksPractical ?? 0) > 0 &&
+        Number(bs?.passingMarksPractical ?? 0) > 0;
+
+      if (theoryJudgeable || practicalJudgeable) {
+        const theoryFailed =
+          theoryJudgeable && theory < Number(bs?.passingMarksTheory ?? 0);
+        const practicalFailed =
+          practicalJudgeable &&
+          practical < Number(bs?.passingMarksPractical ?? 0);
+
+        rs =
+          theoryFailed && practicalFailed
+            ? "FAIL"
+            : theoryFailed
+              ? "FAIL IN THEORY"
+              : practicalFailed
+                ? "FAIL IN PRACTICAL"
+                : "PASS";
       }
     }
 

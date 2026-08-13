@@ -215,23 +215,38 @@ export default function ReportsPage() {
         setIsExporting(false);
         // The modal will auto-close due to the completed status in ExportProgressDialog
 
-        // Legacy student import: show the final summary (incl. per-uid errors)
+        // Legacy student import: show the final summary (incl. per-uid errors).
+        // Field is deliberately `importJobId`, NOT `jobId` — the guard above
+        // treats `meta.jobId` as a REPORT-download identifier and would drop
+        // legacy-import events whose jobId doesn't match a report ref.
         const meta = data.meta as
           | {
               operation?: string;
+              importJobId?: string;
               summary?: {
                 processed: number;
                 notFound: number;
                 notFoundUids?: string[];
                 errors: Array<{ uid: string; error: string }>;
               };
-              /** Server-written Excel of every failed / not-found UID. */
-              errorReportFileName?: string | null;
+              /** Whether the server persisted an error-report XLSX (bytea in DB). */
+              errorReportAvailable?: boolean;
+              /** Download URL — jobId-keyed since ADR 0030. Any instance serves it. */
+              errorReportUrl?: string | null;
             }
           | undefined;
         if (meta?.operation === "student_import_legacy_students" && meta.summary) {
           const { processed, notFound, errors } = meta.summary;
-          const reportFile = meta.errorReportFileName;
+          const importJobId = meta.importJobId;
+          const reportAvailable = Boolean(meta.errorReportAvailable);
+          const reportUrl =
+            meta.errorReportUrl ??
+            (importJobId && reportAvailable
+              ? `/api/students/import-legacy-students/error-report/${importJobId}`
+              : null);
+          const suggestedFileName = importJobId
+            ? `import-errors-${importJobId}.xlsx`
+            : "import-errors.xlsx";
           if (errors?.length || notFound > 0) {
             const list = (errors ?? [])
               .slice(0, 10)
@@ -245,26 +260,25 @@ export default function ReportsPage() {
                 (errors.length > 10
                   ? `<p style="font-size:12px;color:#6b7280">…and ${errors.length - 10} more</p>`
                   : "") +
-                (reportFile
+                (reportUrl
                   ? `<p style="font-size:12px;color:#4f46e5">The full list (every failed and not-found UID) is in the error report.</p>`
                   : "") +
                 `</div>`,
               icon: "warning",
-              showCancelButton: Boolean(reportFile),
-              confirmButtonText: reportFile ? "Download error report" : "OK",
+              showCancelButton: Boolean(reportUrl),
+              confirmButtonText: reportUrl ? "Download error report" : "OK",
               cancelButtonText: "Close",
               confirmButtonColor: "#4f46e5",
             }).then(async (r) => {
-              if (!r.isConfirmed || !reportFile) return;
+              if (!r.isConfirmed || !reportUrl) return;
               try {
-                const resp = await axiosInstance.get(
-                  `/api/students/import-legacy-students/error-report/${reportFile}`,
-                  { responseType: "blob" },
-                );
+                const resp = await axiosInstance.get(reportUrl, {
+                  responseType: "blob",
+                });
                 const url = URL.createObjectURL(resp.data as Blob);
                 const a = document.createElement("a");
                 a.href = url;
-                a.download = reportFile;
+                a.download = suggestedFileName;
                 a.click();
                 URL.revokeObjectURL(url);
               } catch {
