@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { BookType, Download, Edit, Loader2, PlusCircle, Search, Trash2 } from "lucide-react";
+import { BookType, Edit, Loader2, PlusCircle, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   createLibraryBinding,
@@ -161,31 +161,6 @@ export default function BindingTypesPage() {
     }
   };
 
-  const handleDownload = () => {
-    const headers = ["#", "Name", "Legacy Binding ID", "Created At", "Updated At"];
-    const csvRows = rows.map((row, index) => [
-      String((page - 1) * limit + index + 1),
-      row.name,
-      row.legacyBindingId === null ? "-" : String(row.legacyBindingId),
-      new Date(row.createdAt).toLocaleString(),
-      new Date(row.updatedAt).toLocaleString(),
-    ]);
-
-    const csv = [headers, ...csvRows]
-      .map((line) => line.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "library-binding-types.csv";
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <div className="p-2 sm:p-4">
       <LibraryPageHeader
@@ -193,20 +168,15 @@ export default function BindingTypesPage() {
         title="Binding Types"
         subtitle="Manage library binding types used across records."
         actions={
-          <>
-            <Button variant="outline" onClick={handleDownload} className="flex-shrink-0">
-              <Download className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Download</span>
-            </Button>
-            <Button
-              className="bg-purple-600 text-white hover:bg-purple-700"
-              onClick={openCreateDialog}
-              type="button"
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add
-            </Button>
-          </>
+          <Button
+            className="bg-purple-600 text-white hover:bg-purple-700"
+            onClick={openCreateDialog}
+            type="button"
+            size="sm"
+          >
+            <PlusCircle className="mr-2 h-4 w-4" />
+            ADD
+          </Button>
         }
       />
 

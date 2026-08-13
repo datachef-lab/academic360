@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Plus, Search, Trash2, Users } from "lucide-react";
+import { Edit, Loader2, Plus, Search, Trash2, Users } from "lucide-react";
 import type { LibraryAuthorRow, LibraryAuthorUpsertBody } from "@/services/library-authors.service";
 import {
   createLibraryAuthor,
@@ -44,6 +44,7 @@ import {
   STICKY_THEAD_CLASS,
   STICKY_TH_BASE,
   STICKY_TH_LEFT,
+  STICKY_TH_RIGHT,
 } from "@/components/library/LibraryTablePage";
 import { cn } from "@/lib/utils";
 
@@ -247,7 +248,7 @@ export default function AuthorsMasterPage() {
             <div className="flex shrink-0 flex-wrap items-center gap-2">
               <Button type="button" size="sm" onClick={openCreate}>
                 <Plus className="mr-1 h-4 w-4" />
-                Add author
+                ADD
               </Button>
             </div>
           </div>
@@ -281,47 +282,7 @@ export default function AuthorsMasterPage() {
               </div>
             ) : (
               <>
-                <div className="space-y-3 pb-2 lg:hidden">
-                  {rows.map((row, i) => (
-                    <div
-                      key={row.id}
-                      className="cursor-pointer rounded-lg border border-slate-200 bg-card p-3 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50/60 focus-within:ring-2 focus-within:ring-violet-300"
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => openEdit(row.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          openEdit(row.id);
-                        }
-                      }}
-                    >
-                      <div className="mb-2 flex items-start justify-between gap-2">
-                        <span className="text-xs font-medium text-slate-500">
-                          #{(page - 1) * limit + i + 1}
-                        </span>
-                      </div>
-                      <p className="font-semibold text-slate-900">{row.name}</p>
-                      {row.shortName && (
-                        <p className="text-xs text-muted-foreground">{row.shortName}</p>
-                      )}
-                      <div className="mt-2 flex flex-wrap gap-1 text-xs">
-                        {row.authorTypeName && (
-                          <span className="rounded-full bg-purple-50 px-2 py-0.5 text-purple-700">
-                            {row.authorTypeName}
-                          </span>
-                        )}
-                        {row.nationalityName && (
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
-                            {row.nationalityName}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="hidden min-w-0 pb-2 lg:block">
+                <div className="min-w-0 pb-2">
                   <div className="max-h-[70vh] overflow-auto [&>div]:!overflow-visible rounded-md border bg-background">
                     <Table containerClassName="min-w-[780px]">
                       <TableHeader className={STICKY_THEAD_CLASS}>
@@ -340,6 +301,9 @@ export default function AuthorsMasterPage() {
                             Nationality
                           </TableHead>
                           <TableHead className={cn(STICKY_TH_BASE, "w-[110px]")}>Updated</TableHead>
+                          <TableHead className={cn(STICKY_TH_RIGHT, "text-right min-w-[100px]")}>
+                            Actions
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -366,6 +330,34 @@ export default function AuthorsMasterPage() {
                             </TableCell>
                             <TableCell className="align-top text-xs text-muted-foreground">
                               {parseDate(row.updatedAt)}
+                            </TableCell>
+                            <TableCell className="align-top text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="outline"
+                                  className="h-8 w-8"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEdit(row.id);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="destructive"
+                                  className="h-8 w-8"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteTarget(row);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -457,44 +449,19 @@ export default function AuthorsMasterPage() {
             </div>
           </div>
 
-          <DialogFooter className="border-t bg-muted/30 px-6 py-4 sm:justify-between">
-            {/* Delete moved from the per-row action column into the edit
-                dialog. Only shown for existing rows (editingId != null) —
-                the create-new flow doesn't need it. Kicks the same
-                AlertDialog confirmation the row buttons used to fire. */}
-            <div>
-              {editingId != null && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="text-red-600 hover:bg-red-50 hover:text-red-700"
-                  onClick={() => {
-                    const target = rows.find((r) => r.id === editingId);
-                    if (target) {
-                      setDialogOpen(false);
-                      setDeleteTarget(target);
-                    }
-                  }}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </Button>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                className="bg-purple-600 hover:bg-purple-700 text-white shadow-none"
-                disabled={saving}
-                onClick={() => void handleSave()}
-              >
-                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {saving ? "Saving..." : "Save"}
-              </Button>
-            </div>
+          <DialogFooter className="border-t bg-muted/30 px-6 py-4">
+            <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-purple-600 hover:bg-purple-700 text-white shadow-none"
+              disabled={saving}
+              onClick={() => void handleSave()}
+            >
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {saving ? "Saving..." : "Save"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

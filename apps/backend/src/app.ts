@@ -227,6 +227,7 @@ import journalTypeRouter from "@/features/library/routes/journal-type.route.js";
 import libraryArticleRouter from "@/features/library/routes/library-article.route.js";
 import libraryDocumentTypeRouter from "@/features/library/routes/library-document-type.route.js";
 import documentBatchReceiptRouter from "@/features/documents/routes/document-batch-receipt.route.js";
+import documentsDashboardRouter from "@/features/documents/routes/documents-dashboard.route.js";
 import bindingRouter from "@/features/library/routes/binding.route.js";
 import borrowingTypeRouter from "@/features/library/routes/borrowing-type.route.js";
 import enclosureRouter from "@/features/library/routes/enclosure.route.js";
@@ -652,6 +653,9 @@ app.use("/api/cities", cityRouter);
 // router: both live under /api/documents, and the more specific prefix has to
 // be matched first.
 app.use("/api/documents/batch-receipts", documentBatchReceiptRouter);
+
+// Dashboard aggregates — read-only, same "more specific prefix first" rule.
+app.use("/api/documents/dashboard", documentsDashboardRouter);
 
 app.use("/api/documents", documentRouter);
 

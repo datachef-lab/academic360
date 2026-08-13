@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Download, Edit, Loader2, PlusCircle, ScrollText, Search, Trash2 } from "lucide-react";
+import { Edit, Loader2, PlusCircle, ScrollText, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   createLibraryPublisher,
@@ -160,28 +160,6 @@ export default function PublicationsPage() {
     }
   };
 
-  const handleDownload = () => {
-    const headers = ["#", "Name", "Code", "Updated At"];
-    const csvRows = rows.map((row, index) => [
-      String((page - 1) * limit + index + 1),
-      row.name,
-      row.code ?? "-",
-      new Date(row.updatedAt).toLocaleString(),
-    ]);
-    const csv = [headers, ...csvRows]
-      .map((line) => line.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "library-publications.csv";
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <div className="p-2 sm:p-4">
       <LibraryPageHeader
@@ -189,19 +167,14 @@ export default function PublicationsPage() {
         title="Publications"
         subtitle="Manage library publication/publisher master entries."
         actions={
-          <>
-            <Button variant="outline" onClick={handleDownload} className="flex-shrink-0">
-              <Download className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Download</span>
-            </Button>
-            <Button
-              className="bg-purple-600 text-white hover:bg-purple-700"
-              onClick={openCreateDialog}
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add
-            </Button>
-          </>
+          <Button
+            className="bg-purple-600 text-white hover:bg-purple-700"
+            onClick={openCreateDialog}
+            size="sm"
+          >
+            <PlusCircle className="mr-2 h-4 w-4" />
+            ADD
+          </Button>
         }
       />
       <Card className="min-w-0 border-none">

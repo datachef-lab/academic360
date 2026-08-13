@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Download, Edit, Loader2, PlusCircle, Search, Trash2, Workflow } from "lucide-react";
+import { Edit, Loader2, PlusCircle, Search, Trash2, Workflow } from "lucide-react";
 import { toast } from "sonner";
 import {
   createLibrarySeries,
@@ -157,27 +157,6 @@ export default function SeriesPage() {
     }
   };
 
-  const handleDownload = () => {
-    const headers = ["#", "Name", "Updated At"];
-    const csvRows = rows.map((row, index) => [
-      String((page - 1) * limit + index + 1),
-      row.name,
-      new Date(row.updatedAt).toLocaleString(),
-    ]);
-    const csv = [headers, ...csvRows]
-      .map((line) => line.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "library-series.csv";
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <div className="min-w-0 p-2 sm:p-4">
       <LibraryPageHeader
@@ -185,16 +164,10 @@ export default function SeriesPage() {
         title="Series"
         subtitle="Book series master data (e.g. Harry Potter, LOTR)."
         actions={
-          <>
-            <Button variant="outline" onClick={handleDownload}>
-              <Download className="mr-1 h-4 w-4" />
-              Download
-            </Button>
-            <Button onClick={openCreateDialog}>
-              <PlusCircle className="mr-1 h-4 w-4" />
-              Add
-            </Button>
-          </>
+          <Button onClick={openCreateDialog} size="sm">
+            <PlusCircle className="mr-1 h-4 w-4" />
+            ADD
+          </Button>
         }
       />
       <Card className="min-w-0 border-none">

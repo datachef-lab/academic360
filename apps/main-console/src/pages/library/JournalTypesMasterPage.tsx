@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { BookText, Loader2, Plus, Search, Trash2 } from "lucide-react";
+import { BookText, Edit, Loader2, Plus, Search, Trash2 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useSocket } from "@/hooks/useSocket";
 import type {
@@ -46,6 +46,7 @@ import {
   STICKY_THEAD_CLASS,
   STICKY_TH_BASE,
   STICKY_TH_LEFT,
+  STICKY_TH_RIGHT,
 } from "@/components/library/LibraryTablePage";
 import { cn } from "@/lib/utils";
 
@@ -231,7 +232,7 @@ export default function JournalTypesMasterPage() {
             <div className="flex shrink-0 flex-wrap items-center gap-2">
               <Button type="button" size="sm" onClick={openCreate}>
                 <Plus className="mr-1 h-4 w-4" />
-                Add journal type
+                ADD
               </Button>
             </div>
           </div>
@@ -265,41 +266,7 @@ export default function JournalTypesMasterPage() {
               </div>
             ) : (
               <>
-                <div className="space-y-3 pb-2 lg:hidden">
-                  {rows.map((row, i) => (
-                    <div
-                      key={row.id}
-                      className="cursor-pointer rounded-lg border border-slate-200 bg-card p-3 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50/60 focus-within:ring-2 focus-within:ring-violet-300"
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => openEdit(row.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          openEdit(row.id);
-                        }
-                      }}
-                    >
-                      <div className="mb-2 flex items-start justify-between gap-2">
-                        <span className="text-xs font-medium text-slate-500">
-                          #{(page - 1) * limit + i + 1}
-                        </span>
-                      </div>
-
-                      <div className="space-y-1">
-                        <p className="font-semibold text-slate-900 underline underline-offset-2">
-                          {row.name}
-                        </p>
-                      </div>
-
-                      <div className="mt-3 text-xs text-muted-foreground">
-                        Updated: {parseDate(row.updatedAt)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="hidden min-w-0 pb-2 lg:block">
+                <div className="min-w-0 pb-2">
                   <div className="max-h-[70vh] overflow-auto [&>div]:!overflow-visible rounded-md border bg-background">
                     <Table containerClassName="min-w-[690px]">
                       <TableHeader className={STICKY_THEAD_CLASS}>
@@ -310,6 +277,9 @@ export default function JournalTypesMasterPage() {
                           </TableHead>
                           <TableHead className={cn(STICKY_TH_BASE, "min-w-[140px]")}>
                             Updated
+                          </TableHead>
+                          <TableHead className={cn(STICKY_TH_RIGHT, "text-right min-w-[100px]")}>
+                            Actions
                           </TableHead>
                         </TableRow>
                       </TableHeader>
@@ -324,12 +294,38 @@ export default function JournalTypesMasterPage() {
                               {(page - 1) * limit + i + 1}
                             </TableCell>
                             <TableCell className="align-top">
-                              <div className="font-semibold text-slate-900 underline underline-offset-2">
-                                {row.name}
-                              </div>
+                              <div className="font-semibold text-slate-900">{row.name}</div>
                             </TableCell>
                             <TableCell className="align-top text-xs text-muted-foreground">
                               {parseDate(row.updatedAt)}
+                            </TableCell>
+                            <TableCell className="align-top text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="outline"
+                                  className="h-8 w-8"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEdit(row.id);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="destructive"
+                                  className="h-8 w-8"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openDeleteDialog(row);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -391,43 +387,19 @@ export default function JournalTypesMasterPage() {
             </div>
           </div>
 
-          <DialogFooter className="border-t bg-muted/30 px-6 py-4 sm:justify-between">
-            {/* Delete moved from the per-row action column into the edit
-                dialog. Only shown for existing rows (editingId != null) —
-                create-new flow doesn't need it. */}
-            <div>
-              {editingId != null && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="text-red-600 hover:bg-red-50 hover:text-red-700"
-                  onClick={() => {
-                    const target = rows.find((r) => r.id === editingId);
-                    if (target) {
-                      setDialogOpen(false);
-                      openDeleteDialog(target);
-                    }
-                  }}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </Button>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                className="bg-purple-600 hover:bg-purple-700 text-white shadow-none"
-                disabled={saving}
-                onClick={() => void handleSave()}
-              >
-                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {saving ? "Saving..." : "Save"}
-              </Button>
-            </div>
+          <DialogFooter className="border-t bg-muted/30 px-6 py-4">
+            <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-purple-600 hover:bg-purple-700 text-white shadow-none"
+              disabled={saving}
+              onClick={() => void handleSave()}
+            >
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {saving ? "Saving..." : "Save"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
