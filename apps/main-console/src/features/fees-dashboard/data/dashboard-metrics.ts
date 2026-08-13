@@ -55,7 +55,7 @@ export interface DashboardMetric {
 export const ALL_METRICS: Record<MetricId, DashboardMetric> = {
   fee_receivable: { id: "fee_receivable", label: "Fee receivable", hint: "Total payable" },
   fee_collected: { id: "fee_collected", label: "Collected", hint: "Amount paid" },
-  fee_pending: { id: "fee_pending", label: "Pending", hint: "receivable − collected" },
+  fee_pending: { id: "fee_pending", label: "Due", hint: "receivable − collected" },
   total_students: {
     id: "total_students",
     label: "Total students",
@@ -167,7 +167,7 @@ export const ALL_METRICS: Record<MetricId, DashboardMetric> = {
 
 export const TAB_METRICS: Record<FeesDashboardTab, MetricId[]> = {
   overview: ["fee_receivable", "fee_collected", "fee_pending", "total_students"],
-  enrollment: ["fee_receivable", "fee_collected", "challans_generated", "challans_pending"],
+  enrollment: ["fee_receivable", "fee_collected", "fee_pending", "total_students"],
   collections: ["fee_receivable", "fee_collected", "fee_pending", "collection_rate"],
   transactions: ["fee_collected", "online_collected", "cash_collected", "cheque_collected"],
   challans: ["challans_generated", "challans_pending", "fee_collected", "collection_rate"],

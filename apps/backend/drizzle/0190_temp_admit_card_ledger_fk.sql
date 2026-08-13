@@ -11,12 +11,12 @@ DO $$ BEGIN
                 ADD CONSTRAINT "temp_admit_card_distributions_document_ledger_id_fk_document_ledger_id_fk"
                 FOREIGN KEY ("document_ledger_id_fk") REFERENCES "public"."document_ledger"("id")
                 ON DELETE NO ACTION ON UPDATE NO ACTION';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
 
         BEGIN
             EXECUTE 'ALTER TABLE "temp_admit_card_distributions"
                 ADD CONSTRAINT "temp_admit_card_distributions_document_ledger_id_fk_unique"
                 UNIQUE ("document_ledger_id_fk")';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
     END IF;
 END $$;
