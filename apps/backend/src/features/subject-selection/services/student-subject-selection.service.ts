@@ -2709,6 +2709,8 @@ optional_group_selected AS (
       std.id                              AS student_id,
       std.uid                             AS uid,
       u.name                              AS user_name,
+      std.registration_number             AS registration_number,
+      std.roll_number                     AS roll_number,
       ay.year                             AS academic_year,
       sry.registration_year               AS registration_year,
       spbc.promotion_academic_year        AS promotion_academic_year,
@@ -2752,10 +2754,14 @@ optional_group_selected AS (
   LEFT JOIN affiliations aff ON aff.id = pc.affiliation_id_fk
   LEFT JOIN regulation_types reg ON reg.id = pc.regulation_type_id_fk
   LEFT JOIN student_registration_year sry ON sry.student_id = std.id
+  -- Papers come from the REPORT year (via student_paper_years), not the
+  -- group's own academic year: the picked group is anchored to the meta's
+  -- admission-year AY while the student's current-semester papers live in the
+  -- year being reported. Pinning p_all to sgm.academic_year_id_fk guaranteed
+  -- zero rows — the group's AY is never the report AY for a promoted cohort.
   JOIN papers p_all
        ON p_all.programe_course_id_fk = pc.id
       AND p_all.subject_id_fk = sgs.subject_id_fk
-      AND p_all.academic_year_id_fk = sgm.academic_year_id_fk
       AND EXISTS (
         SELECT 1 FROM student_paper_years spy_y
         WHERE spy_y.student_id = std.id
