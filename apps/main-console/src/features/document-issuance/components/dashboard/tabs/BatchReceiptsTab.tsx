@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
-import { DashboardPanel, GradientKpi, ProportionBar } from "../ui";
+import { DashboardPanel, GradientKpi } from "../ui";
 import {
   getAllBatchReceipts,
   type BatchReceipt,
@@ -39,14 +39,6 @@ const scopeLabel = (courses: string[]): string => {
   if (courses.length === 0) return "No programme course";
   if (courses.length <= 2) return courses.join(", ");
   return `${courses.length} programme courses`;
-};
-
-const heatCellColor = (value: number) => {
-  if (value === 0) return "bg-[#f2f2f2] text-[#ccc]";
-  if (value >= 6) return "bg-[#7c3aed] text-white";
-  if (value >= 4) return "bg-[#7c3aed]/70 text-white";
-  if (value >= 2) return "bg-[#7c3aed]/35 text-[#4c1d95]";
-  return "bg-[#7c3aed]/15 text-[#6d28d9]";
 };
 
 export function BatchReceiptsTab() {
@@ -136,7 +128,6 @@ export function BatchReceiptsTab() {
   }
 
   const maxDrift = Math.max(1, ...derived.drifted.map((r) => r.drift));
-  const maxMode = Math.max(1, ...derived.modeMix.map((m) => m.value));
 
   return (
     <div className="flex flex-col gap-3">
