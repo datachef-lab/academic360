@@ -74,7 +74,7 @@ DO $$ BEGIN
 
         BEGIN
             EXECUTE 'ALTER TABLE "document_types" ADD CONSTRAINT "document_types_code_unique" UNIQUE ("code")';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
     END IF;
 END $$;--> statement-breakpoint
 
@@ -91,13 +91,13 @@ DO $$ BEGIN
                 ADD CONSTRAINT "id_card_issues_document_ledger_id_fk_document_ledger_id_fk"
                 FOREIGN KEY ("document_ledger_id_fk") REFERENCES "public"."document_ledger"("id")
                 ON DELETE NO ACTION ON UPDATE NO ACTION';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
 
         BEGIN
             EXECUTE 'ALTER TABLE "id_card_issues"
                 ADD CONSTRAINT "id_card_issues_document_ledger_id_fk_unique"
                 UNIQUE ("document_ledger_id_fk")';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
     END IF;
 END $$;--> statement-breakpoint
 
@@ -114,12 +114,12 @@ DO $$ BEGIN
                 ADD CONSTRAINT "cu_registration_document_uploads_document_ledger_id_fk_document_ledger_id_fk"
                 FOREIGN KEY ("document_ledger_id_fk") REFERENCES "public"."document_ledger"("id")
                 ON DELETE NO ACTION ON UPDATE NO ACTION';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
 
         BEGIN
             EXECUTE 'ALTER TABLE "cu_registration_document_uploads"
                 ADD CONSTRAINT "cu_registration_document_uploads_document_ledger_id_fk_unique"
                 UNIQUE ("document_ledger_id_fk")';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
     END IF;
 END $$;
