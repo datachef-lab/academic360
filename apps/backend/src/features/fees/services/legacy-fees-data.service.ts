@@ -486,8 +486,17 @@ export async function loadStudentFeesForUid(uid: string): Promise<{
           ),
         );
       if (!existingMapping) {
+        // Pass targetStudentId so the ensure call only fans out for THIS
+        // student instead of all matching promotions of the fee structure.
+        // Prevents the 6,778-iteration critical section (e.g. B.Com H SEM I
+        // 2023-24) from queuing 30+ import workers behind one holder in prod.
+        // See ADR 0034.
         await ensureDefaultFeeStudentMappingsForFeeStructure(
           feeStructureResult,
+          undefined,
+          undefined,
+          undefined,
+          foundStudent.id,
         );
       }
 

@@ -188,6 +188,16 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
   progressUserId?: string,
   /** When set and different from the fee structure's current academic year, copy career-progression form data from this year for affected students. */
   previousAcademicYearId?: number | null,
+  /**
+   * When set, only ensure the mapping for THIS student's promotions matching
+   * the fee structure's (year, class, program, shift). The legacy Excel-UID
+   * import passes this so each per-UID call does O(1-2) inserts instead of
+   * fanning out over ALL matching promotions of the fee structure — the
+   * fanout under 50 concurrent workers caused hours-long queues on a single
+   * lock in prod (ADR 0034). Full-fanout callers (fs create/update, batch
+   * promotion) leave this undefined to preserve the original behavior.
+   */
+  targetStudentId?: number,
 ): Promise<void> {
   // Serialize per fee structure: this fans out over ALL students of the
   // structure and fee_student_mappings has no covering unique constraint, so
@@ -195,12 +205,18 @@ export async function ensureDefaultFeeStudentMappingsForFeeStructure(
   // promotion commit) would duplicate mapping rows. syncFeeStudentMapping in
   // legacy-fees-data.service.ts locks the SAME key for its per-student
   // get-or-create. The body takes no other advisory lock (deadlock rule).
+  //
+  // We DELIBERATELY keep the same lock key even when targetStudentId is set —
+  // otherwise a per-student call and a concurrent full-fanout call could both
+  // insert the same (studentId, feeStructureId, fgpId) row (no unique index
+  // to catch the race). Same lock, smaller body — that's the fix.
   return withAdvisoryXactLock(`import:fees:fsm:${feeStructure.id}`, () =>
     ensureDefaultFeeStudentMappingsForFeeStructureUnlocked(
       feeStructure,
       userId,
       progressUserId,
       previousAcademicYearId,
+      targetStudentId,
     ),
   );
 }
@@ -210,6 +226,7 @@ async function ensureDefaultFeeStudentMappingsForFeeStructureUnlocked(
   userId?: number,
   progressUserId?: string,
   previousAcademicYearId?: number | null,
+  targetStudentId?: number,
 ): Promise<void> {
   const emitProgress = (
     message: string,
@@ -303,6 +320,19 @@ async function ensureDefaultFeeStudentMappingsForFeeStructureUnlocked(
   emitProgress("Finding matching students...", 20, "in_progress");
 
   // Active promotions matching this fee structure context (student account status ignored).
+  // When targetStudentId is set (legacy per-UID import), narrow to just this
+  // student's matching promotions — the outer lock is still per-fee-structure,
+  // so this only changes how MUCH work each lock holder does, not correctness.
+  const promotionsWhere = [
+    eq(sessionModel.academicYearId, feeStructure.academicYearId),
+    eq(promotionModel.classId, feeStructure.classId),
+    eq(promotionModel.programCourseId, feeStructure.programCourseId),
+    eq(promotionModel.shiftId, feeStructure.shiftId),
+    activePromotionCondition(),
+  ];
+  if (targetStudentId != null) {
+    promotionsWhere.push(eq(promotionModel.studentId, targetStudentId));
+  }
   const promotions = await db
     .select({
       id: promotionModel.id,
@@ -310,15 +340,7 @@ async function ensureDefaultFeeStudentMappingsForFeeStructureUnlocked(
     })
     .from(promotionModel)
     .innerJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
-    .where(
-      and(
-        eq(sessionModel.academicYearId, feeStructure.academicYearId),
-        eq(promotionModel.classId, feeStructure.classId),
-        eq(promotionModel.programCourseId, feeStructure.programCourseId),
-        eq(promotionModel.shiftId, feeStructure.shiftId),
-        activePromotionCondition(),
-      ),
-    );
+    .where(and(...promotionsWhere));
 
   if (!promotions.length || promotions.length === 0) {
     emitProgress(
