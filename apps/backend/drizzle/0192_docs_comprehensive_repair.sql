@@ -20,35 +20,35 @@ DO $$ BEGIN
         'ADMISSION', 'ENROLMENT', 'PRE_CU_REGISTRATION', 'POST_CU_REGISTRATION',
         'EXAM', 'FEES', 'LIBRARY', 'OTHER'
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END $$;
 
 DO $$ BEGIN
     CREATE TYPE "public"."document_category" AS ENUM(
         'EXAM_LINKED', 'ADMINISTRATIVE', 'UPLOAD', 'SYSTEM_GENERATED'
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END $$;
 
 DO $$ BEGIN
     CREATE TYPE "public"."document_eligibility_rule" AS ENUM(
         'FORM_FILLUP_RECORDED', 'RCSI_RECORDED'
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END $$;
 
 DO $$ BEGIN
     CREATE TYPE "public"."document_ledger_status" AS ENUM(
         'UPLOADED', 'PENDING', 'ON_HOLD', 'COLLECTED', 'WAIVED', 'EXPECTED', 'NO_CHANGE'
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END $$;
 
 DO $$ BEGIN
     CREATE TYPE "public"."issuing_authority" AS ENUM('UNIVERSITY', 'COLLEGE');
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END $$;
 
 DO $$ BEGIN
     CREATE TYPE "public"."document_batch_receipt_mode" AS ENUM(
         'EXAM_LINKED', 'ADMINISTRATIVE'
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END $$;
 
 -- =========================================================================
 -- 0175 STEP 1 — Rename documents → document_types (if the old name exists)
@@ -121,13 +121,13 @@ DO $$ BEGIN
         EXCEPTION WHEN others THEN NULL; END;
 
         BEGIN EXECUTE 'ALTER TABLE "document_types" ADD CONSTRAINT "document_types_code_unique" UNIQUE ("code")';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
 
         BEGIN EXECUTE 'ALTER TABLE "document_types" ADD CONSTRAINT "document_types_name_unique" UNIQUE ("name")';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
 
         BEGIN EXECUTE 'ALTER TABLE "document_types" ADD CONSTRAINT "document_types_sequence_unique" UNIQUE ("sequence")';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
     END IF;
 END $$;
 
@@ -203,41 +203,41 @@ CREATE TABLE IF NOT EXISTS "document_batch_receipt_modes" (
 DO $$ BEGIN
     IF to_regclass('public.document_batch_receipts') IS NOT NULL AND to_regclass('public.document_types') IS NOT NULL THEN
         BEGIN EXECUTE 'ALTER TABLE "document_batch_receipts" ADD CONSTRAINT "document_batch_receipts_document_type_id_fk_document_types_id_fk" FOREIGN KEY ("document_type_id_fk") REFERENCES "public"."document_types"("id") ON DELETE NO ACTION ON UPDATE NO ACTION';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
         BEGIN EXECUTE 'ALTER TABLE "document_batch_receipts" ADD CONSTRAINT "document_batch_receipts_academic_year_id_fk_academic_years_id_fk" FOREIGN KEY ("academic_year_id_fk") REFERENCES "public"."academic_years"("id") ON DELETE NO ACTION ON UPDATE NO ACTION';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
         BEGIN EXECUTE 'ALTER TABLE "document_batch_receipts" ADD CONSTRAINT "document_batch_receipts_class_id_fk_classes_id_fk" FOREIGN KEY ("class_id_fk") REFERENCES "public"."classes"("id") ON DELETE NO ACTION ON UPDATE NO ACTION';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
         BEGIN EXECUTE 'ALTER TABLE "document_batch_receipts" ADD CONSTRAINT "document_batch_receipts_created_by_user_id_fk_users_id_fk" FOREIGN KEY ("created_by_user_id_fk") REFERENCES "public"."users"("id") ON DELETE NO ACTION ON UPDATE NO ACTION';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
         BEGIN EXECUTE 'ALTER TABLE "document_batch_receipts" ADD CONSTRAINT "document_batch_receipts_updated_by_user_id_fk_users_id_fk" FOREIGN KEY ("updated_by_user_id_fk") REFERENCES "public"."users"("id") ON DELETE NO ACTION ON UPDATE NO ACTION';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
         BEGIN EXECUTE 'ALTER TABLE "document_batch_receipts" ADD CONSTRAINT "document_batch_receipts_documents_received_by_user_id_fk_users_id_fk" FOREIGN KEY ("documents_received_by_user_id_fk") REFERENCES "public"."users"("id") ON DELETE NO ACTION ON UPDATE NO ACTION';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
     END IF;
 END $$;
 
 DO $$ BEGIN
     IF to_regclass('public.document_batch_receipt_program_courses') IS NOT NULL THEN
         BEGIN EXECUTE 'ALTER TABLE "document_batch_receipt_program_courses" ADD CONSTRAINT "document_batch_receipt_program_courses_document_batch_receipt_id_fk_document_batch_receipts_id_fk" FOREIGN KEY ("document_batch_receipt_id_fk") REFERENCES "public"."document_batch_receipts"("id") ON DELETE NO ACTION ON UPDATE NO ACTION';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
         BEGIN EXECUTE 'ALTER TABLE "document_batch_receipt_program_courses" ADD CONSTRAINT "document_batch_receipt_program_courses_program_course_id_fk_program_courses_id_fk" FOREIGN KEY ("program_course_id_fk") REFERENCES "public"."program_courses"("id") ON DELETE NO ACTION ON UPDATE NO ACTION';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
     END IF;
 END $$;
 
 DO $$ BEGIN
     IF to_regclass('public.document_ledger') IS NOT NULL THEN
         BEGIN EXECUTE 'ALTER TABLE "document_ledger" ADD CONSTRAINT "document_ledger_document_type_id_fk_document_types_id_fk" FOREIGN KEY ("document_type_id_fk") REFERENCES "public"."document_types"("id") ON DELETE NO ACTION ON UPDATE NO ACTION';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
         BEGIN EXECUTE 'ALTER TABLE "document_ledger" ADD CONSTRAINT "document_ledger_document_batch_receipt_id_fk_document_batch_receipts_id_fk" FOREIGN KEY ("document_batch_receipt_id_fk") REFERENCES "public"."document_batch_receipts"("id") ON DELETE NO ACTION ON UPDATE NO ACTION';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
         BEGIN EXECUTE 'ALTER TABLE "document_ledger" ADD CONSTRAINT "document_ledger_promotion_id_fk_promotions_id_fk" FOREIGN KEY ("promotion_id_fk") REFERENCES "public"."promotions"("id") ON DELETE NO ACTION ON UPDATE NO ACTION';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
         BEGIN EXECUTE 'ALTER TABLE "document_ledger" ADD CONSTRAINT "document_ledger_provided_by_fk_users_id_fk" FOREIGN KEY ("provided_by_fk") REFERENCES "public"."users"("id") ON DELETE NO ACTION ON UPDATE NO ACTION';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
         BEGIN EXECUTE 'ALTER TABLE "document_ledger" ADD CONSTRAINT "document_ledger_override_by_fk_users_id_fk" FOREIGN KEY ("override_by_fk") REFERENCES "public"."users"("id") ON DELETE NO ACTION ON UPDATE NO ACTION';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
 
         -- 0189 indexes
         EXECUTE 'CREATE INDEX IF NOT EXISTS "document_ledger_promotion_id_idx" ON "document_ledger" ("promotion_id_fk")';
@@ -249,7 +249,7 @@ END $$;
 DO $$ BEGIN
     IF to_regclass('public.document_batch_receipt_modes') IS NOT NULL AND to_regclass('public.document_batch_receipts') IS NOT NULL THEN
         BEGIN EXECUTE 'ALTER TABLE "document_batch_receipt_modes" ADD CONSTRAINT "document_batch_receipt_modes_document_batch_receipt_id_fk_document_batch_receipts_id_fk" FOREIGN KEY ("document_batch_receipt_id_fk") REFERENCES "public"."document_batch_receipts"("id") ON DELETE NO ACTION ON UPDATE NO ACTION';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
     END IF;
 END $$;
 
@@ -261,9 +261,9 @@ DO $$ BEGIN
     IF to_regclass('public.id_card_issues') IS NOT NULL AND to_regclass('public.document_ledger') IS NOT NULL THEN
         EXECUTE 'ALTER TABLE "id_card_issues" ADD COLUMN IF NOT EXISTS "document_ledger_id_fk" integer';
         BEGIN EXECUTE 'ALTER TABLE "id_card_issues" ADD CONSTRAINT "id_card_issues_document_ledger_id_fk_document_ledger_id_fk" FOREIGN KEY ("document_ledger_id_fk") REFERENCES "public"."document_ledger"("id") ON DELETE NO ACTION ON UPDATE NO ACTION';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
         BEGIN EXECUTE 'ALTER TABLE "id_card_issues" ADD CONSTRAINT "id_card_issues_document_ledger_id_fk_unique" UNIQUE ("document_ledger_id_fk")';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
     END IF;
 END $$;
 
@@ -271,14 +271,14 @@ DO $$ BEGIN
     IF to_regclass('public.cu_registration_document_uploads') IS NOT NULL AND to_regclass('public.document_ledger') IS NOT NULL THEN
         EXECUTE 'ALTER TABLE "cu_registration_document_uploads" ADD COLUMN IF NOT EXISTS "document_ledger_id_fk" integer';
         BEGIN EXECUTE 'ALTER TABLE "cu_registration_document_uploads" ADD CONSTRAINT "cu_registration_document_uploads_document_ledger_id_fk_document_ledger_id_fk" FOREIGN KEY ("document_ledger_id_fk") REFERENCES "public"."document_ledger"("id") ON DELETE NO ACTION ON UPDATE NO ACTION';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
         BEGIN EXECUTE 'ALTER TABLE "cu_registration_document_uploads" ADD CONSTRAINT "cu_registration_document_uploads_document_ledger_id_fk_unique" UNIQUE ("document_ledger_id_fk")';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
 
         -- Restore the FK from cu_registration_document_uploads → document_types
         -- (was on documents, dropped in 0175 STEP 1, needs to be re-added targeting the new name)
         BEGIN EXECUTE 'ALTER TABLE "cu_registration_document_uploads" ADD CONSTRAINT "cu_registration_document_uploads_document_id_fk_document_types_id_fk" FOREIGN KEY ("document_id_fk") REFERENCES "public"."document_types"("id") ON DELETE NO ACTION ON UPDATE NO ACTION';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
     END IF;
 END $$;
 
@@ -290,9 +290,9 @@ DO $$ BEGIN
     IF to_regclass('public.temp_admit_card_distributions') IS NOT NULL AND to_regclass('public.document_ledger') IS NOT NULL THEN
         EXECUTE 'ALTER TABLE "temp_admit_card_distributions" ADD COLUMN IF NOT EXISTS "document_ledger_id_fk" integer';
         BEGIN EXECUTE 'ALTER TABLE "temp_admit_card_distributions" ADD CONSTRAINT "temp_admit_card_distributions_document_ledger_id_fk_document_ledger_id_fk" FOREIGN KEY ("document_ledger_id_fk") REFERENCES "public"."document_ledger"("id") ON DELETE NO ACTION ON UPDATE NO ACTION';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
         BEGIN EXECUTE 'ALTER TABLE "temp_admit_card_distributions" ADD CONSTRAINT "temp_admit_card_distributions_document_ledger_id_fk_unique" UNIQUE ("document_ledger_id_fk")';
-        EXCEPTION WHEN duplicate_object THEN NULL; END;
+        EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL; END;
     END IF;
 END $$;
 
