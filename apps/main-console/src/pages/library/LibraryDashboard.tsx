@@ -136,6 +136,27 @@ function resolveRange(preset: RangePreset, fromRaw?: string | null, toRaw?: stri
   return { dateFrom: from.toISOString(), dateTo: to.toISOString() };
 }
 
+/**
+ * The Overview trend charts (footfall, issues per day) need a trend, not a
+ * dot — on the default "Today" filter a one-point series renders as a single
+ * marker. Pad the chart window back to at least 7 calendar days ending at the
+ * filter's end date. Returns the SAME object when no widening is needed so
+ * the widened query key matches the main one and react-query dedupes instead
+ * of fetching twice.
+ */
+const MIN_CHART_DAYS = 7;
+function widenRangeForCharts(applied: LibraryDashboardFilters): LibraryDashboardFilters {
+  if (!applied.dateFrom) return applied; // all-time already spans ≥7 days
+  const to = applied.dateTo ? new Date(applied.dateTo) : new Date();
+  const from = new Date(applied.dateFrom);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return applied;
+  if (to.getTime() - from.getTime() >= (MIN_CHART_DAYS - 1) * 86_400_000) return applied;
+  const widenedFrom = new Date(to);
+  widenedFrom.setDate(widenedFrom.getDate() - (MIN_CHART_DAYS - 1));
+  widenedFrom.setHours(0, 0, 0, 0);
+  return { ...applied, dateFrom: widenedFrom.toISOString() };
+}
+
 const nfmt = new Intl.NumberFormat("en-IN");
 const inr = (n: number) =>
   new Intl.NumberFormat("en-IN", {
@@ -176,6 +197,43 @@ function FootfallTooltip({
           {nfmt.format(row.entries ?? 0)}
         </span>
       </div>
+    </div>
+  );
+}
+
+/** Styled tooltip for the Issues-per-day chart — same white card recipe as
+ *  the notifications trend tooltip, instead of the default recharts box. */
+function IssuesTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload?: { issues?: number; reissues?: number } }>;
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+  const row = payload[0]?.payload;
+  if (!row) return null;
+  return (
+    <div className="grid min-w-[8rem] gap-1.5 rounded-lg border border-[#d4d4d4] bg-white px-2.5 py-2 text-xs shadow-md">
+      <p className="font-semibold text-[#1a1a1a]">{label}</p>
+      {(
+        [
+          ["Issues", row.issues ?? 0, "#7c3aed"],
+          ["Reissues", row.reissues ?? 0, "#f59e0b"],
+        ] as const
+      ).map(([name, val, color]) => (
+        <div key={name} className="flex items-center justify-between gap-4">
+          <span className="flex items-center gap-1.5 text-[#444]">
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+            {name}
+          </span>
+          <span className="font-mono font-medium tabular-nums text-[#1a1a1a]">
+            {nfmt.format(val)}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -423,10 +481,10 @@ function EmptyPanel({ label }: { label: string }) {
  * across the console so the library tiles read as one product.
  */
 const GRADIENTS = {
-  indigo: "from-[#4338ca] via-[#6366f1] to-[#818cf8]",
+  indigo: "from-[#3730a3] via-[#4f46e5] to-[#6366f1]",
   emerald: "from-[#047857] via-[#059669] to-[#10b981]",
   amber: "from-[#b45309] via-[#d97706] to-[#f59e0b]",
-  rose: "from-[#b91c1c] via-[#e11d48] to-[#f43f5e]",
+  rose: "from-[#b91c1c] via-[#dc2626] to-[#ef4444]",
   violet: "from-[#5b21b6] via-[#7c3aed] to-[#8b5cf6]",
   cyan: "from-[#0e7490] via-[#0891b2] to-[#06b6d4]",
   sky: "from-[#1d4ed8] via-[#2563eb] to-[#3b82f6]",
@@ -495,18 +553,22 @@ function RankedList({
 
 function OverviewTab({
   stats,
-  applied,
+  chartStats,
+  chartApplied,
 }: {
   stats: LibraryDashboardStats;
-  applied: LibraryDashboardFilters;
+  /** Stats for the (possibly widened) chart window — trend charts read these
+   *  so they always cover at least the last 7 days; tiles keep `stats`. */
+  chartStats: LibraryDashboardStats;
+  chartApplied: LibraryDashboardFilters;
 }) {
-  // Title reflects the applied filter, not a hard-coded "last 14 days". When
+  // Title reflects the chart window, not a hard-coded "last 14 days". When
   // the user picks "all time" (or the range covers the full data extent) the
   // title says "all time"; otherwise it spells out the exact dd/mm/yyyy
   // window using the same helper the footfall chart uses.
-  const issueRangeLabel = formatDateRangeDMY(applied.dateFrom, applied.dateTo, {
+  const issueRangeLabel = formatDateRangeDMY(chartApplied.dateFrom, chartApplied.dateTo, {
     fallback: "all time",
-    entryDays: stats.dailyIssuesLast14,
+    entryDays: chartStats.dailyIssuesLast14,
   });
   const donutData = useMemo(
     () =>
@@ -523,22 +585,25 @@ function OverviewTab({
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        {/* Same six-hue spread as the notifications KPI strip — violet, blue,
+            amber, red, green, teal — so no two neighbouring tiles share a hue
+            (the old strip had Books and Active issues both purple). */}
         <GradientStatCard
-          gradient={GRADIENTS.indigo}
+          gradient={GRADIENTS.violet}
           icon={BookOpen}
           label="Books"
           value={formatCompactIN(stats.totalBooks)}
           hint="catalogued titles"
         />
         <GradientStatCard
-          gradient={GRADIENTS.cyan}
+          gradient={GRADIENTS.sky}
           icon={Boxes}
           label="Copies"
           value={formatCompactIN(stats.totalCopies)}
           hint="physical + e-copies"
         />
         <GradientStatCard
-          gradient={GRADIENTS.violet}
+          gradient={GRADIENTS.amber}
           icon={BookMarked}
           label="Active issues"
           value={formatCompactIN(stats.activeIssues)}
@@ -559,7 +624,7 @@ function OverviewTab({
           hint="in the selected range"
         />
         <GradientStatCard
-          gradient={GRADIENTS.sky}
+          gradient={GRADIENTS.cyan}
           icon={UserRoundCheck}
           label="In library now"
           value={formatCompactIN(stats.currentlyInLibrary)}
@@ -573,17 +638,17 @@ function OverviewTab({
           without losing the trend. */}
       <VisualCard
         title={
-          stats.entryExitByDay.length > 120
-            ? "Library footfall · weekly · hover for details"
-            : "Library footfall · daily · hover for details"
+          chartStats.entryExitByDay.length > 120
+            ? `Library footfall · weekly · ${issueRangeLabel}`
+            : `Library footfall · daily · ${issueRangeLabel}`
         }
       >
-        {stats.entryExitByDay.length === 0 ? (
-          <EmptyPanel label="No visits in the selected range" />
+        {chartStats.entryExitByDay.length === 0 ? (
+          <EmptyPanel label="No visits in the last 7 days" />
         ) : (
           <ChartContainer config={FOOTFALL_CHART_CONFIG} className="h-[240px] w-full">
             <AreaChart
-              data={aggregateFootfall(stats.entryExitByDay)}
+              data={aggregateFootfall(chartStats.entryExitByDay)}
               margin={{ top: 8, right: 8, left: 4, bottom: 4 }}
             >
               <defs>
@@ -622,18 +687,18 @@ function OverviewTab({
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <PanelCard title={`Issues per day · ${issueRangeLabel}`} className="lg:col-span-2">
-          {stats.dailyIssuesLast14.length === 0 ? (
-            <EmptyPanel label="No issues in the selected range" />
+          {chartStats.dailyIssuesLast14.length === 0 ? (
+            <EmptyPanel label="No issues in the last 7 days" />
           ) : (
             <div className="h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
-                  data={stats.dailyIssuesLast14.map((d) => ({ ...d, label: fmtDay(d.day) }))}
+                  data={chartStats.dailyIssuesLast14.map((d) => ({ ...d, label: fmtDay(d.day) }))}
                 >
                   <defs>
                     <linearGradient id="issuesFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#6366f1" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#6366f1" stopOpacity={0.02} />
+                      <stop offset="0%" stopColor="#7c3aed" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#7c3aed" stopOpacity={0.02} />
                     </linearGradient>
                     <linearGradient id="reissuesFill" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.35} />
@@ -653,13 +718,13 @@ function OverviewTab({
                     tickLine={false}
                     width={30}
                   />
-                  <Tooltip cursor={{ fill: "#f1f5f9" }} />
+                  <Tooltip cursor={{ fill: "#f1f5f9" }} content={<IssuesTooltip />} />
                   <Area
                     type="monotone"
                     dataKey="issues"
                     name="Issues"
                     stackId="circ"
-                    stroke="#6366f1"
+                    stroke="#7c3aed"
                     strokeWidth={2}
                     fill="url(#issuesFill)"
                   />
@@ -676,7 +741,7 @@ function OverviewTab({
               </ResponsiveContainer>
               <div className="mt-1 flex items-center justify-center gap-4 text-[11px] text-slate-600">
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-indigo-500" /> Issues
+                  <span className="h-2 w-2 rounded-full bg-[#7c3aed]" /> Issues
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-amber-500" /> Reissues
@@ -1741,6 +1806,17 @@ export default function LibraryDashboard() {
     keepPreviousData: true,
   });
 
+  // Second stats fetch for the Overview trend charts, padded to ≥7 days.
+  // When the applied range already spans 7+ days, `widenRangeForCharts`
+  // returns the same object, the query keys match and react-query serves
+  // the same cache entry — no duplicate request.
+  const chartApplied = useMemo(() => widenRangeForCharts(applied), [applied]);
+  const { data: chartStats } = useQuery({
+    queryKey: ["library-dashboard-stats", chartApplied],
+    queryFn: async () => (await getLibraryDashboardStats(chartApplied)).payload!,
+    keepPreviousData: true,
+  });
+
   const [loadBanner, setLoadBanner] = useState<null | {
     label: string;
     loaded: number;
@@ -1992,7 +2068,11 @@ export default function LibraryDashboard() {
               ) : (
                 <>
                   <TabsContent value="overview" className="mt-0 focus-visible:outline-none">
-                    <OverviewTab stats={stats} applied={applied} />
+                    <OverviewTab
+                      stats={stats}
+                      chartStats={chartStats ?? stats}
+                      chartApplied={chartApplied}
+                    />
                   </TabsContent>
                   <TabsContent value="circulation" className="mt-0 focus-visible:outline-none">
                     <CirculationTab stats={stats} />
