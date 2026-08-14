@@ -6,6 +6,8 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
+  LabelList,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -748,9 +750,9 @@ function OverviewTab({
       </VisualCard>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Overlaid multi-line areas (no stackId) — same recipe as the
-            notifications "over time" chart, one absolute line per event
-            type so issue / reissue / return trends read independently. */}
+        {/* Grouped bars (three per day) — deliberately a different chart
+            shape from the visits area above so the two Overview trends
+            don't read as the same widget twice. */}
         <PanelCard
           title={`Issues · reissues · returns · ${issueRangeLabel}`}
           className="lg:col-span-2"
@@ -760,8 +762,10 @@ function OverviewTab({
           ) : (
             <div className="h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
+                <BarChart
                   data={chartStats.dailyIssuesLast14.map((d) => ({ ...d, label: fmtDay(d.day) }))}
+                  barGap={2}
+                  barCategoryGap="22%"
                 >
                   <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
                   <XAxis
@@ -777,34 +781,10 @@ function OverviewTab({
                     width={30}
                   />
                   <Tooltip cursor={{ fill: "#f1f5f9" }} content={<IssuesTooltip />} />
-                  <Area
-                    type="monotone"
-                    dataKey="issues"
-                    name="Issues"
-                    stroke="#7c3aed"
-                    strokeWidth={2}
-                    fill="#7c3aed"
-                    fillOpacity={0.18}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="returns"
-                    name="Returns"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    fill="#10b981"
-                    fillOpacity={0.12}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="reissues"
-                    name="Reissues"
-                    stroke="#f59e0b"
-                    strokeWidth={2}
-                    fill="#f59e0b"
-                    fillOpacity={0.12}
-                  />
-                </AreaChart>
+                  <Bar dataKey="issues" name="Issues" fill="#7c3aed" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="reissues" name="Reissues" fill="#f59e0b" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="returns" name="Returns" fill="#10b981" radius={[3, 3, 0, 0]} />
+                </BarChart>
               </ResponsiveContainer>
               <div className="mt-1 flex items-center justify-center gap-4 text-[11px] text-slate-600">
                 <span className="flex items-center gap-1.5">
@@ -867,10 +847,33 @@ function OverviewTab({
   );
 }
 
+/** Patron chip — STUDENT wears the module violet, STAFF red (same pairing
+ *  as the visits chart lines), FACULTY amber. */
+function UserTypeBadge({ category }: { category: string }) {
+  const cls =
+    category === "STUDENT"
+      ? "border-violet-200 bg-violet-50 text-violet-700"
+      : category === "FACULTY"
+        ? "border-amber-200 bg-amber-50 text-amber-700"
+        : "border-rose-200 bg-rose-50 text-rose-700";
+  return (
+    <Badge variant="outline" className={cls}>
+      {category}
+    </Badge>
+  );
+}
+
+/** Ageing buckets get hotter as loans get later — amber → orange → red. */
+const AGEING_BUCKETS = [
+  { key: "0-7", label: "1–7 days late", color: "#f59e0b" },
+  { key: "8-30", label: "8–30 days late", color: "#f97316" },
+  { key: ">30", label: "30+ days late", color: "#dc2626" },
+] as const;
+
 function CirculationTab({ stats }: { stats: LibraryDashboardStats }) {
-  const ageing = ["0-7", "8-30", ">30"].map((b) => {
-    const found = stats.overdueAgeing.find((r) => r.bucket === b);
-    return { bucket: b, count: found?.count ?? 0 };
+  const ageing = AGEING_BUCKETS.map((b) => {
+    const found = stats.overdueAgeing.find((r) => r.bucket === b.key);
+    return { bucket: b.label, count: found?.count ?? 0, fill: b.color };
   });
   const total = stats.activeIssues;
   const overdue = stats.overdueCount;
@@ -905,18 +908,18 @@ function CirculationTab({ stats }: { stats: LibraryDashboardStats }) {
           icon={RefreshCcw}
           label="Reissues"
           value={formatCompactIN(stats.reissueCount)}
-          hint="renewed loans"
+          hint={`in the selected range · ${formatCompactIN(stats.reissueCountAllTime)} all-time`}
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <PanelCard title="Overdue ageing" className="lg:col-span-2">
+        <PanelCard title="Overdue ageing · how late are the late ones" className="lg:col-span-2">
           {overdue === 0 ? (
             <EmptyPanel label="Nothing overdue" />
           ) : (
-            <div className="h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={ageing}>
+            <div>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={ageing} margin={{ top: 20, right: 8, left: 4, bottom: 4 }}>
                   <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
                   <XAxis
                     dataKey="bucket"
@@ -928,36 +931,149 @@ function CirculationTab({ stats }: { stats: LibraryDashboardStats }) {
                     tick={{ fontSize: 11, fill: "#64748b" }}
                     axisLine={false}
                     tickLine={false}
-                    width={30}
+                    width={40}
                   />
-                  <Tooltip cursor={{ fill: "#f1f5f9" }} />
-                  <Bar dataKey="count" fill="#f43f5e" radius={[6, 6, 0, 0]} />
+                  <Tooltip cursor={{ fill: "#f1f5f9" }} content={<MultiSeriesTooltip />} />
+                  {/* Per-bar colour comes from each row's `fill`; the value
+                      label on top saves a hover for the exact count. */}
+                  <Bar dataKey="count" name="Loans" radius={[6, 6, 0, 0]}>
+                    <LabelList
+                      dataKey="count"
+                      position="top"
+                      formatter={(v: number) => nfmt.format(v)}
+                      style={{ fontSize: 11, fill: "#475569", fontWeight: 600 }}
+                    />
+                    {ageing.map((row) => (
+                      <Cell key={row.bucket} fill={row.fill} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
+              <div className="mt-1 flex items-center justify-center gap-4 text-[11px] text-slate-600">
+                {AGEING_BUCKETS.map((b) => (
+                  <span key={b.key} className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: b.color }} />
+                    {b.label}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </PanelCard>
         <PanelCard title="Loan quality">
           <div className="grid gap-3">
-            <div className="rounded-md bg-slate-50 p-3">
-              <div className="text-xs text-slate-500">Average loan duration</div>
-              <div className="mt-1 text-lg font-semibold">
-                {stats.avgLoanDays > 0 ? `${stats.avgLoanDays.toFixed(1)} days` : "—"}
+            <div className="flex items-center gap-3 rounded-lg border border-violet-100 bg-violet-50/70 p-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-700">
+                <Clock className="h-4 w-4" />
+              </span>
+              <div>
+                <div className="text-xs text-violet-700/80">Average loan duration</div>
+                <div className="text-lg font-bold text-violet-900">
+                  {stats.avgLoanDays > 0 ? `${stats.avgLoanDays.toFixed(1)} days` : "—"}
+                </div>
               </div>
             </div>
-            <div className="rounded-md bg-slate-50 p-3">
-              <div className="text-xs text-slate-500">Forced issues</div>
-              <div className="mt-1 text-lg font-semibold">
-                {nfmt.format(stats.forcedIssueCount)}
+            <div className="flex items-center gap-3 rounded-lg border border-amber-100 bg-amber-50/70 p-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+                <AlertTriangle className="h-4 w-4" />
+              </span>
+              <div>
+                <div className="text-xs text-amber-700/80">Forced issues</div>
+                <div className="text-lg font-bold text-amber-900">
+                  {nfmt.format(stats.forcedIssueCount)}
+                </div>
               </div>
             </div>
-            <div className="rounded-md bg-slate-50 p-3">
-              <div className="text-xs text-slate-500">Fines waived this month</div>
-              <div className="mt-1 text-lg font-semibold">{inr(stats.finesWaivedThisMonth)}</div>
+            <div className="flex items-center gap-3 rounded-lg border border-emerald-100 bg-emerald-50/70 p-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+                <IndianRupee className="h-4 w-4" />
+              </span>
+              <div>
+                <div className="text-xs text-emerald-700/80">Fines waived this month</div>
+                <div className="text-lg font-bold text-emerald-900">
+                  {inr(stats.finesWaivedThisMonth)}
+                </div>
+              </div>
             </div>
           </div>
         </PanelCard>
       </div>
+
+      <PanelCard title="Top overdue borrowers (top 10)">
+        <FeesTable fixed={false} framed stickyHeader maxHeight="max-h-[420px]">
+          <FeesTableHeader>
+            <FeesTableHead className="w-[56px] text-center">Sr no</FeesTableHead>
+            <FeesTableHead>Borrower</FeesTableHead>
+            <FeesTableHead className="text-center">UID / Code</FeesTableHead>
+            <FeesTableHead className="text-center">Patron</FeesTableHead>
+            <FeesTableHead className="text-center">Books overdue</FeesTableHead>
+          </FeesTableHeader>
+          <FeesTableBody>
+            {stats.overdueByPatron.length === 0 ? (
+              <EmptyRow label="Nobody is overdue" cols={5} />
+            ) : (
+              stats.overdueByPatron.map((r, i) => (
+                <FeesTableRow key={r.userId}>
+                  <FeesTableCell className="text-center tabular-nums text-[#555]">
+                    {i + 1}
+                  </FeesTableCell>
+                  <FeesTableCell className="font-medium text-[#333]">
+                    {r.userName ?? `Patron #${r.userId}`}
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center tabular-nums text-[#555]">
+                    {r.uid ?? "—"}
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center">
+                    <UserTypeBadge category={r.category} />
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center font-semibold tabular-nums text-rose-700">
+                    {nfmt.format(r.count)}
+                  </FeesTableCell>
+                </FeesTableRow>
+              ))
+            )}
+          </FeesTableBody>
+        </FeesTable>
+      </PanelCard>
+
+      <PanelCard title="Longest overdue books (top 10)">
+        <FeesTable fixed={false} framed stickyHeader maxHeight="max-h-[420px]">
+          <FeesTableHeader>
+            <FeesTableHead>Book</FeesTableHead>
+            <FeesTableHead>Borrower</FeesTableHead>
+            <FeesTableHead className="text-center">UID / Code</FeesTableHead>
+            <FeesTableHead className="text-center">Patron</FeesTableHead>
+            <FeesTableHead className="text-center">Due on</FeesTableHead>
+            <FeesTableHead className="text-center">Days overdue</FeesTableHead>
+          </FeesTableHeader>
+          <FeesTableBody>
+            {stats.longestOverdue.length === 0 ? (
+              <EmptyRow label="Nothing overdue" cols={6} />
+            ) : (
+              stats.longestOverdue.map((r) => (
+                <FeesTableRow key={r.circulationId}>
+                  <FeesTableCell className="max-w-[380px] truncate font-medium text-[#333]">
+                    {r.title}
+                  </FeesTableCell>
+                  <FeesTableCell>{r.userName ?? "—"}</FeesTableCell>
+                  <FeesTableCell className="text-center tabular-nums text-[#555]">
+                    {r.uid ?? "—"}
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center">
+                    <UserTypeBadge category={r.category} />
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center tabular-nums">
+                    {fmtDMY(r.dueDate) ?? r.dueDate}
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center font-semibold tabular-nums text-rose-700">
+                    {nfmt.format(r.daysOverdue)}
+                  </FeesTableCell>
+                </FeesTableRow>
+              ))
+            )}
+          </FeesTableBody>
+        </FeesTable>
+      </PanelCard>
     </div>
   );
 }
