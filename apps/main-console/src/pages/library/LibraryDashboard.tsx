@@ -183,6 +183,22 @@ const CATEGORY_LINE_COLORS = [
   "#64748b",
 ] as const;
 
+/** Fixed hues for the types staff recognise at a glance — STUDENT wears the
+ *  module violet, STAFF wears red (mirrors the notifications trend chart's
+ *  primary/danger pairing). Everything else takes the palette in volume
+ *  order. */
+const CATEGORY_COLOR_OVERRIDES: Record<string, string> = {
+  STUDENT: "#7c3aed",
+  STAFF: "#dc2626",
+};
+
+function colorForCategory(category: string, index: number): string {
+  return (
+    CATEGORY_COLOR_OVERRIDES[category] ??
+    (CATEGORY_LINE_COLORS[index % CATEGORY_LINE_COLORS.length] as string)
+  );
+}
+
 /**
  * Pivot the day × patron-type rows into one recharts row per day with a key
  * per category, binning to ISO weeks past ~4 months (same reasoning as the
@@ -700,7 +716,7 @@ function OverviewTab({
                 />
                 <Tooltip content={<MultiSeriesTooltip />} cursor={{ fill: "#f1f5f9" }} />
                 {visits.categories.map((c, i) => {
-                  const color = CATEGORY_LINE_COLORS[i % CATEGORY_LINE_COLORS.length] as string;
+                  const color = colorForCategory(c, i);
                   return (
                     <Area
                       key={c}
@@ -721,9 +737,7 @@ function OverviewTab({
                 <span key={c} className="flex items-center gap-1.5">
                   <span
                     className="h-2 w-2 rounded-full"
-                    style={{
-                      backgroundColor: CATEGORY_LINE_COLORS[i % CATEGORY_LINE_COLORS.length],
-                    }}
+                    style={{ backgroundColor: colorForCategory(c, i) }}
                   />
                   {c}
                 </span>
@@ -954,10 +968,10 @@ function HoldingsTab({ stats }: { stats: LibraryDashboardStats }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {/* Blue → green → orange → purple spread; the per-year bar chart
-            below wears teal so no widget repeats a neighbour's hue. */}
+        {/* Red → green → orange → purple spread; the per-year bar chart
+            below wears orange to echo the warm end of the strip. */}
         <GradientStatCard
-          gradient={GRADIENTS.sky}
+          gradient={GRADIENTS.rose}
           icon={BookOpen}
           label="Books"
           value={formatCompactIN(stats.totalBooks)}
@@ -1008,7 +1022,7 @@ function HoldingsTab({ stats }: { stats: LibraryDashboardStats }) {
                   width={30}
                 />
                 <Tooltip cursor={{ fill: "#f1f5f9" }} />
-                <Bar dataKey="count" fill="#0891b2" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="count" fill="#f97316" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
