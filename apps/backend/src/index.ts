@@ -84,6 +84,7 @@ import { createLogger } from "@/config/logger.js"; // not createLogger
 import { startPaytmDowntimeScheduler } from "@/features/payments/schedulers/paytm-downtime.scheduler.js";
 import { startLibraryReminderScheduler } from "@/features/library/schedulers/library-reminders.scheduler.js";
 import { startJournalIssuePredictorScheduler } from "@/features/library/schedulers/journal-issue-predictor.scheduler.js";
+import { startLibraryFineAccrualScheduler } from "@/features/library/schedulers/library-fine-accrual.scheduler.js";
 const log = createLogger("db");
 
 const PORT = process.env.PORT || 8080;
@@ -159,6 +160,7 @@ function checkRequiredEnvs() {
       startPaytmDowntimeScheduler();
       startLibraryReminderScheduler();
       startJournalIssuePredictorScheduler();
+      startLibraryFineAccrualScheduler();
       // Legacy ID card backfill — background + idempotent (skips already-migrated
       // entries and already-uploaded images), so it self-heals on every restart.
       void import("@/features/idcard/services/legacy-idcard-sync.service.js")
