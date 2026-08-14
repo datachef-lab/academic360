@@ -31,9 +31,7 @@ import { runTempAdmitCardLedgerBackfill } from "@/features/documents/services/te
 import { runCuRegMissingUploadsBackfill } from "@/features/documents/services/cureg-missing-uploads-backfill.service.js";
 import { runCuRegPdfLedgerBackfill } from "@/features/documents/services/cureg-pdf-ledger-backfill.service.js";
 import { runLedgerTimestampHeal } from "@/features/documents/services/ledger-timestamp-heal.service.js";
-// TEMPORARILY DISABLED 2026-08-10 (ADR 0034) — re-enable together with the
-// commented boot-migration entry below when the timeout fix is proven stable.
-// import { runLibraryLegacyLoad } from "@/features/library/services/library-legacy-load.service.js";
+import { runLibraryLegacyLoad } from "@/features/library/services/library-legacy-load.service.js";
 import { runLibraryMastersSeed } from "@/features/library/services/library-masters-seed.service.js";
 import { runSubjectGroupMnHeal } from "@/features/subject-selection/services/subject-group-mn-heal.service.js";
 import { reconcileStaleLegacyImportJobs } from "@/features/user/services/legacy-import-jobs.service.js";
@@ -262,16 +260,14 @@ const MIGRATIONS: Migration[] = [
     name: "legacy-import-boot-reconcile",
     run: async () => reconcileStaleLegacyImportJobs(),
   },
-  // TEMPORARILY DISABLED 2026-08-10 (ADR 0034): the legacy load is a multi-
-  // hour walk that competes for DB connections while the excel-UID importer
-  // is running. Combined with the withAdvisoryXactLock hang we hit today, it
-  // amplified the deadlock's blast radius. Re-enable by uncommenting once the
-  // timeout fix is proven stable and the initial load is confirmed complete
-  // (boot_migration_markers row 'library-legacy-load-v1' present).
-  // {
-  //   name: "library-legacy-load",
-  //   run: async () => runLibraryLegacyLoad(),
-  // },
+  // RE-ENABLED 2026-08-14 (Harsh): disabled 2026-08-10 per ADR 0034 while the
+  // excel-UID importer competed for DB connections; that import is done. The
+  // load is marker-gated ('library-legacy-load-v1'), so environments that
+  // already completed it skip straight through.
+  {
+    name: "library-legacy-load",
+    run: async () => runLibraryLegacyLoad(),
+  },
 ];
 
 /**

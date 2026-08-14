@@ -105,15 +105,15 @@ export const connectToDatabase = async () => {
       log.warn("Boot migrations orchestrator threw", { error: err }),
     );
 
-    // TEMPORARILY DISABLED 2026-08-10 (ADR 0034): the 10-min delta sync
-    // competes for DB connections with the excel-UID importer. Kept off
-    // together with the boot-load in boot-migrations.ts. Re-enable by
-    // uncommenting once the timeout fix is proven stable in prod.
-    // import("@/features/library/services/library-legacy-sync.service.js")
-    //   .then(({ startLibrarySyncScheduler }) => startLibrarySyncScheduler())
-    //   .catch((err) =>
-    //     log.warn("Library sync scheduler failed to start", { error: err }),
-    //   );
+    // RE-ENABLED 2026-08-14 (Harsh): was disabled 2026-08-10 per ADR 0034
+    // while the excel-UID importer competed for DB connections; that import
+    // is done. The tick now also backfills rows missing by legacy id before
+    // applying the modified-since delta, so never-imported old-DB rows load.
+    import("@/features/library/services/library-legacy-sync.service.js")
+      .then(({ startLibrarySyncScheduler }) => startLibrarySyncScheduler())
+      .catch((err) =>
+        log.warn("Library sync scheduler failed to start", { error: err }),
+      );
   } catch (error) {
     log.debug(process.env.DATABASE_URL ?? "DATABASE_URL not set");
     log.error("Failed to connect to the database ⚠", { error });
