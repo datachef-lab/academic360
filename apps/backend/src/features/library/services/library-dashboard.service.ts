@@ -17,6 +17,7 @@ import { bookCirculationModel } from "@repo/db/schemas/models/library/book-circu
 import { statusModel } from "@repo/db/schemas/models/library/status.model.js";
 import { libraryEntryExitModel } from "@repo/db/schemas/models/library/library-entry-exit.model.js";
 import { userModel } from "@repo/db/schemas/models/user/user.model.js";
+import { studentModel } from "@repo/db/schemas/models/user/student.model.js";
 import { paymentModel } from "@repo/db/schemas/models/payments/payment.model.js";
 import { publisherModel } from "@repo/db/schemas/models/library/publisher.model.js";
 import { rackModel } from "@repo/db/schemas/models/library/rack.model.js";
@@ -75,14 +76,19 @@ export type DashboardStats = {
   // Circulation tab — everything reads from book_circulation.
   currentlyInLibrary: number; // library_entry_exit rows still CHECKED_IN
   reissueCount: number; // isReIssued = true, within the selected date range
+  /** All-time renewed-loan count — context for the range-scoped tile. */
+  reissueCountAllTime: number;
   forcedIssueCount: number; // isForcedIssue = true
   finesWaivedThisMonth: number; // fine_waiver > 0 with fineWaivedAt in month
   avgLoanDays: number; // AVG(actualReturn - issue) over returned rows
   overdueAgeing: Array<{ bucket: "0-7" | "8-30" | ">30"; count: number }>;
-  /** Open overdue loans grouped by borrower, worst first (top 10, "now"-scoped). */
+  /** Open overdue loans grouped by borrower, worst first (top 10, "now"-scoped).
+   *  `uid` is the human-facing student identifier (null for staff). */
   overdueByPatron: Array<{
     userId: number;
     userName: string | null;
+    uid: string | null;
+    category: string;
     count: number;
   }>;
   /** Longest-overdue open loans, oldest due date first (top 10). */
@@ -90,6 +96,8 @@ export type DashboardStats = {
     circulationId: number;
     title: string;
     userName: string | null;
+    uid: string | null;
+    category: string;
     dueDate: string;
     daysOverdue: number;
   }>;
@@ -408,6 +416,7 @@ export async function getLibraryDashboardStats(
     outstandingByPatronRaw,
     overdueByPatronRaw,
     longestOverdueRaw,
+    [{ reissueCountAllTime }],
     openLoansByCategoryRaw,
   ] = await Promise.all([
     // "In library now" — TODAY's (IST) entries still checked in. Matches the
@@ -642,21 +651,25 @@ export async function getLibraryDashboardStats(
       .limit(10),
     // Overdue borrowers — who to chase first. Open loans past due, grouped
     // by borrower; "now"-scoped like the Overdue tile (not the date filter).
+    // Student UID via left join (staff have no student row → null).
     db
       .select({
         userId: userModel.id,
         userName: userModel.name,
+        uid: studentModel.uid,
+        category: sql<string>`COALESCE(${userModel.type}::text, 'Unknown')`,
         count: count(bookCirculationModel.id),
       })
       .from(bookCirculationModel)
       .innerJoin(userModel, eq(userModel.id, bookCirculationModel.userId))
+      .leftJoin(studentModel, eq(studentModel.userId, userModel.id))
       .where(
         circulationConditions([
           eq(bookCirculationModel.isReturned, false),
           sql`${bookCirculationModel.returnTimestamp} < NOW()`,
         ]),
       )
-      .groupBy(userModel.id, userModel.name)
+      .groupBy(userModel.id, userModel.name, userModel.type, studentModel.uid)
       .orderBy(desc(count(bookCirculationModel.id)))
       .limit(10),
     // Longest-overdue open loans — oldest due date first.
@@ -665,6 +678,8 @@ export async function getLibraryDashboardStats(
         circulationId: bookCirculationModel.id,
         title: bookModel.title,
         userName: userModel.name,
+        uid: studentModel.uid,
+        category: sql<string>`COALESCE(${userModel.type}::text, 'Unknown')`,
         dueDate: sql<string>`TO_CHAR(${bookCirculationModel.returnTimestamp}, 'YYYY-MM-DD')`,
         daysOverdue: sql<number>`FLOOR(EXTRACT(EPOCH FROM (NOW() - ${bookCirculationModel.returnTimestamp})) / 86400)::int`,
       })
@@ -675,6 +690,7 @@ export async function getLibraryDashboardStats(
       )
       .innerJoin(bookModel, eq(bookModel.id, copyDetailsModel.bookId))
       .innerJoin(userModel, eq(userModel.id, bookCirculationModel.userId))
+      .leftJoin(studentModel, eq(studentModel.userId, userModel.id))
       .where(
         circulationConditions([
           eq(bookCirculationModel.isReturned, false),
@@ -683,6 +699,14 @@ export async function getLibraryDashboardStats(
       )
       .orderBy(bookCirculationModel.returnTimestamp)
       .limit(10),
+    // All-time renewed loans — context for the range-scoped Reissues tile
+    // (a "0 today" reads as broken without the historical footnote).
+    db
+      .select({ reissueCountAllTime: count() })
+      .from(bookCirculationModel)
+      .where(
+        circulationConditions([eq(bookCirculationModel.isReIssued, true)]),
+      ),
     // Open loans split by user type — same grouping as the visits chart.
     db
       .select({
@@ -843,15 +867,20 @@ export async function getLibraryDashboardStats(
       collected: Number(r.collected),
       waived: Number(r.waived),
     })),
+    reissueCountAllTime: reissueCountAllTime ?? 0,
     overdueByPatron: overdueByPatronRaw.map((r) => ({
       userId: r.userId,
       userName: r.userName,
+      uid: r.uid,
+      category: r.category,
       count: r.count,
     })),
     longestOverdue: longestOverdueRaw.map((r) => ({
       circulationId: r.circulationId,
       title: r.title,
       userName: r.userName,
+      uid: r.uid,
+      category: r.category,
       dueDate: r.dueDate,
       daysOverdue: Number(r.daysOverdue),
     })),

@@ -869,6 +869,23 @@ function OverviewTab({
   );
 }
 
+/** User-type chip — STUDENT wears the module violet, staff wear red, the
+ *  same pairing as the visits chart lines. */
+function UserTypeBadge({ category }: { category: string }) {
+  return (
+    <Badge
+      variant="outline"
+      className={
+        category === "STUDENT"
+          ? "border-violet-200 bg-violet-50 text-violet-700"
+          : "border-rose-200 bg-rose-50 text-rose-700"
+      }
+    >
+      {category}
+    </Badge>
+  );
+}
+
 /** Ageing buckets get hotter as loans get later — amber → orange → red. */
 const AGEING_BUCKETS = [
   { key: "0-7", label: "1–7 days late", color: "#f59e0b" },
@@ -914,7 +931,7 @@ function CirculationTab({ stats }: { stats: LibraryDashboardStats }) {
           icon={RefreshCcw}
           label="Reissues"
           value={formatCompactIN(stats.reissueCount)}
-          hint="renewed loans in the selected range"
+          hint={`in the selected range · ${formatCompactIN(stats.reissueCountAllTime)} all-time`}
         />
       </div>
 
@@ -1005,50 +1022,65 @@ function CirculationTab({ stats }: { stats: LibraryDashboardStats }) {
         </PanelCard>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <PanelCard title="Top overdue borrowers">
-          <RankedList
-            emptyLabel="Nobody is overdue"
-            accent="text-rose-700 bg-rose-50"
-            format={(v) => `${nfmt.format(v)} book${v === 1 ? "" : "s"}`}
-            items={stats.overdueByPatron.map((r) => ({
-              key: String(r.userId),
-              label: r.userName ?? `Patron #${r.userId}`,
-              value: r.count,
-            }))}
-          />
-        </PanelCard>
-        <PanelCard title="Open loans by user type">
-          <RankedList
-            emptyLabel="No open loans"
-            accent="text-violet-700 bg-violet-50"
-            items={stats.openLoansByCategory.map((r) => ({
-              key: r.category,
-              label: r.category,
-              value: r.count,
-            }))}
-          />
-        </PanelCard>
-      </div>
+      <PanelCard title="Top overdue borrowers (top 10)">
+        <FeesTable fixed={false} framed stickyHeader maxHeight="max-h-[420px]">
+          <FeesTableHeader>
+            <FeesTableHead className="w-[56px] text-center">Sr no</FeesTableHead>
+            <FeesTableHead>Borrower</FeesTableHead>
+            <FeesTableHead>UID</FeesTableHead>
+            <FeesTableHead>User type</FeesTableHead>
+            <FeesTableHead className="text-right">Books overdue</FeesTableHead>
+          </FeesTableHeader>
+          <FeesTableBody>
+            {stats.overdueByPatron.length === 0 ? (
+              <EmptyRow label="Nobody is overdue" cols={5} />
+            ) : (
+              stats.overdueByPatron.map((r, i) => (
+                <FeesTableRow key={r.userId}>
+                  <FeesTableCell className="text-center tabular-nums text-[#555]">
+                    {i + 1}
+                  </FeesTableCell>
+                  <FeesTableCell className="font-medium text-[#333]">
+                    {r.userName ?? `Patron #${r.userId}`}
+                  </FeesTableCell>
+                  <FeesTableCell className="tabular-nums text-[#555]">{r.uid ?? "—"}</FeesTableCell>
+                  <FeesTableCell>
+                    <UserTypeBadge category={r.category} />
+                  </FeesTableCell>
+                  <FeesTableCell className="text-right font-semibold tabular-nums text-rose-700">
+                    {nfmt.format(r.count)}
+                  </FeesTableCell>
+                </FeesTableRow>
+              ))
+            )}
+          </FeesTableBody>
+        </FeesTable>
+      </PanelCard>
 
       <PanelCard title="Longest overdue books (top 10)">
         <FeesTable fixed={false} framed stickyHeader maxHeight="max-h-[420px]">
           <FeesTableHeader>
             <FeesTableHead>Book</FeesTableHead>
             <FeesTableHead>Borrower</FeesTableHead>
+            <FeesTableHead>UID</FeesTableHead>
+            <FeesTableHead>User type</FeesTableHead>
             <FeesTableHead className="text-right">Due on</FeesTableHead>
             <FeesTableHead className="text-right">Days overdue</FeesTableHead>
           </FeesTableHeader>
           <FeesTableBody>
             {stats.longestOverdue.length === 0 ? (
-              <EmptyRow label="Nothing overdue" cols={4} />
+              <EmptyRow label="Nothing overdue" cols={6} />
             ) : (
               stats.longestOverdue.map((r) => (
                 <FeesTableRow key={r.circulationId}>
-                  <FeesTableCell className="max-w-[420px] truncate font-medium text-[#333]">
+                  <FeesTableCell className="max-w-[380px] truncate font-medium text-[#333]">
                     {r.title}
                   </FeesTableCell>
                   <FeesTableCell>{r.userName ?? "—"}</FeesTableCell>
+                  <FeesTableCell className="tabular-nums text-[#555]">{r.uid ?? "—"}</FeesTableCell>
+                  <FeesTableCell>
+                    <UserTypeBadge category={r.category} />
+                  </FeesTableCell>
                   <FeesTableCell className="text-right tabular-nums">
                     {fmtDMY(r.dueDate) ?? r.dueDate}
                   </FeesTableCell>

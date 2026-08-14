@@ -37,11 +37,20 @@ export type LibraryDashboardStats = {
   finesWaivedThisMonth: number;
   avgLoanDays: number;
   overdueAgeing: Array<{ bucket: "0-7" | "8-30" | ">30"; count: number }>;
-  overdueByPatron: Array<{ userId: number; userName: string | null; count: number }>;
+  reissueCountAllTime: number;
+  overdueByPatron: Array<{
+    userId: number;
+    userName: string | null;
+    uid: string | null;
+    category: string;
+    count: number;
+  }>;
   longestOverdue: Array<{
     circulationId: number;
     title: string;
     userName: string | null;
+    uid: string | null;
+    category: string;
     dueDate: string;
     daysOverdue: number;
   }>;
