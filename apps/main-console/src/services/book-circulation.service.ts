@@ -74,7 +74,14 @@ export type BookCirculationPreviewRow = {
   fine: number;
   fineWaiver: number;
   netFine: number;
+  finePaid: boolean;
   latestReissueReturnTimestamp: string | null;
+  /** Policy facts so the UI can govern actions up front (server re-enforces). */
+  reissuesUsed: number;
+  renewalLimit: number;
+  loanDays: number;
+  finePerDay: number;
+  maxCopiesAtOnce: number;
 };
 
 export type BookCirculationPreviewPayload = {

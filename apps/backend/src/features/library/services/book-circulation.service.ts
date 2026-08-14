@@ -89,7 +89,14 @@ export type BookCirculationPreviewRow = {
   fine: number;
   fineWaiver: number;
   netFine: number;
+  finePaid: boolean;
   latestReissueReturnTimestamp: Date | null;
+  // Policy facts so the UI can govern actions client-side (server re-enforces).
+  reissuesUsed: number;
+  renewalLimit: number;
+  loanDays: number;
+  finePerDay: number;
+  maxCopiesAtOnce: number;
 };
 
 export type BookCirculationPreviewResult = {
@@ -419,6 +426,7 @@ export async function getBookCirculationPreviewByUserId(
       actualReturnTimestamp: bookCirculationModel.actualReturnTimestamp,
       fineAmount: bookCirculationModel.fineAmount,
       fineWaiver: bookCirculationModel.fineWaiver,
+      paymentId: bookCirculationModel.paymentId,
     })
     .from(bookCirculationModel)
     .leftJoin(
@@ -453,11 +461,26 @@ export async function getBookCirculationPreviewByUserId(
         .orderBy(desc(bookReissueModel.createdAt))
     : [];
   const latestReissueMap = new Map<number, Date>();
+  const reissueCountMap = new Map<number, number>();
   for (const item of reissueRows) {
     if (!item.bookCirculationId) continue;
     if (!latestReissueMap.has(item.bookCirculationId)) {
       latestReissueMap.set(item.bookCirculationId, item.returnTimestamp);
     }
+    reissueCountMap.set(
+      item.bookCirculationId,
+      (reissueCountMap.get(item.bookCirculationId) ?? 0) + 1,
+    );
+  }
+
+  // Policy facts per copy so the UI can disable/annotate actions up front
+  // (the upsert path re-enforces everything server-side regardless).
+  const policyByCopy = new Map<
+    number,
+    Awaited<ReturnType<typeof resolvePolicyForCirculation>>
+  >();
+  for (const copyId of new Set(rowsDb.map((r) => r.copyDetailsId))) {
+    policyByCopy.set(copyId, await resolvePolicyForCirculation(userId, copyId));
   }
 
   const rows: BookCirculationPreviewRow[] = rowsDb.map((row) => ({
@@ -477,7 +500,13 @@ export async function getBookCirculationPreviewByUserId(
     fine: row.fineAmount ?? 0,
     fineWaiver: row.fineWaiver ?? 0,
     netFine: (row.fineAmount ?? 0) - (row.fineWaiver ?? 0),
+    finePaid: row.paymentId != null,
     latestReissueReturnTimestamp: latestReissueMap.get(row.id) ?? null,
+    reissuesUsed: reissueCountMap.get(row.id) ?? 0,
+    renewalLimit: policyByCopy.get(row.copyDetailsId)?.renewalLimit ?? 0,
+    loanDays: policyByCopy.get(row.copyDetailsId)?.loanDays ?? 7,
+    finePerDay: policyByCopy.get(row.copyDetailsId)?.finePerDay ?? 0,
+    maxCopiesAtOnce: policyByCopy.get(row.copyDetailsId)?.maxCopiesAtOnce ?? 0,
   }));
 
   return {

@@ -422,7 +422,13 @@ export default function BookCirculationPage() {
         fine: 0,
         fineWaiver: 0,
         netFine: 0,
+        finePaid: false,
         latestReissueReturnTimestamp: null,
+        reissuesUsed: 0,
+        renewalLimit: stagedPolicy?.renewalLimit ?? 0,
+        loanDays: stagedPolicy?.loanDays ?? 7,
+        finePerDay: stagedPolicy?.finePerDay ?? 0,
+        maxCopiesAtOnce: stagedPolicy?.maxCopiesAtOnce ?? 0,
         isNew: true,
         policy: stagedPolicy,
       },
@@ -435,6 +441,11 @@ export default function BookCirculationPage() {
     (row) => row.isNew && (!row.copyDetailsId || !row.returnTimestamp),
   );
   const hasSavable = editableRows.length > 0;
+  // Open loans the patron already holds + books being staged now — used to
+  // warn when a save would exceed the policy's copies-at-once cap (the server
+  // rejects it; staff can then confirm a forced issue).
+  const openLoanCount = editableRows.filter((r) => !r.isNew && !r.actualReturnTimestamp).length;
+  const stagedCount = editableRows.filter((r) => r.isNew).length;
 
   const formatDateChip = (isoDate: string) => {
     const parsed = new Date(`${isoDate}T00:00:00`);
@@ -621,13 +632,22 @@ export default function BookCirculationPage() {
                         <p className="truncate text-[11px] text-slate-500">{item.author}</p>
                       ) : null}
                       {item.isNew && item.policy ? (
-                        <p className="truncate text-[11px] text-blue-700">
-                          Policy: {item.policy.loanDays}d loan · {item.policy.renewalLimit}{" "}
-                          {item.policy.renewalLimit === 1 ? "renewal" : "renewals"} ·{" "}
-                          {item.policy.finePerDay > 0
-                            ? `₹${item.policy.finePerDay}/day${item.policy.graceDays > 0 ? ` after ${item.policy.graceDays}d grace` : ""}`
-                            : "no fine set"}
-                        </p>
+                        <>
+                          <p className="truncate text-[11px] text-blue-700">
+                            Policy: {item.policy.loanDays}d loan · {item.policy.renewalLimit}{" "}
+                            {item.policy.renewalLimit === 1 ? "renewal" : "renewals"} ·{" "}
+                            {item.policy.finePerDay > 0
+                              ? `₹${item.policy.finePerDay}/day${item.policy.graceDays > 0 ? ` after ${item.policy.graceDays}d grace` : ""}`
+                              : "no fine set"}
+                          </p>
+                          {item.policy.maxCopiesAtOnce > 0 &&
+                          openLoanCount + stagedCount > item.policy.maxCopiesAtOnce ? (
+                            <p className="truncate text-[11px] font-medium text-amber-700">
+                              Copy cap exceeded ({openLoanCount} open + {stagedCount} new &gt;{" "}
+                              {item.policy.maxCopiesAtOnce}) — save will need a forced issue
+                            </p>
+                          ) : null}
+                        </>
                       ) : null}
                     </div>
                   </TableCell>
@@ -702,7 +722,18 @@ export default function BookCirculationPage() {
                     </TableCell>
                   ) : null}
                   {showFine ? (
-                    <TableCell className={cellBase}>{formatInr(item.netFine)}</TableCell>
+                    <TableCell className={cellBase}>
+                      {item.finePaid ? (
+                        <span className="inline-flex flex-col items-center">
+                          <span>{formatInr(item.fine - item.fineWaiver)}</span>
+                          <span className="rounded bg-emerald-100 px-1 text-[10px] font-semibold text-emerald-700">
+                            PAID
+                          </span>
+                        </span>
+                      ) : (
+                        formatInr(item.netFine)
+                      )}
+                    </TableCell>
                   ) : null}
                   <TableCell className={cellBase}>
                     <div className="flex flex-wrap items-center justify-center gap-1.5">
@@ -736,12 +767,22 @@ export default function BookCirculationPage() {
                             variant="outline"
                             className="h-8 border-blue-300 bg-blue-50 px-2 text-xs text-blue-700 hover:bg-blue-100"
                             type="button"
-                            disabled={!!item.actualReturnTimestamp}
+                            disabled={
+                              !!item.actualReturnTimestamp || item.reissuesUsed >= item.renewalLimit
+                            }
+                            title={
+                              item.reissuesUsed >= item.renewalLimit && !item.actualReturnTimestamp
+                                ? `Renewal limit reached (${item.reissuesUsed}/${item.renewalLimit})`
+                                : `Renewals used: ${item.reissuesUsed}/${item.renewalLimit}`
+                            }
                             onClick={() => {
                               setReissueRowId(item.id);
-                              setReissueDate(
-                                item.returnTimestamp ? new Date(item.returnTimestamp) : undefined,
-                              );
+                              // Policy-driven default: the new due date is
+                              // loanDays from today (same as the RE-ISSUE
+                              // action semantics); staff can still override.
+                              const due = new Date();
+                              due.setDate(due.getDate() + Math.max(1, item.loanDays));
+                              setReissueDate(due);
                             }}
                           >
                             <CalendarClock className="mr-1 h-3.5 w-3.5" />
@@ -752,7 +793,9 @@ export default function BookCirculationPage() {
                             variant="outline"
                             className="h-8 border-amber-300 bg-amber-50 px-2 text-xs text-amber-700 hover:bg-amber-100"
                             type="button"
-                            disabled={item.netFine <= 0 || !previewData?.user?.userId}
+                            disabled={
+                              item.netFine <= 0 || item.finePaid || !previewData?.user?.userId
+                            }
                             onClick={async () => {
                               if (!previewData?.user?.userId) return;
                               try {
@@ -795,7 +838,7 @@ export default function BookCirculationPage() {
                             variant="outline"
                             className="h-8 border-emerald-300 bg-emerald-50 px-2 text-xs text-emerald-700 hover:bg-emerald-100"
                             type="button"
-                            disabled={item.netFine <= 0}
+                            disabled={item.netFine <= 0 || item.finePaid}
                             onClick={() => {
                               setCashRow(item);
                               setCashRemarks("");
@@ -808,7 +851,7 @@ export default function BookCirculationPage() {
                             variant="outline"
                             className="h-8 border-slate-300 bg-slate-50 px-2 text-xs text-slate-700 hover:bg-slate-100"
                             type="button"
-                            disabled={item.fine <= 0}
+                            disabled={item.fine <= 0 || item.finePaid}
                             onClick={() => {
                               setWaiveRow(item);
                               setWaiveAmount(String(item.netFine > 0 ? item.netFine : item.fine));
