@@ -37,6 +37,15 @@ export type LibraryDashboardStats = {
   finesWaivedThisMonth: number;
   avgLoanDays: number;
   overdueAgeing: Array<{ bucket: "0-7" | "8-30" | ">30"; count: number }>;
+  overdueByPatron: Array<{ userId: number; userName: string | null; count: number }>;
+  longestOverdue: Array<{
+    circulationId: number;
+    title: string;
+    userName: string | null;
+    dueDate: string;
+    daysOverdue: number;
+  }>;
+  openLoansByCategory: Array<{ category: string; count: number }>;
 
   booksByLanguage: Array<{ language: string; count: number }>;
   booksByPublisher: Array<{ publisher: string; count: number }>;

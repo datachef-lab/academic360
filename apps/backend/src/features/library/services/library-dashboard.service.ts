@@ -79,6 +79,22 @@ export type DashboardStats = {
   finesWaivedThisMonth: number; // fine_waiver > 0 with fineWaivedAt in month
   avgLoanDays: number; // AVG(actualReturn - issue) over returned rows
   overdueAgeing: Array<{ bucket: "0-7" | "8-30" | ">30"; count: number }>;
+  /** Open overdue loans grouped by borrower, worst first (top 10, "now"-scoped). */
+  overdueByPatron: Array<{
+    userId: number;
+    userName: string | null;
+    count: number;
+  }>;
+  /** Longest-overdue open loans, oldest due date first (top 10). */
+  longestOverdue: Array<{
+    circulationId: number;
+    title: string;
+    userName: string | null;
+    dueDate: string;
+    daysOverdue: number;
+  }>;
+  /** Currently open loans split by user type. */
+  openLoansByCategory: Array<{ category: string; count: number }>;
 
   // Holdings tab — where copies live and what the catalogue looks like.
   booksByLanguage: Array<{ language: string; count: number }>;
@@ -390,6 +406,9 @@ export async function getLibraryDashboardStats(
     [{ avgVisitSeconds }],
     finesByDayResult,
     outstandingByPatronRaw,
+    overdueByPatronRaw,
+    longestOverdueRaw,
+    openLoansByCategoryRaw,
   ] = await Promise.all([
     // "In library now" — TODAY's (IST) entries still checked in. Matches the
     // entry/exit page's "Checked in" badge, which always filters date=today.
@@ -621,6 +640,62 @@ export async function getLibraryDashboardStats(
         ),
       )
       .limit(10),
+    // Overdue borrowers — who to chase first. Open loans past due, grouped
+    // by borrower; "now"-scoped like the Overdue tile (not the date filter).
+    db
+      .select({
+        userId: userModel.id,
+        userName: userModel.name,
+        count: count(bookCirculationModel.id),
+      })
+      .from(bookCirculationModel)
+      .innerJoin(userModel, eq(userModel.id, bookCirculationModel.userId))
+      .where(
+        circulationConditions([
+          eq(bookCirculationModel.isReturned, false),
+          sql`${bookCirculationModel.returnTimestamp} < NOW()`,
+        ]),
+      )
+      .groupBy(userModel.id, userModel.name)
+      .orderBy(desc(count(bookCirculationModel.id)))
+      .limit(10),
+    // Longest-overdue open loans — oldest due date first.
+    db
+      .select({
+        circulationId: bookCirculationModel.id,
+        title: bookModel.title,
+        userName: userModel.name,
+        dueDate: sql<string>`TO_CHAR(${bookCirculationModel.returnTimestamp}, 'YYYY-MM-DD')`,
+        daysOverdue: sql<number>`FLOOR(EXTRACT(EPOCH FROM (NOW() - ${bookCirculationModel.returnTimestamp})) / 86400)::int`,
+      })
+      .from(bookCirculationModel)
+      .innerJoin(
+        copyDetailsModel,
+        eq(copyDetailsModel.id, bookCirculationModel.copyDetailsId),
+      )
+      .innerJoin(bookModel, eq(bookModel.id, copyDetailsModel.bookId))
+      .innerJoin(userModel, eq(userModel.id, bookCirculationModel.userId))
+      .where(
+        circulationConditions([
+          eq(bookCirculationModel.isReturned, false),
+          sql`${bookCirculationModel.returnTimestamp} < NOW()`,
+        ]),
+      )
+      .orderBy(bookCirculationModel.returnTimestamp)
+      .limit(10),
+    // Open loans split by user type — same grouping as the visits chart.
+    db
+      .select({
+        category: sql<string>`COALESCE(${userModel.type}::text, 'Unknown')`,
+        count: count(bookCirculationModel.id),
+      })
+      .from(bookCirculationModel)
+      .leftJoin(userModel, eq(userModel.id, bookCirculationModel.userId))
+      .where(
+        circulationConditions([eq(bookCirculationModel.isReturned, false)]),
+      )
+      .groupBy(userModel.type)
+      .orderBy(desc(count(bookCirculationModel.id))),
   ]);
 
   // DISTINCT publisher + language counts — separate cheap queries because
@@ -767,6 +842,22 @@ export async function getLibraryDashboardStats(
       day: r.day,
       collected: Number(r.collected),
       waived: Number(r.waived),
+    })),
+    overdueByPatron: overdueByPatronRaw.map((r) => ({
+      userId: r.userId,
+      userName: r.userName,
+      count: r.count,
+    })),
+    longestOverdue: longestOverdueRaw.map((r) => ({
+      circulationId: r.circulationId,
+      title: r.title,
+      userName: r.userName,
+      dueDate: r.dueDate,
+      daysOverdue: Number(r.daysOverdue),
+    })),
+    openLoansByCategory: openLoansByCategoryRaw.map((r) => ({
+      category: r.category,
+      count: r.count,
     })),
     outstandingByPatron: outstandingByPatronRaw.map((r) => ({
       userId: r.userId,
