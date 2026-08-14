@@ -432,7 +432,9 @@ async function syncOneTable(
       )
     ).rows as Array<{ legacy_id: number }>;
     const presentIds = new Set<number>(
-      presentRows.map((r) => Number(r.legacy_id)).filter((n) => Number.isFinite(n)),
+      presentRows
+        .map((r) => Number(r.legacy_id))
+        .filter((n) => Number.isFinite(n)),
     );
     const missingIds = inScopeIds.filter((id) => !presentIds.has(id));
     const refreshIds = inScopeIds.filter((id) => presentIds.has(id));
@@ -657,20 +659,12 @@ let firstTickTimer: NodeJS.Timeout | null = null;
  * early is safe (the first ticks just skip until the marker lands).
  */
 export function startLibrarySyncScheduler(): void {
-  // Only tick against the legacy IRP MySQL in production. Develop / staging
-  // point at the same read-only IRP replica, so a running dev scheduler
-  // races the prod one for the shared advisory lock and (worse) hammers
-  // legacy MySQL with duplicate queries. The paytm-downtime scheduler uses
-  // the same pattern — grep for "scheduler skipped: NODE_ENV is not
-  // production". Companion to the `library-legacy-load` skip in
-  // boot-migrations.ts, which turned off the one-time initial walk but
-  // left the periodic delta tick running.
-  if (process.env.NODE_ENV !== "production") {
-    log.info(
-      "library-legacy-sync scheduler skipped: NODE_ENV is not production",
-    );
-    return;
-  }
+  // Runs in EVERY environment (Harsh, 2026-08-14): develop/staging must keep
+  // their library data flowing from the read-only IRP replica too, not just
+  // prod. Each environment's own Postgres holds its own advisory lock, so
+  // instances within an environment never double-tick; the cost of multiple
+  // environments scanning the shared replica every 10 min is accepted. Use
+  // LIBRARY_LEGACY_SYNC=off in an environment's .env to quiet it.
   if ((process.env.LIBRARY_LEGACY_SYNC ?? "").toLowerCase() === "off") {
     log.info("LIBRARY_LEGACY_SYNC=off — scheduler not started");
     return;
