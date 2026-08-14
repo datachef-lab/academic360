@@ -96,6 +96,7 @@ export function LibrarySyncBanner() {
   } = data;
 
   let label: string;
+  let shortLabel: string;
   if (running) {
     const elapsedMs = startedAt ? Math.max(0, now - new Date(startedAt).getTime()) : 0;
     const elapsedLabel = formatDuration(elapsedMs);
@@ -166,10 +167,18 @@ export function LibrarySyncBanner() {
       parts.push("first sync usually takes 15–45 min");
     }
     label = parts.join(" · ");
+    shortLabel =
+      livePercent != null
+        ? `Syncing · ${livePercent}%${
+            liveRemainingLabel ? ` · ${liveRemainingLabel.replace(" remaining", " left")}` : ""
+          }`
+        : `Syncing · ${elapsedLabel}`;
   } else if (lastSyncedAt) {
     label = `Auto-syncing with old library system · Last synced ${humaniseAgo(lastSyncedAt)} · Next sync in ${humaniseCountdown(nextSyncAt)}`;
+    shortLabel = `Synced ${humaniseAgo(lastSyncedAt)}`;
   } else {
     label = "Auto-syncing with old library system · Waiting for first sync";
+    shortLabel = "Sync pending";
   }
 
   const summary =
@@ -177,25 +186,25 @@ export function LibrarySyncBanner() {
       ? ` · Last tick: ${lastTickSummary.rowsUpdated.toLocaleString()} rows updated, ${lastTickSummary.rowsRemoved.toLocaleString()} removed across ${lastTickSummary.tables} tables in ${formatDuration(lastDurationMs ?? 0)}`
       : "";
 
+  // Compact pill — sits inline beside the page title; hover (native title
+  // attribute) reveals the full sentence, including the last-tick summary.
   return (
-    <div
-      className={`mx-4 mb-2 mt-1 flex items-center gap-2 rounded-md border px-3 py-2 text-[11px] ${
+    <span
+      className={`inline-flex min-w-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${
         running
-          ? "border-sky-200 bg-sky-50 text-sky-900"
-          : "border-slate-200 bg-slate-50 text-slate-700"
+          ? "border-sky-200 bg-sky-50 text-sky-800"
+          : "border-slate-200 bg-slate-50 text-slate-600"
       }`}
       role="status"
       aria-live="polite"
+      title={`${label}${summary}`}
     >
       {running ? (
         <Loader2 className="h-3 w-3 shrink-0 animate-spin text-sky-700" />
       ) : (
         <RefreshCw className="h-3 w-3 shrink-0 text-slate-500" />
       )}
-      <span className="flex-1">
-        {label}
-        <span className="text-slate-500">{summary}</span>
-      </span>
-    </div>
+      <span className="truncate">{shortLabel}</span>
+    </span>
   );
 }

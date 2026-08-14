@@ -1,5 +1,16 @@
 import { db } from "@/db/index.js";
-import { and, count, desc, eq, gte, isNull, lte, sql, SQL } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gte,
+  isNotNull,
+  isNull,
+  lte,
+  sql,
+  SQL,
+} from "drizzle-orm";
 import { bookModel } from "@repo/db/schemas/models/library/book.model.js";
 import { copyDetailsModel } from "@repo/db/schemas/models/library/copy-details.model.js";
 import { bookCirculationModel } from "@repo/db/schemas/models/library/book-circulation.model.js";
@@ -33,11 +44,14 @@ export type DashboardStats = {
   finesOutstanding: number;
   topBooks: Array<{ bookId: number; title: string; issueCount: number }>;
   topPatrons: Array<{ userId: number; userName: string; issueCount: number }>;
-  /** Per-day circulation events; `count` = issues + reissues (total). */
+  /** Per-day circulation events; `count` = issues + reissues (total).
+   *  `returns` is keyed by the actual-return day, merged onto the same
+   *  day axis so the chart can overlay all three lines. */
   dailyIssuesLast14: Array<{
     day: string;
     issues: number;
     reissues: number;
+    returns: number;
     count: number;
   }>;
   copiesByStatus: Array<{
@@ -46,6 +60,12 @@ export type DashboardStats = {
     count: number;
   }>;
   entryExitByDay: Array<{ day: string; count: number }>;
+  /** Same series split by user type — one chart line per patron type. */
+  entryExitByDayByCategory: Array<{
+    day: string;
+    category: string;
+    count: number;
+  }>;
 
   // Article-entry / catalogue counts — for the Holdings tiles.
   totalJournals: number;
@@ -184,6 +204,7 @@ export async function getLibraryDashboardStats(
     dailyIssuesRaw,
     copiesByStatusRaw,
     entryExitByDayRaw,
+    dailyReturnsRaw,
   ] = await Promise.all([
     db.select({ totalBooks: count() }).from(bookModel).where(bookConditions()),
     db
@@ -284,18 +305,50 @@ export async function getLibraryDashboardStats(
       .where(copyConditions())
       .groupBy(copyDetailsModel.statusId, statusModel.name)
       .orderBy(desc(count(copyDetailsModel.id))),
+    // Grouped by day × user type so the dashboard can draw one line per
+    // patron type; the plain per-day total is derived from this in the
+    // mapping below (left join keeps userless rows counted as Unknown).
     db
       .select({
         day: sql<string>`TO_CHAR(${libraryEntryExitModel.entryTimestamp}, 'YYYY-MM-DD')`,
+        category: sql<string>`COALESCE(${userModel.type}::text, 'Unknown')`,
         count: count(libraryEntryExitModel.id),
       })
       .from(libraryEntryExitModel)
+      .leftJoin(userModel, eq(userModel.id, libraryEntryExitModel.userId))
       .where(entryExitConditions())
       .groupBy(
         sql`TO_CHAR(${libraryEntryExitModel.entryTimestamp}, 'YYYY-MM-DD')`,
+        userModel.type,
       )
       .orderBy(
         sql`TO_CHAR(${libraryEntryExitModel.entryTimestamp}, 'YYYY-MM-DD')`,
+      ),
+    // Returns are keyed on the day the copy actually came back, not the
+    // issue day, so they need their own grouped query; merged into the
+    // daily circulation series below.
+    db
+      .select({
+        day: sql<string>`TO_CHAR(${bookCirculationModel.actualReturnTimestamp}, 'YYYY-MM-DD')`,
+        returns: sql<number>`COUNT(*)::int`,
+      })
+      .from(bookCirculationModel)
+      .where(
+        circulationConditions([
+          isNotNull(bookCirculationModel.actualReturnTimestamp),
+          ...(issueRangeStart
+            ? [gte(bookCirculationModel.actualReturnTimestamp, issueRangeStart)]
+            : []),
+          ...(issueRangeEnd
+            ? [lte(bookCirculationModel.actualReturnTimestamp, issueRangeEnd)]
+            : []),
+        ]),
+      )
+      .groupBy(
+        sql`TO_CHAR(${bookCirculationModel.actualReturnTimestamp}, 'YYYY-MM-DD')`,
+      )
+      .orderBy(
+        sql`TO_CHAR(${bookCirculationModel.actualReturnTimestamp}, 'YYYY-MM-DD')`,
       ),
   ]);
 
@@ -598,20 +651,47 @@ export async function getLibraryDashboardStats(
       userName: r.userName,
       issueCount: r.issueCount,
     })),
-    dailyIssuesLast14: dailyIssuesRaw.map((r) => ({
-      day: r.day,
-      issues: Number(r.issues),
-      reissues: Number(r.reissues),
-      count: Number(r.issues) + Number(r.reissues),
-    })),
+    // Union of issue-days and return-days — a day can have returns with no
+    // fresh issues (or vice versa) and still needs a point on the chart.
+    dailyIssuesLast14: (() => {
+      const issuesByDay = new Map(dailyIssuesRaw.map((r) => [r.day, r]));
+      const returnsByDay = new Map(
+        dailyReturnsRaw.map((r) => [r.day, Number(r.returns)]),
+      );
+      const allDays = Array.from(
+        new Set([...issuesByDay.keys(), ...returnsByDay.keys()]),
+      ).sort();
+      return allDays.map((day) => {
+        const r = issuesByDay.get(day);
+        const issues = Number(r?.issues ?? 0);
+        const reissues = Number(r?.reissues ?? 0);
+        return {
+          day,
+          issues,
+          reissues,
+          returns: returnsByDay.get(day) ?? 0,
+          count: issues + reissues,
+        };
+      });
+    })(),
     copiesByStatus: copiesByStatusRaw.map((r) => ({
       statusId: r.statusId,
       statusName: r.statusName ?? "Unknown",
       count: r.count,
     })),
-    entryExitByDay: entryExitByDayRaw.map((r) => ({
+    entryExitByDay: (() => {
+      const totals = new Map<string, number>();
+      for (const r of entryExitByDayRaw) {
+        totals.set(r.day, (totals.get(r.day) ?? 0) + Number(r.count));
+      }
+      return Array.from(totals.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([day, count]) => ({ day, count }));
+    })(),
+    entryExitByDayByCategory: entryExitByDayRaw.map((r) => ({
       day: r.day,
-      count: r.count,
+      category: r.category,
+      count: Number(r.count),
     })),
 
     // Placeholder zeros — the type carries totalJournals/Series/Holidays for
