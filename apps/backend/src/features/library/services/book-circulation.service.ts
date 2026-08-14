@@ -26,11 +26,12 @@ import { userModel } from "@repo/db/schemas/models/user/user.model.js";
 import { studentModel } from "@repo/db/schemas/models/user/student.model.js";
 import { staffModel } from "@repo/db/schemas/models/user/staff.model.js";
 import { getLibraryEntryExitPreviewByUserId } from "@/features/library/services/library-entry-exit.service.js";
+import { resolvePolicyForCirculation } from "@/features/library/services/circulation-policy-resolver.service.js";
 import {
-  resolveCurrentClassIdForUser,
-  resolvePolicyForCirculation,
-} from "@/features/library/services/circulation-policy-resolver.service.js";
-import { countWorkingDaysBetween } from "@/features/library/services/holiday-calendar.service.js";
+  applyFineForCirculation,
+  getFineAccrualGoLiveDate,
+  type FineApplicationResult,
+} from "@/features/library/services/library-fine.service.js";
 import { emitLibraryNotification } from "@/features/library/services/library-notifications.service.js";
 import { emitLibraryEvent } from "@/features/library/services/library-realtime.service.js";
 
@@ -88,7 +89,14 @@ export type BookCirculationPreviewRow = {
   fine: number;
   fineWaiver: number;
   netFine: number;
+  finePaid: boolean;
   latestReissueReturnTimestamp: Date | null;
+  // Policy facts so the UI can govern actions client-side (server re-enforces).
+  reissuesUsed: number;
+  renewalLimit: number;
+  loanDays: number;
+  finePerDay: number;
+  maxCopiesAtOnce: number;
 };
 
 export type BookCirculationPreviewResult = {
@@ -116,8 +124,12 @@ export type BookCirculationUpsertEntry = {
   copyDetailsId: number;
   borrowingTypeId?: number | null;
   issueTimestamp: Date | string;
-  returnTimestamp: Date | string;
+  // Optional: when omitted the due date is derived server-side from policy.
+  returnTimestamp?: Date | string | null;
   actualReturnTimestamp?: Date | string | null;
+  // Desk override: bypasses availability / copy-cap / non-circulating policy
+  // rejections (never the catalog-level "Not to be issued" flag).
+  isForcedIssue?: boolean;
 };
 
 const toDayBounds = (isoDate: string) => {
@@ -414,6 +426,7 @@ export async function getBookCirculationPreviewByUserId(
       actualReturnTimestamp: bookCirculationModel.actualReturnTimestamp,
       fineAmount: bookCirculationModel.fineAmount,
       fineWaiver: bookCirculationModel.fineWaiver,
+      paymentId: bookCirculationModel.paymentId,
     })
     .from(bookCirculationModel)
     .leftJoin(
@@ -448,11 +461,26 @@ export async function getBookCirculationPreviewByUserId(
         .orderBy(desc(bookReissueModel.createdAt))
     : [];
   const latestReissueMap = new Map<number, Date>();
+  const reissueCountMap = new Map<number, number>();
   for (const item of reissueRows) {
     if (!item.bookCirculationId) continue;
     if (!latestReissueMap.has(item.bookCirculationId)) {
       latestReissueMap.set(item.bookCirculationId, item.returnTimestamp);
     }
+    reissueCountMap.set(
+      item.bookCirculationId,
+      (reissueCountMap.get(item.bookCirculationId) ?? 0) + 1,
+    );
+  }
+
+  // Policy facts per copy so the UI can disable/annotate actions up front
+  // (the upsert path re-enforces everything server-side regardless).
+  const policyByCopy = new Map<
+    number,
+    Awaited<ReturnType<typeof resolvePolicyForCirculation>>
+  >();
+  for (const copyId of new Set(rowsDb.map((r) => r.copyDetailsId))) {
+    policyByCopy.set(copyId, await resolvePolicyForCirculation(userId, copyId));
   }
 
   const rows: BookCirculationPreviewRow[] = rowsDb.map((row) => ({
@@ -472,7 +500,13 @@ export async function getBookCirculationPreviewByUserId(
     fine: row.fineAmount ?? 0,
     fineWaiver: row.fineWaiver ?? 0,
     netFine: (row.fineAmount ?? 0) - (row.fineWaiver ?? 0),
+    finePaid: row.paymentId != null,
     latestReissueReturnTimestamp: latestReissueMap.get(row.id) ?? null,
+    reissuesUsed: reissueCountMap.get(row.id) ?? 0,
+    renewalLimit: policyByCopy.get(row.copyDetailsId)?.renewalLimit ?? 0,
+    loanDays: policyByCopy.get(row.copyDetailsId)?.loanDays ?? 7,
+    finePerDay: policyByCopy.get(row.copyDetailsId)?.finePerDay ?? 0,
+    maxCopiesAtOnce: policyByCopy.get(row.copyDetailsId)?.maxCopiesAtOnce ?? 0,
   }));
 
   return {
@@ -558,10 +592,7 @@ export async function returnBookCirculationById(id: number): Promise<void> {
       copyDetailsId: bookCirculationModel.copyDetailsId,
       issueTimestamp: bookCirculationModel.issueTimestamp,
       returnTimestamp: bookCirculationModel.returnTimestamp,
-      // Guarded reads: don't re-return a returned row, don't rewrite a paid fine.
       isReturned: bookCirculationModel.isReturned,
-      existingFineAmount: bookCirculationModel.fineAmount,
-      paymentId: bookCirculationModel.paymentId,
     })
     .from(bookCirculationModel)
     .where(eq(bookCirculationModel.id, id))
@@ -575,75 +606,47 @@ export async function returnBookCirculationById(id: number): Promise<void> {
   if (base.isReturned) return;
 
   const actualReturn = new Date();
-  const policy = await resolvePolicyForCirculation(
-    base.userId,
-    base.copyDetailsId,
-  );
+  const goLive = await getFineAccrualGoLiveDate();
 
-  let fineAmount = 0;
-  if (actualReturn > base.returnTimestamp) {
-    let lateDays: number;
-    if (policy.skipHolidaysInFine) {
-      // Class-specific holidays only apply to students; for staff/faculty this
-      // resolves to null and only org-wide holidays are subtracted.
-      const classId = await resolveCurrentClassIdForUser(base.userId);
-      lateDays = await countWorkingDaysBetween(
-        base.returnTimestamp,
-        actualReturn,
-        classId,
-      );
-    } else {
-      // Raw calendar-day fine — policy opted out of holiday exclusion.
-      const ms = actualReturn.getTime() - base.returnTimestamp.getTime();
-      lateDays = Math.max(0, Math.floor(ms / 86400000));
-    }
-    const billableDays = Math.max(0, lateDays - policy.graceDays);
-    fineAmount = billableDays * policy.finePerDay;
-  }
-
-  // Paid-fine preservation. If a payment already sits on this row, the fine
-  // is history — the patron has already paid what they were charged. Re-
-  // computing it here would either undercharge (write ₹0 over a paid ₹200)
-  // or overcharge (raise it after payment) depending on timing. Keep the
-  // stored amount when a payment is linked.
-  const fineAmountToWrite = base.paymentId
-    ? (base.existingFineAmount ?? 0)
-    : fineAmount;
-  const fineToNotify = base.paymentId ? 0 : fineAmount;
-
-  await db
-    .update(bookCirculationModel)
-    .set({
-      isReturned: true,
-      actualReturnTimestamp: actualReturn,
-      returnedToId: null,
-      fineAmount: fineAmountToWrite,
-      fineDate:
-        fineAmountToWrite > 0
-          ? // Preserve fineDate for a paid fine; only set NOW for a fresh charge.
-            base.paymentId
-            ? undefined
-            : actualReturn
-          : null,
-      updatedAt: new Date(),
-    })
-    .where(eq(bookCirculationModel.id, id));
+  let fineResult: FineApplicationResult | null = null;
+  await db.transaction(async (tx) => {
+    await tx
+      .update(bookCirculationModel)
+      .set({
+        isReturned: true,
+        actualReturnTimestamp: actualReturn,
+        returnedToId: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(bookCirculationModel.id, id));
+    // Shared calculator: ledger + circulation mirror, paid-fine freeze, go-live
+    // clamp — the same math the nightly accrual sweep uses.
+    fineResult = await applyFineForCirculation(tx, {
+      circulationId: id,
+      userId: base.userId,
+      copyDetailsId: base.copyDetailsId,
+      dueDate: base.returnTimestamp,
+      asOf: actualReturn,
+      goLive,
+    });
+  });
 
   await emitLibraryNotification({
     event: "LIBRARY_RETURN_CONFIRMED",
     userId: base.userId,
     variables: { circulationId: id, returnedAt: actualReturn.toISOString() },
   });
-  if (fineToNotify > 0) {
+  const finalFine = fineResult as FineApplicationResult | null;
+  if (finalFine?.charged) {
     await emitLibraryNotification({
       event: "LIBRARY_FINE_CHARGED",
       userId: base.userId,
-      variables: { circulationId: id, fineAmount: fineToNotify },
+      variables: { circulationId: id, fineAmount: finalFine.fineAmount },
     });
   }
   emitLibraryEvent("library:circulation:updated", {
     userId: base.userId,
-    detail: { id, action: "returned", fineAmount: fineAmountToWrite },
+    detail: { id, action: "returned", fineAmount: finalFine?.fineAmount ?? 0 },
   });
 }
 
@@ -735,6 +738,47 @@ export async function issueBookCirculationFromExistingById(
     base.userId,
     base.copyDetailsId,
   );
+
+  // Same guards as the upsert path (parity): availability, non-circulating
+  // policy, and the patron's copy cap.
+  const [openConflict] = await db
+    .select({ id: bookCirculationModel.id })
+    .from(bookCirculationModel)
+    .where(
+      and(
+        eq(bookCirculationModel.copyDetailsId, base.copyDetailsId),
+        eq(bookCirculationModel.isReturned, false),
+      ),
+    )
+    .limit(1);
+  if (openConflict) {
+    throw new ApiError(
+      400,
+      "This copy is already issued and has not been returned yet.",
+    );
+  }
+  if (policy.loanDays <= 0 || policy.maxCopiesAtOnce <= 0) {
+    throw new ApiError(
+      400,
+      "This copy is non-circulating for this patron category as per policy.",
+    );
+  }
+  const [{ openCount }] = await db
+    .select({ openCount: count() })
+    .from(bookCirculationModel)
+    .where(
+      and(
+        eq(bookCirculationModel.userId, base.userId),
+        eq(bookCirculationModel.isReturned, false),
+      ),
+    );
+  if (openCount >= policy.maxCopiesAtOnce) {
+    throw new ApiError(
+      400,
+      `Copy limit reached: this patron already holds ${openCount} open loans (policy allows ${policy.maxCopiesAtOnce}).`,
+    );
+  }
+
   const now = new Date();
   const due = new Date(now);
   due.setDate(due.getDate() + policy.loanDays);
@@ -787,19 +831,21 @@ export async function upsertBookCirculationRowsForUser(
   const prepared = rows
     .map((row) => {
       const issueTimestamp = toValidDate(row.issueTimestamp);
-      const returnTimestamp = toValidDate(row.returnTimestamp);
+      const returnTimestamp = toValidDate(row.returnTimestamp ?? null);
       const actualReturnTimestamp = toValidDate(
         row.actualReturnTimestamp ?? null,
       );
-      if (!issueTimestamp || !returnTimestamp) return null;
+      if (!issueTimestamp) return null;
       if (!row.copyDetailsId || Number.isNaN(row.copyDetailsId)) return null;
       return {
         id: row.id && row.id > 0 ? row.id : null,
         copyDetailsId: row.copyDetailsId,
         borrowingTypeId: row.borrowingTypeId ?? null,
         issueTimestamp,
+        // May be null: the due date is then derived from policy server-side.
         returnTimestamp,
         actualReturnTimestamp,
+        isForcedIssue: !!row.isForcedIssue,
       };
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
@@ -808,7 +854,10 @@ export async function upsertBookCirculationRowsForUser(
     | { kind: "ISSUE"; circulationId: number; returnTimestamp: Date }
     | { kind: "RETURN"; circulationId: number; returnedAt: Date }
     | { kind: "REISSUE"; circulationId: number; newReturnTimestamp: Date }
+    | { kind: "FINE"; circulationId: number; fineAmount: number }
   > = [];
+
+  const goLive = await getFineAccrualGoLiveDate();
 
   await db.transaction(async (tx) => {
     const existingIds = prepared
@@ -823,8 +872,13 @@ export async function upsertBookCirculationRowsForUser(
             returnTimestamp: bookCirculationModel.returnTimestamp,
             actualReturnTimestamp: bookCirculationModel.actualReturnTimestamp,
             issuedFromId: bookCirculationModel.issuedFromId,
+            accessNumber: copyDetailsModel.accessNumber,
           })
           .from(bookCirculationModel)
+          .leftJoin(
+            copyDetailsModel,
+            eq(copyDetailsModel.id, bookCirculationModel.copyDetailsId),
+          )
           .where(inArray(bookCirculationModel.id, existingIds))
       : [];
     const existingMap = new Map(existingRows.map((row) => [row.id, row]));
@@ -834,30 +888,101 @@ export async function upsertBookCirculationRowsForUser(
         prepared.filter((row) => !row.id).map((row) => row.copyDetailsId),
       ),
     );
-    const copyBranchMap = new Map<number, number | null>();
+    const copyInfoMap = new Map<
+      number,
+      {
+        branchId: number | null;
+        issueType: string | null;
+        accessNumber: string | null;
+      }
+    >();
+    const openCopySet = new Set<number>();
     if (newCopyIds.length > 0) {
       const copies = await tx
         .select({
           id: copyDetailsModel.id,
           branchId: copyDetailsModel.branchId,
+          issueType: copyDetailsModel.issueType,
+          accessNumber: copyDetailsModel.accessNumber,
         })
         .from(copyDetailsModel)
         .where(inArray(copyDetailsModel.id, newCopyIds));
-      for (const c of copies) copyBranchMap.set(c.id, c.branchId ?? null);
+      for (const c of copies)
+        copyInfoMap.set(c.id, {
+          branchId: c.branchId ?? null,
+          issueType: c.issueType ?? null,
+          accessNumber: c.accessNumber ?? null,
+        });
+      // Availability: copies of this batch that are still out with anyone.
+      const openRows = await tx
+        .select({ copyDetailsId: bookCirculationModel.copyDetailsId })
+        .from(bookCirculationModel)
+        .where(
+          and(
+            inArray(bookCirculationModel.copyDetailsId, newCopyIds),
+            eq(bookCirculationModel.isReturned, false),
+          ),
+        );
+      for (const r of openRows) openCopySet.add(r.copyDetailsId);
     }
+
+    // Copy cap: the patron's open loans, kept current as this batch inserts.
+    const [{ openCount }] = await tx
+      .select({ openCount: count() })
+      .from(bookCirculationModel)
+      .where(
+        and(
+          eq(bookCirculationModel.userId, userId),
+          eq(bookCirculationModel.isReturned, false),
+        ),
+      );
+    let userOpenCount = openCount;
+
+    const policyCache = new Map<
+      number,
+      Awaited<ReturnType<typeof resolvePolicyForCirculation>>
+    >();
+    const policyFor = async (copyDetailsId: number) => {
+      const cached = policyCache.get(copyDetailsId);
+      if (cached) return cached;
+      const policy = await resolvePolicyForCirculation(userId, copyDetailsId);
+      policyCache.set(copyDetailsId, policy);
+      return policy;
+    };
 
     for (const row of prepared) {
       if (row.id) {
         const existing = existingMap.get(row.id);
         if (!existing || existing.userId !== userId) continue;
 
+        const rowLabel = existing.accessNumber
+          ? `copy ${existing.accessNumber}`
+          : `copy #${row.copyDetailsId}`;
+        const targetReturnTimestamp =
+          row.returnTimestamp ?? existing.returnTimestamp;
         const returnTimestampChanged =
           new Date(existing.returnTimestamp).getTime() !==
-          row.returnTimestamp.getTime();
+          targetReturnTimestamp.getTime();
         const reissuedById = actorUserId ?? existing.issuedFromId ?? userId;
         const shouldInsertReissue = returnTimestampChanged;
         const becameReturned =
           !existing.actualReturnTimestamp && !!row.actualReturnTimestamp;
+
+        // A due-date change IS a renewal — enforce the policy's renewalLimit
+        // exactly like the /:id/action REISSUE path does.
+        if (shouldInsertReissue && !becameReturned && !row.isForcedIssue) {
+          const policy = await policyFor(row.copyDetailsId);
+          const [{ existingReissues }] = await tx
+            .select({ existingReissues: count() })
+            .from(bookReissueModel)
+            .where(eq(bookReissueModel.bookCirculationId, row.id));
+          if (existingReissues >= policy.renewalLimit) {
+            throw new ApiError(
+              400,
+              `Renewal limit reached (${policy.renewalLimit}) for ${rowLabel}. The due date cannot be extended again.`,
+            );
+          }
+        }
 
         await tx
           .update(bookCirculationModel)
@@ -865,7 +990,7 @@ export async function upsertBookCirculationRowsForUser(
             copyDetailsId: row.copyDetailsId,
             borrowingTypeId: row.borrowingTypeId,
             issueTimestamp: row.issueTimestamp,
-            returnTimestamp: row.returnTimestamp,
+            returnTimestamp: targetReturnTimestamp,
             actualReturnTimestamp: row.actualReturnTimestamp,
             isReturned: !!row.actualReturnTimestamp,
             isReIssued: shouldInsertReissue ? true : undefined,
@@ -880,12 +1005,12 @@ export async function upsertBookCirculationRowsForUser(
           await tx.insert(bookReissueModel).values({
             bookCirculationId: row.id,
             reissuedBy: reissuedById,
-            returnTimestamp: row.returnTimestamp,
+            returnTimestamp: targetReturnTimestamp,
           });
           events.push({
             kind: "REISSUE",
             circulationId: row.id,
-            newReturnTimestamp: row.returnTimestamp,
+            newReturnTimestamp: targetReturnTimestamp,
           });
         }
         if (becameReturned && row.actualReturnTimestamp) {
@@ -894,8 +1019,71 @@ export async function upsertBookCirculationRowsForUser(
             circulationId: row.id,
             returnedAt: row.actualReturnTimestamp,
           });
+          const fineResult = await applyFineForCirculation(tx, {
+            circulationId: row.id,
+            userId,
+            copyDetailsId: row.copyDetailsId,
+            dueDate: targetReturnTimestamp,
+            asOf: row.actualReturnTimestamp,
+            goLive,
+          });
+          if (fineResult.charged) {
+            events.push({
+              kind: "FINE",
+              circulationId: row.id,
+              fineAmount: fineResult.fineAmount,
+            });
+          }
         }
         continue;
+      }
+
+      const copy = copyInfoMap.get(row.copyDetailsId);
+      const rowLabel = copy?.accessNumber
+        ? `copy ${copy.accessNumber}`
+        : `copy #${row.copyDetailsId}`;
+      const isOpenInsert = !row.actualReturnTimestamp;
+      const policy = await policyFor(row.copyDetailsId);
+
+      if (isOpenInsert) {
+        // Catalog-level block — a "Not to be issued" copy never circulates,
+        // forced issue included (fix the catalog instead).
+        if (
+          (copy?.issueType ?? "").trim().toLowerCase() === "not to be issued"
+        ) {
+          throw new ApiError(
+            400,
+            `${rowLabel} is marked "Not to be issued" and cannot be circulated.`,
+          );
+        }
+        if (!row.isForcedIssue) {
+          if (openCopySet.has(row.copyDetailsId)) {
+            throw new ApiError(
+              400,
+              `${rowLabel} is already issued and has not been returned yet.`,
+            );
+          }
+          if (policy.loanDays <= 0 || policy.maxCopiesAtOnce <= 0) {
+            throw new ApiError(
+              400,
+              `${rowLabel} is non-circulating for this patron category as per policy.`,
+            );
+          }
+          if (userOpenCount >= policy.maxCopiesAtOnce) {
+            throw new ApiError(
+              400,
+              `Copy limit reached: this patron already holds ${userOpenCount} open ${userOpenCount === 1 ? "loan" : "loans"} (policy allows ${policy.maxCopiesAtOnce}). Return a book first or use forced issue.`,
+            );
+          }
+        }
+      }
+
+      // Server-side due-date default from policy; an explicit staff-picked
+      // date always wins (desk reality).
+      let dueDate = row.returnTimestamp;
+      if (!dueDate) {
+        dueDate = new Date(row.issueTimestamp);
+        dueDate.setDate(dueDate.getDate() + Math.max(1, policy.loanDays));
       }
 
       const [inserted] = await tx
@@ -903,14 +1091,14 @@ export async function upsertBookCirculationRowsForUser(
         .values({
           copyDetailsId: row.copyDetailsId,
           userId,
-          branchId: copyBranchMap.get(row.copyDetailsId) ?? null,
+          branchId: copy?.branchId ?? null,
           borrowingTypeId: row.borrowingTypeId,
           issueTimestamp: row.issueTimestamp,
-          returnTimestamp: row.returnTimestamp,
+          returnTimestamp: dueDate,
           actualReturnTimestamp: row.actualReturnTimestamp,
           isReturned: !!row.actualReturnTimestamp,
           isReIssued: false,
-          isForcedIssue: false,
+          isForcedIssue: row.isForcedIssue,
           fineAmount: 0,
           fineWaiver: 0,
           issuedFromId: actorUserId ?? userId,
@@ -919,12 +1107,33 @@ export async function upsertBookCirculationRowsForUser(
             : null,
         })
         .returning({ id: bookCirculationModel.id });
-      if (inserted?.id && !row.actualReturnTimestamp) {
+      if (inserted?.id && isOpenInsert) {
+        userOpenCount += 1;
+        openCopySet.add(row.copyDetailsId);
         events.push({
           kind: "ISSUE",
           circulationId: inserted.id,
-          returnTimestamp: row.returnTimestamp,
+          returnTimestamp: dueDate,
         });
+      }
+      if (inserted?.id && !isOpenInsert && row.actualReturnTimestamp) {
+        // Historical backfill entered already-returned: still price any fine
+        // (the go-live clamp keeps legacy periods forgiven).
+        const fineResult = await applyFineForCirculation(tx, {
+          circulationId: inserted.id,
+          userId,
+          copyDetailsId: row.copyDetailsId,
+          dueDate,
+          asOf: row.actualReturnTimestamp,
+          goLive,
+        });
+        if (fineResult.charged) {
+          events.push({
+            kind: "FINE",
+            circulationId: inserted.id,
+            fineAmount: fineResult.fineAmount,
+          });
+        }
       }
     }
   });
@@ -955,6 +1164,15 @@ export async function upsertBookCirculationRowsForUser(
         variables: {
           circulationId: ev.circulationId,
           newReturnTimestamp: ev.newReturnTimestamp.toISOString(),
+        },
+      });
+    } else if (ev.kind === "FINE") {
+      await emitLibraryNotification({
+        event: "LIBRARY_FINE_CHARGED",
+        userId,
+        variables: {
+          circulationId: ev.circulationId,
+          fineAmount: ev.fineAmount,
         },
       });
     }

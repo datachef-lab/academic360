@@ -74,7 +74,14 @@ export type BookCirculationPreviewRow = {
   fine: number;
   fineWaiver: number;
   netFine: number;
+  finePaid: boolean;
   latestReissueReturnTimestamp: string | null;
+  /** Policy facts so the UI can govern actions up front (server re-enforces). */
+  reissuesUsed: number;
+  renewalLimit: number;
+  loanDays: number;
+  finePerDay: number;
+  maxCopiesAtOnce: number;
 };
 
 export type BookCirculationPreviewPayload = {
@@ -158,6 +165,7 @@ export type BookCirculationPolicyPayload = {
   finePerDay: number;
   graceDays: number;
   renewalLimit: number;
+  maxCopiesAtOnce: number;
   policyId: number | null;
   dueDate: string;
 };
@@ -190,6 +198,8 @@ export type BookCirculationUpsertRow = {
   issueTimestamp: string;
   returnTimestamp: string;
   actualReturnTimestamp?: string | null;
+  /** Desk override: bypass availability / copy-cap / non-circulating policy rejections. */
+  isForcedIssue?: boolean;
 };
 
 export async function upsertBookCirculationRows(

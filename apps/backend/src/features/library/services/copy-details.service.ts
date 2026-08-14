@@ -587,14 +587,56 @@ function upsertValues(input: CopyDetailsUpsertInput) {
   };
 }
 
+const ITEM_CATEGORY_CODE_BY_COPY_TYPE: Record<string, string> = {
+  "Text Book": "TEXTBOOK",
+  Reference: "REFERENCE",
+};
+
+// Item category is title-level (books.item_category_id_fk); the copy column is
+// an override for titles that mix categories. When the client doesn't pick a
+// category explicitly, derive it from the copy `type`: fill the title's
+// category if the title has none, otherwise store a copy override only when it
+// differs from the title's.
+async function applyDerivedItemCategory(
+  values: ReturnType<typeof upsertValues>,
+): Promise<ReturnType<typeof upsertValues>> {
+  if (values.itemCategoryId != null || !values.bookId) return values;
+  const code = ITEM_CATEGORY_CODE_BY_COPY_TYPE[values.type ?? ""];
+  if (!code) return values;
+  const [ic] = await db
+    .select({ id: itemCategoryModel.id })
+    .from(itemCategoryModel)
+    .where(eq(itemCategoryModel.code, code))
+    .limit(1);
+  if (!ic) return values;
+  const [book] = await db
+    .select({ itemCategoryId: bookModel.itemCategoryId })
+    .from(bookModel)
+    .where(eq(bookModel.id, values.bookId))
+    .limit(1);
+  if (!book) return values;
+  if (book.itemCategoryId == null) {
+    await db
+      .update(bookModel)
+      .set({ itemCategoryId: ic.id, updatedAt: new Date() })
+      .where(eq(bookModel.id, values.bookId));
+    return values;
+  }
+  if (book.itemCategoryId !== ic.id) {
+    return { ...values, itemCategoryId: ic.id };
+  }
+  return values;
+}
+
 export async function createCopyDetails(
   input: CopyDetailsUpsertInput,
   createdById: number | null,
 ): Promise<number> {
+  const values = await applyDerivedItemCategory(upsertValues(input));
   const [inserted] = await db
     .insert(copyDetailsModel)
     .values({
-      ...upsertValues(input),
+      ...values,
       createdById: createdById ?? null,
     })
     .returning({ id: copyDetailsModel.id });
@@ -606,10 +648,11 @@ export async function updateCopyDetails(
   input: CopyDetailsUpsertInput,
   updatedById: number | null,
 ): Promise<void> {
+  const values = await applyDerivedItemCategory(upsertValues(input));
   await db
     .update(copyDetailsModel)
     .set({
-      ...upsertValues(input),
+      ...values,
       updatedById: updatedById ?? null,
       updatedAt: new Date(),
     })
