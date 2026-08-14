@@ -750,9 +750,9 @@ function OverviewTab({
       </VisualCard>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Overlaid multi-line areas (no stackId) — same recipe as the
-            notifications "over time" chart, one absolute line per event
-            type so issue / reissue / return trends read independently. */}
+        {/* Grouped bars (three per day) — deliberately a different chart
+            shape from the visits area above so the two Overview trends
+            don't read as the same widget twice. */}
         <PanelCard
           title={`Issues · reissues · returns · ${issueRangeLabel}`}
           className="lg:col-span-2"
@@ -762,8 +762,10 @@ function OverviewTab({
           ) : (
             <div className="h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
+                <BarChart
                   data={chartStats.dailyIssuesLast14.map((d) => ({ ...d, label: fmtDay(d.day) }))}
+                  barGap={2}
+                  barCategoryGap="22%"
                 >
                   <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
                   <XAxis
@@ -779,34 +781,10 @@ function OverviewTab({
                     width={30}
                   />
                   <Tooltip cursor={{ fill: "#f1f5f9" }} content={<IssuesTooltip />} />
-                  <Area
-                    type="monotone"
-                    dataKey="issues"
-                    name="Issues"
-                    stroke="#7c3aed"
-                    strokeWidth={2}
-                    fill="#7c3aed"
-                    fillOpacity={0.18}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="returns"
-                    name="Returns"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    fill="#10b981"
-                    fillOpacity={0.12}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="reissues"
-                    name="Reissues"
-                    stroke="#f59e0b"
-                    strokeWidth={2}
-                    fill="#f59e0b"
-                    fillOpacity={0.12}
-                  />
-                </AreaChart>
+                  <Bar dataKey="issues" name="Issues" fill="#7c3aed" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="reissues" name="Reissues" fill="#f59e0b" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="returns" name="Returns" fill="#10b981" radius={[3, 3, 0, 0]} />
+                </BarChart>
               </ResponsiveContainer>
               <div className="mt-1 flex items-center justify-center gap-4 text-[11px] text-slate-600">
                 <span className="flex items-center gap-1.5">
@@ -869,18 +847,17 @@ function OverviewTab({
   );
 }
 
-/** User-type chip — STUDENT wears the module violet, staff wear red, the
- *  same pairing as the visits chart lines. */
+/** Patron chip — STUDENT wears the module violet, STAFF red (same pairing
+ *  as the visits chart lines), FACULTY amber. */
 function UserTypeBadge({ category }: { category: string }) {
+  const cls =
+    category === "STUDENT"
+      ? "border-violet-200 bg-violet-50 text-violet-700"
+      : category === "FACULTY"
+        ? "border-amber-200 bg-amber-50 text-amber-700"
+        : "border-rose-200 bg-rose-50 text-rose-700";
   return (
-    <Badge
-      variant="outline"
-      className={
-        category === "STUDENT"
-          ? "border-violet-200 bg-violet-50 text-violet-700"
-          : "border-rose-200 bg-rose-50 text-rose-700"
-      }
-    >
+    <Badge variant="outline" className={cls}>
       {category}
     </Badge>
   );
@@ -1027,9 +1004,9 @@ function CirculationTab({ stats }: { stats: LibraryDashboardStats }) {
           <FeesTableHeader>
             <FeesTableHead className="w-[56px] text-center">Sr no</FeesTableHead>
             <FeesTableHead>Borrower</FeesTableHead>
-            <FeesTableHead>UID</FeesTableHead>
-            <FeesTableHead>User type</FeesTableHead>
-            <FeesTableHead className="text-right">Books overdue</FeesTableHead>
+            <FeesTableHead className="text-center">UID / Code</FeesTableHead>
+            <FeesTableHead className="text-center">Patron</FeesTableHead>
+            <FeesTableHead className="text-center">Books overdue</FeesTableHead>
           </FeesTableHeader>
           <FeesTableBody>
             {stats.overdueByPatron.length === 0 ? (
@@ -1043,11 +1020,13 @@ function CirculationTab({ stats }: { stats: LibraryDashboardStats }) {
                   <FeesTableCell className="font-medium text-[#333]">
                     {r.userName ?? `Patron #${r.userId}`}
                   </FeesTableCell>
-                  <FeesTableCell className="tabular-nums text-[#555]">{r.uid ?? "—"}</FeesTableCell>
-                  <FeesTableCell>
+                  <FeesTableCell className="text-center tabular-nums text-[#555]">
+                    {r.uid ?? "—"}
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center">
                     <UserTypeBadge category={r.category} />
                   </FeesTableCell>
-                  <FeesTableCell className="text-right font-semibold tabular-nums text-rose-700">
+                  <FeesTableCell className="text-center font-semibold tabular-nums text-rose-700">
                     {nfmt.format(r.count)}
                   </FeesTableCell>
                 </FeesTableRow>
@@ -1062,10 +1041,10 @@ function CirculationTab({ stats }: { stats: LibraryDashboardStats }) {
           <FeesTableHeader>
             <FeesTableHead>Book</FeesTableHead>
             <FeesTableHead>Borrower</FeesTableHead>
-            <FeesTableHead>UID</FeesTableHead>
-            <FeesTableHead>User type</FeesTableHead>
-            <FeesTableHead className="text-right">Due on</FeesTableHead>
-            <FeesTableHead className="text-right">Days overdue</FeesTableHead>
+            <FeesTableHead className="text-center">UID / Code</FeesTableHead>
+            <FeesTableHead className="text-center">Patron</FeesTableHead>
+            <FeesTableHead className="text-center">Due on</FeesTableHead>
+            <FeesTableHead className="text-center">Days overdue</FeesTableHead>
           </FeesTableHeader>
           <FeesTableBody>
             {stats.longestOverdue.length === 0 ? (
@@ -1077,14 +1056,16 @@ function CirculationTab({ stats }: { stats: LibraryDashboardStats }) {
                     {r.title}
                   </FeesTableCell>
                   <FeesTableCell>{r.userName ?? "—"}</FeesTableCell>
-                  <FeesTableCell className="tabular-nums text-[#555]">{r.uid ?? "—"}</FeesTableCell>
-                  <FeesTableCell>
+                  <FeesTableCell className="text-center tabular-nums text-[#555]">
+                    {r.uid ?? "—"}
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center">
                     <UserTypeBadge category={r.category} />
                   </FeesTableCell>
-                  <FeesTableCell className="text-right tabular-nums">
+                  <FeesTableCell className="text-center tabular-nums">
                     {fmtDMY(r.dueDate) ?? r.dueDate}
                   </FeesTableCell>
-                  <FeesTableCell className="text-right font-semibold tabular-nums text-rose-700">
+                  <FeesTableCell className="text-center font-semibold tabular-nums text-rose-700">
                     {nfmt.format(r.daysOverdue)}
                   </FeesTableCell>
                 </FeesTableRow>

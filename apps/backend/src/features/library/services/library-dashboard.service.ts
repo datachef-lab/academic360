@@ -18,6 +18,7 @@ import { statusModel } from "@repo/db/schemas/models/library/status.model.js";
 import { libraryEntryExitModel } from "@repo/db/schemas/models/library/library-entry-exit.model.js";
 import { userModel } from "@repo/db/schemas/models/user/user.model.js";
 import { studentModel } from "@repo/db/schemas/models/user/student.model.js";
+import { staffModel } from "@repo/db/schemas/models/user/staff.model.js";
 import { paymentModel } from "@repo/db/schemas/models/payments/payment.model.js";
 import { publisherModel } from "@repo/db/schemas/models/library/publisher.model.js";
 import { rackModel } from "@repo/db/schemas/models/library/rack.model.js";
@@ -132,6 +133,18 @@ export type DashboardStats = {
     amount: number;
   }>; // top 10
 };
+
+/** users.type → library patron category, same mapping as the policy
+ *  resolver (ADMIN counts as STAFF, PARENTS borrow as STUDENT). */
+const PATRON_BY_USER_TYPE: Record<string, string> = {
+  STUDENT: "STUDENT",
+  FACULTY: "FACULTY",
+  TEACHER: "FACULTY",
+  STAFF: "STAFF",
+  ADMIN: "STAFF",
+  PARENTS: "STUDENT",
+};
+const patronOf = (t: string): string => PATRON_BY_USER_TYPE[t] ?? t;
 
 /**
  * Midnight today in Asia/Kolkata, as a UTC Date. IST is a fixed UTC+5:30
@@ -656,20 +669,31 @@ export async function getLibraryDashboardStats(
       .select({
         userId: userModel.id,
         userName: userModel.name,
-        uid: studentModel.uid,
+        // Students carry a UID; staff fall back to their staff UID / code.
+        uid: sql<
+          string | null
+        >`COALESCE(${studentModel.uid}, ${staffModel.uid}, ${staffModel.codeNumber})`,
         category: sql<string>`COALESCE(${userModel.type}::text, 'Unknown')`,
         count: count(bookCirculationModel.id),
       })
       .from(bookCirculationModel)
       .innerJoin(userModel, eq(userModel.id, bookCirculationModel.userId))
       .leftJoin(studentModel, eq(studentModel.userId, userModel.id))
+      .leftJoin(staffModel, eq(staffModel.userId, userModel.id))
       .where(
         circulationConditions([
           eq(bookCirculationModel.isReturned, false),
           sql`${bookCirculationModel.returnTimestamp} < NOW()`,
         ]),
       )
-      .groupBy(userModel.id, userModel.name, userModel.type, studentModel.uid)
+      .groupBy(
+        userModel.id,
+        userModel.name,
+        userModel.type,
+        studentModel.uid,
+        staffModel.uid,
+        staffModel.codeNumber,
+      )
       .orderBy(desc(count(bookCirculationModel.id)))
       .limit(10),
     // Longest-overdue open loans — oldest due date first.
@@ -678,7 +702,9 @@ export async function getLibraryDashboardStats(
         circulationId: bookCirculationModel.id,
         title: bookModel.title,
         userName: userModel.name,
-        uid: studentModel.uid,
+        uid: sql<
+          string | null
+        >`COALESCE(${studentModel.uid}, ${staffModel.uid}, ${staffModel.codeNumber})`,
         category: sql<string>`COALESCE(${userModel.type}::text, 'Unknown')`,
         dueDate: sql<string>`TO_CHAR(${bookCirculationModel.returnTimestamp}, 'YYYY-MM-DD')`,
         daysOverdue: sql<number>`FLOOR(EXTRACT(EPOCH FROM (NOW() - ${bookCirculationModel.returnTimestamp})) / 86400)::int`,
@@ -691,6 +717,7 @@ export async function getLibraryDashboardStats(
       .innerJoin(bookModel, eq(bookModel.id, copyDetailsModel.bookId))
       .innerJoin(userModel, eq(userModel.id, bookCirculationModel.userId))
       .leftJoin(studentModel, eq(studentModel.userId, userModel.id))
+      .leftJoin(staffModel, eq(staffModel.userId, userModel.id))
       .where(
         circulationConditions([
           eq(bookCirculationModel.isReturned, false),
@@ -872,7 +899,7 @@ export async function getLibraryDashboardStats(
       userId: r.userId,
       userName: r.userName,
       uid: r.uid,
-      category: r.category,
+      category: patronOf(r.category),
       count: r.count,
     })),
     longestOverdue: longestOverdueRaw.map((r) => ({
@@ -880,7 +907,7 @@ export async function getLibraryDashboardStats(
       title: r.title,
       userName: r.userName,
       uid: r.uid,
-      category: r.category,
+      category: patronOf(r.category),
       dueDate: r.dueDate,
       daysOverdue: Number(r.daysOverdue),
     })),
