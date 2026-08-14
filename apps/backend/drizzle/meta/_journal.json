@@ -1275,6 +1275,13 @@
       "when": 1786500060000,
       "tag": "0179_loud_kinsey_walden",
       "breakpoints": true
+    },
+    {
+      "idx": 188,
+      "version": "7",
+      "when": 1786699208801,
+      "tag": "0188_legal_madripoor",
+      "breakpoints": true
     }
   ]
 }

@@ -11,6 +11,7 @@ import { userModel } from "../user";
 import { libraryPeriodModel } from "./library-period.model";
 import { subjectGroupingMainModel } from "../course-design";
 import { branchModel } from "./branch.model";
+import { academicYearModel } from "../academics";
 
 export const bookModel = pgTable("books", {
     id: serial().primaryKey(),
@@ -24,6 +25,13 @@ export const bookModel = pgTable("books", {
     alternateTitle: varchar({ length: 1000 }),
     subjectGroupId: integer("subject_group_id_fk")
         .references(() => subjectGroupingMainModel.id),
+    // Which academic year this book's own record belongs to (distinct from
+    // subjectGroupId's academic year, which is pinned to the current year
+    // because legacy subject-group data carries no year of its own — see
+    // getSubjectGroupByOldId in old-irp-data.ts). Derived at import time from
+    // the legacy record's entry date, so it can vary per book.
+    academicYearId: integer("academic_year_id_fk")
+        .references(() => academicYearModel.id),
     languageId: integer("language_id_fk")
         .references(() => languageMediumModel.id),
     isbn: varchar({ length: 1000 }),

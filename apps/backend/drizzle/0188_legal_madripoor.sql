@@ -1,0 +1,2 @@
+ALTER TABLE "books" ADD COLUMN "academic_year_id_fk" integer;--> statement-breakpoint
+ALTER TABLE "books" ADD CONSTRAINT "books_academic_year_id_fk_academic_years_id_fk" FOREIGN KEY ("academic_year_id_fk") REFERENCES "public"."academic_years"("id") ON DELETE no action ON UPDATE no action;

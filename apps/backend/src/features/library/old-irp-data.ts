@@ -33,6 +33,7 @@ import {
   classModel,
   languageMediumModel,
   programCourseModel,
+  sessionModel,
   staffModel,
   studentModel,
   subjectGroupingMainModel,
@@ -514,7 +515,7 @@ async function getSubjectGroupByOldId(oldSubjectGroupId: number | null) {
   const [academicYear] = await db
     .select()
     .from(academicYearModel)
-    .where(eq(academicYearModel.year, "2025-26"));
+    .where(eq(academicYearModel.isCurrentYear, true));
   if (!academicYear) return null;
 
   const payload = {
@@ -536,6 +537,34 @@ async function getSubjectGroupByOldId(oldSubjectGroupId: number | null) {
   return (
     await db.insert(subjectGroupingMainModel).values(payload).returning()
   )[0];
+}
+
+let sessionDateRangesPromise: Promise<
+  { from: string; to: string; academicYearId: number | null }[]
+> | null = null;
+
+async function loadSessionDateRanges() {
+  if (!sessionDateRangesPromise) {
+    sessionDateRangesPromise = db
+      .select({
+        from: sessionModel.from,
+        to: sessionModel.to,
+        academicYearId: sessionModel.academicYearId,
+      })
+      .from(sessionModel);
+  }
+  return sessionDateRangesPromise;
+}
+
+async function resolveAcademicYearIdForDate(
+  date: Date | null,
+): Promise<number | null> {
+  if (!date) return null;
+  const ymd = toYmdFromDate(date);
+  if (!ymd) return null;
+  const ranges = await loadSessionDateRanges();
+  const hit = ranges.find((r) => ymd >= r.from && ymd <= r.to);
+  return hit?.academicYearId ?? null;
 }
 
 async function getEnclosureByOldId(oldEnclosureId: number | null) {
@@ -1138,8 +1167,7 @@ async function getUserByOldId(oldStaffId: number | null) {
     "staffpersonaldetails",
     oldStaffId,
   );
-  // The old destructuring typed this as always-present, so a legacy staff id
-  // with no row reached upsertUser and threw. It is a skip, not a crash.
+
   if (!oldStaff) return;
 
   return upsertUser(oldStaff, "STAFF");
@@ -1152,10 +1180,12 @@ async function getBookByOldId(oldBookId: number | null) {
 
   if (!oldBook) return null;
 
-  const createdAt = parseMysqlAsIst(oldBook.entryDate) ?? new Date();
+  const entryDate = parseMysqlAsIst(oldBook.entryDate);
+  const createdAt = entryDate ?? new Date();
   const updatedAt = parseMysqlAsIst(oldBook.modifedDate) ?? new Date();
 
   const payload = {
+    academicYearId: await resolveAcademicYearIdForDate(entryDate),
     title: oldBook.mainTitle,
     alternateTitle: oldBook.alternateTitle,
     backCover: oldBook.backCover,
