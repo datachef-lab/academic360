@@ -905,7 +905,7 @@ function CirculationTab({ stats }: { stats: LibraryDashboardStats }) {
           icon={RefreshCcw}
           label="Reissues"
           value={formatCompactIN(stats.reissueCount)}
-          hint="renewed loans"
+          hint="renewed loans in the selected range"
         />
       </div>
 

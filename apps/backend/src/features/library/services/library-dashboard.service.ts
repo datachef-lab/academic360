@@ -74,7 +74,7 @@ export type DashboardStats = {
 
   // Circulation tab — everything reads from book_circulation.
   currentlyInLibrary: number; // library_entry_exit rows still CHECKED_IN
-  reissueCount: number; // isReIssued = true
+  reissueCount: number; // isReIssued = true, within the selected date range
   forcedIssueCount: number; // isForcedIssue = true
   finesWaivedThisMonth: number; // fine_waiver > 0 with fineWaivedAt in month
   avgLoanDays: number; // AVG(actualReturn - issue) over returned rows
@@ -411,11 +411,19 @@ export async function getLibraryDashboardStats(
           gte(libraryEntryExitModel.entryTimestamp, istTodayStart()),
         ),
       ),
+    // Scoped to the dashboard's date range like the Overview reissues
+    // series — the unscoped count was 19k legacy renewals sitting next to
+    // three "right now" tiles, which read as 19k renewals on 9k open loans.
+    // (book_reissue.createdAt is import-time for legacy rows, so the issue
+    // timestamp is the only range field with real legacy dates.)
     db
       .select({ reissueCount: count() })
       .from(bookCirculationModel)
       .where(
-        circulationConditions([eq(bookCirculationModel.isReIssued, true)]),
+        circulationConditions([
+          eq(bookCirculationModel.isReIssued, true),
+          ...issueRange,
+        ]),
       ),
     db
       .select({ forcedIssueCount: count() })
