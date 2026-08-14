@@ -56,16 +56,25 @@ export default function SubjectSelection() {
   }
 
   return (
-    <div className="py-2 flex justify-center h-[calc(100vh-3.5rem)] relative overflow-hidden">
-      <div className="flex gap-6 w-full max-w-screen h-full border borde-red-500 ">
-        {/* Left: Form */}
+    // Viewport-locked two-column layout: the outer box is exactly the visible
+    // height and hides overflow, so the app shell's page scroller never has
+    // anything to scroll — the form stays fixed in place and only the notes
+    // column scrolls within itself.
+    // 5.5rem clears the app-shell breadcrumb header (~84px) with a little
+    // slack, so the shell's page scroller ends up with NOTHING to scroll and
+    // dropdown focus can never yank the page (3.5rem left a 28px overflow).
+    <div className="py-2 flex justify-center h-[calc(100vh-5.5rem)] relative overflow-hidden">
+      <div className="flex gap-6 w-full max-w-screen h-full">
+        {/* Left: Form. Its card is content-height, so with the dropdowns on
+            screen this column has nothing to scroll; it only scrolls when the
+            form genuinely outgrows the viewport. */}
         <div className="w-full md:w-[75%] h-full overflow-y-auto no-scrollbar">
           <SubjectSelectionForm
             openNotes={() => setOpenMobileNotes(true)}
             onVisibleCategoriesChange={setVisibleCategories}
           />
         </div>
-        {/* Right: Notes (desktop only) */}
+        {/* Right: Notes (desktop only) — scrolls independently */}
         <div className="w-[25%] h-full border hidden lg:block overflow-y-auto no-scrollbar">
           <Instructions student={student} visibleCategories={visibleCategories} />
         </div>

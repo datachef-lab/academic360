@@ -65,7 +65,22 @@ export function Combobox({
           <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width,240px)] p-0 max-h-80 overflow-y-auto">
+      <PopoverContent
+        className="w-[var(--radix-popover-trigger-width,240px)] p-0 max-h-80 overflow-y-auto"
+        onOpenAutoFocus={(event) => {
+          // Radix focuses the popover content on open and the browser scrolls
+          // the focused node into view while it is still being positioned,
+          // yanking the page to the dropdown. Take over: focus the search
+          // input ourselves with preventScroll so the page stays put.
+          event.preventDefault();
+          const content = event.currentTarget as HTMLElement | null;
+          requestAnimationFrame(() => {
+            content?.querySelector<HTMLInputElement>("[cmdk-input]")?.focus({
+              preventScroll: true,
+            });
+          });
+        }}
+      >
         <Command>
           <CommandInput
             value={search}
