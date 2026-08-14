@@ -1556,17 +1556,25 @@ const IST_OFFSET = "+05:30";
  * Legacy sometimes stores counts as free text (e.g. "1032p."). Postgres integer
  * columns must get a real int or null/default.
  */
+// Postgres int4 bounds. Legacy numeric fields carry garbage like a full ISBN
+// ("9781853264184" in noOfPages) that parses fine in JS but overflows int4 and
+// kills the whole row's insert — out-of-range values are treated as absent.
+const INT4_MIN = -2147483648;
+const INT4_MAX = 2147483647;
+
 function parseLegacyOptionalInt(value: unknown): number | null {
+  const clamp = (n: number): number | null =>
+    n >= INT4_MIN && n <= INT4_MAX ? n : null;
   if (value == null) return null;
   if (typeof value === "number" && Number.isFinite(value)) {
-    return Math.trunc(value);
+    return clamp(Math.trunc(value));
   }
   const s = String(value).trim();
   if (!s) return null;
   const m = s.match(/-?\d+/);
   if (!m) return null;
   const n = Number.parseInt(m[0], 10);
-  return Number.isNaN(n) ? null : n;
+  return Number.isNaN(n) ? null : clamp(n);
 }
 
 function pad2(n: number): string {
@@ -1595,9 +1603,10 @@ function parseMysqlAsIst(value: Date | string | null | undefined): Date | null {
   if (value == null) return null;
   if (value instanceof Date) {
     if (Number.isNaN(value.getTime())) return null;
-    return new Date(
+    const fromDate = new Date(
       `${toYmdFromDate(value)}T${pad2(value.getHours())}:${pad2(value.getMinutes())}:${pad2(value.getSeconds())}${IST_OFFSET}`,
     );
+    return Number.isNaN(fromDate.getTime()) ? null : fromDate;
   }
   const trimmed = String(value).trim();
   if (!trimmed) return null;
@@ -1612,9 +1621,13 @@ function parseMysqlAsIst(value: Date | string | null | undefined): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return null;
   const timePart = (timeRaw || "00:00:00").replace(/\.\d+$/, "").slice(0, 8);
   const [h = "0", m = "0", s = "0"] = timePart.split(":");
-  return new Date(
+  const parsed = new Date(
     `${datePart}T${pad2(Number(h))}:${pad2(Number(m))}:${pad2(Number(s))}${IST_OFFSET}`,
   );
+  // MySQL zero-dates ("0000-00-00 00:00:00") pass the shape regex but produce
+  // an Invalid Date, which is truthy — it then flows into inserts and only
+  // blows up at serialization ("Invalid time value"). Treat as absent.
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 /** Calendar date string for Postgres `date` columns (day in Asia/Kolkata). */
