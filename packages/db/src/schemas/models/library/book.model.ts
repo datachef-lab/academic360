@@ -11,6 +11,7 @@ import { userModel } from "../user";
 import { libraryPeriodModel } from "./library-period.model";
 import { subjectGroupingMainModel } from "../course-design";
 import { branchModel } from "./branch.model";
+import { itemCategoryModel } from "./item-category.model";
 
 export const bookModel = pgTable("books", {
     id: serial().primaryKey(),
@@ -19,6 +20,10 @@ export const bookModel = pgTable("books", {
         .references(() => branchModel.id),
     libraryDocumentTypeId: integer("library_document_type_id_fk")
         .references(() => libraryDocumentTypeModel.id),
+    // Title-level circulation category (Textbook/Reference/...); copy_details
+    // carries a per-copy override for the rare mixed-type titles.
+    itemCategoryId: integer("item_category_id_fk")
+        .references(() => itemCategoryModel.id),
     title: varchar({ length: 1000 }).notNull(),
     subTitle: varchar({ length: 1000 }),
     alternateTitle: varchar({ length: 1000 }),

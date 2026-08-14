@@ -158,6 +158,7 @@ export type BookCirculationPolicyPayload = {
   finePerDay: number;
   graceDays: number;
   renewalLimit: number;
+  maxCopiesAtOnce: number;
   policyId: number | null;
   dueDate: string;
 };
@@ -190,6 +191,8 @@ export type BookCirculationUpsertRow = {
   issueTimestamp: string;
   returnTimestamp: string;
   actualReturnTimestamp?: string | null;
+  /** Desk override: bypass availability / copy-cap / non-circulating policy rejections. */
+  isForcedIssue?: boolean;
 };
 
 export async function upsertBookCirculationRows(

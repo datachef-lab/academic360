@@ -56,7 +56,12 @@ import {
   searchBookCirculationBookOptions,
   upsertBookCirculationRows,
 } from "@/services/book-circulation.service";
-import { initiateLibraryFinePayment } from "@/services/library-fine-payment.service";
+import {
+  initiateLibraryFinePayment,
+  openPaytmCheckoutForFine,
+  recordLibraryFineCashPayment,
+  waiveLibraryFine,
+} from "@/services/library-fine-payment.service";
 import {
   STICKY_THEAD_CLASS,
   STICKY_TH_BASE,
@@ -87,9 +92,18 @@ type LibraryBookCirculationSocketUpdate = {
 };
 
 const LOCAL_SAVE_SOCKET_SUPPRESS_MS = 30_000;
+type StagedRowPolicy = {
+  loanDays: number;
+  finePerDay: number;
+  graceDays: number;
+  renewalLimit: number;
+  maxCopiesAtOnce: number;
+};
+
 type EditablePreviewRow = BookCirculationPreviewPayload["rows"][number] & {
   bookOptionKey: string;
   isNew: boolean;
+  policy?: StagedRowPolicy | null;
 };
 
 const prettyLabel = (value: string) =>
@@ -188,6 +202,14 @@ export default function BookCirculationPage() {
   const [pickerLoading, setPickerLoading] = useState(false);
   const [addingStagedBook, setAddingStagedBook] = useState(false);
   const [activeDialogTab, setActiveDialogTab] = useState<"issue" | "history">("issue");
+  const [forceIssuePrompt, setForceIssuePrompt] = useState<string | null>(null);
+  const [cashRow, setCashRow] = useState<EditablePreviewRow | null>(null);
+  const [cashRemarks, setCashRemarks] = useState("");
+  const [cashSubmitting, setCashSubmitting] = useState(false);
+  const [waiveRow, setWaiveRow] = useState<EditablePreviewRow | null>(null);
+  const [waiveAmount, setWaiveAmount] = useState("");
+  const [waiveRemarks, setWaiveRemarks] = useState("");
+  const [waiveSubmitting, setWaiveSubmitting] = useState(false);
   const lastLocalSaveAtRef = useRef<number>(0);
   const pickerRequestIdRef = useRef(0);
 
@@ -359,11 +381,21 @@ export default function BookCirculationPage() {
       bookOptions.find((o) => String(o.copyDetailsId) === stagedBookKey);
     if (!picked) return;
     let returnDate = getDefaultReturnDate().toISOString();
+    let stagedPolicy: StagedRowPolicy | null = null;
     try {
       setAddingStagedBook(true);
       const policy = await getBookCirculationPolicy(previewData.user.userId, picked.copyDetailsId);
       if (policy.payload?.dueDate) {
         returnDate = policy.payload.dueDate;
+      }
+      if (policy.payload) {
+        stagedPolicy = {
+          loanDays: policy.payload.loanDays,
+          finePerDay: policy.payload.finePerDay,
+          graceDays: policy.payload.graceDays,
+          renewalLimit: policy.payload.renewalLimit,
+          maxCopiesAtOnce: policy.payload.maxCopiesAtOnce,
+        };
       }
     } catch (error) {
       console.error("policy lookup failed; falling back to default return date", error);
@@ -392,6 +424,7 @@ export default function BookCirculationPage() {
         netFine: 0,
         latestReissueReturnTimestamp: null,
         isNew: true,
+        policy: stagedPolicy,
       },
     ]);
     setStagedBookKey("");
@@ -471,7 +504,15 @@ export default function BookCirculationPage() {
     }
   };
 
-  const saveRows = async () => {
+  // Rejections the backend allows staff to override with a forced issue
+  // (availability, copy cap, non-circulating policy, renewal limit). The
+  // catalog-level "Not to be issued" block is deliberately not forceable.
+  const isForceableRejection = (message: string) =>
+    /forced issue|already issued|non-circulating|Copy limit reached|Renewal limit reached/i.test(
+      message,
+    );
+
+  const saveRows = async (forceIssue = false) => {
     if (!previewData?.user?.userId) return;
 
     const payloadRows = editableRows
@@ -483,12 +524,14 @@ export default function BookCirculationPage() {
         issueTimestamp: row.issuedTimestamp,
         returnTimestamp: row.returnTimestamp,
         actualReturnTimestamp: row.actualReturnTimestamp,
+        ...(forceIssue ? { isForcedIssue: true } : {}),
       }));
 
     try {
       setSavingRows(true);
       lastLocalSaveAtRef.current = Date.now();
       await upsertBookCirculationRows(previewData.user.userId, payloadRows);
+      setForceIssuePrompt(null);
       toast.success("Book circulation saved successfully.");
       setDetailsOpen(false);
       setPreviewData(null);
@@ -496,7 +539,13 @@ export default function BookCirculationPage() {
       void fetchRows();
     } catch (error) {
       console.error(error);
-      toast.error("Failed to save circulation rows.");
+      const serverMessage = (error as { response?: { data?: { message?: string } } })?.response
+        ?.data?.message;
+      if (serverMessage && !forceIssue && isForceableRejection(serverMessage)) {
+        setForceIssuePrompt(serverMessage);
+      } else {
+        toast.error(serverMessage ?? "Failed to save circulation rows.");
+      }
     } finally {
       setSavingRows(false);
     }
@@ -570,6 +619,15 @@ export default function BookCirculationPage() {
                       </p>
                       {item.author ? (
                         <p className="truncate text-[11px] text-slate-500">{item.author}</p>
+                      ) : null}
+                      {item.isNew && item.policy ? (
+                        <p className="truncate text-[11px] text-blue-700">
+                          Policy: {item.policy.loanDays}d loan · {item.policy.renewalLimit}{" "}
+                          {item.policy.renewalLimit === 1 ? "renewal" : "renewals"} ·{" "}
+                          {item.policy.finePerDay > 0
+                            ? `₹${item.policy.finePerDay}/day${item.policy.graceDays > 0 ? ` after ${item.policy.graceDays}d grace` : ""}`
+                            : "no fine set"}
+                        </p>
                       ) : null}
                     </div>
                   </TableCell>
@@ -702,15 +760,25 @@ export default function BookCirculationPage() {
                                   item.id,
                                   previewData.user.userId,
                                 );
-                                if (res.payload) {
-                                  const link = `Order ${res.payload.orderId} · ${formatInr(res.payload.amount)}`;
-                                  await navigator.clipboard
-                                    ?.writeText(res.payload.orderId)
-                                    .catch(() => undefined);
-                                  toast.success(
-                                    `Payment link generated. ${link} (order id copied).`,
+                                if (!res.payload) return;
+                                if (res.payload.txnToken) {
+                                  const opened = await openPaytmCheckoutForFine(
+                                    res.payload.orderId,
+                                    res.payload.txnToken,
                                   );
+                                  if (opened) {
+                                    toast.success(
+                                      `Paytm checkout opened for ${formatInr(res.payload.amount)}.`,
+                                    );
+                                    return;
+                                  }
                                 }
+                                await navigator.clipboard
+                                  ?.writeText(res.payload.orderId)
+                                  .catch(() => undefined);
+                                toast.success(
+                                  `Payment initiated: order ${res.payload.orderId} · ${formatInr(res.payload.amount)} (order id copied${res.payload.gatewayError ? `; online checkout unavailable: ${res.payload.gatewayError}` : ""}).`,
+                                );
                               } catch (e) {
                                 const msg =
                                   (e as { response?: { data?: { message?: string } } })?.response
@@ -721,6 +789,33 @@ export default function BookCirculationPage() {
                           >
                             <IndianRupee className="mr-1 h-3.5 w-3.5" />
                             Pay Fine
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 border-emerald-300 bg-emerald-50 px-2 text-xs text-emerald-700 hover:bg-emerald-100"
+                            type="button"
+                            disabled={item.netFine <= 0}
+                            onClick={() => {
+                              setCashRow(item);
+                              setCashRemarks("");
+                            }}
+                          >
+                            Cash
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 border-slate-300 bg-slate-50 px-2 text-xs text-slate-700 hover:bg-slate-100"
+                            type="button"
+                            disabled={item.fine <= 0}
+                            onClick={() => {
+                              setWaiveRow(item);
+                              setWaiveAmount(String(item.netFine > 0 ? item.netFine : item.fine));
+                              setWaiveRemarks("");
+                            }}
+                          >
+                            Waive
                           </Button>
                         </>
                       ) : (
@@ -1294,6 +1389,176 @@ export default function BookCirculationPage() {
                 }}
               >
                 Confirm
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={forceIssuePrompt !== null}
+        onOpenChange={(open) => {
+          if (!open) setForceIssuePrompt(null);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Policy check failed</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-2">
+            <p className="text-sm text-slate-700">{forceIssuePrompt}</p>
+            <p className="text-sm text-muted-foreground">
+              Save again as a <span className="font-semibold">forced issue</span>? This bypasses the
+              availability, copy-limit and renewal-limit checks and is recorded on the circulation
+              record.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" size="sm" onClick={() => setForceIssuePrompt(null)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="bg-red-600 text-white hover:bg-red-700"
+                disabled={savingRows}
+                onClick={() => void saveRows(true)}
+              >
+                {savingRows ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
+                Force issue
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={cashRow !== null}
+        onOpenChange={(open) => {
+          if (!open) setCashRow(null);
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Collect fine in cash</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-2">
+            <p className="text-sm text-slate-700">
+              Record a cash payment of{" "}
+              <span className="font-semibold">{formatInr(cashRow?.netFine ?? 0)}</span> for{" "}
+              {cashRow?.title || "this book"} ({cashRow?.accessNumber || "—"}).
+            </p>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="cash-remarks">Remarks (optional)</Label>
+              <Input
+                id="cash-remarks"
+                value={cashRemarks}
+                onChange={(e) => setCashRemarks(e.target.value)}
+                placeholder="e.g. receipt number"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" size="sm" onClick={() => setCashRow(null)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="bg-emerald-600 text-white hover:bg-emerald-700"
+                disabled={cashSubmitting || !cashRow}
+                onClick={async () => {
+                  if (!cashRow) return;
+                  try {
+                    setCashSubmitting(true);
+                    const res = await recordLibraryFineCashPayment(cashRow.id, cashRemarks);
+                    toast.success(
+                      `Cash payment of ${formatInr(res.payload?.amount ?? cashRow.netFine)} recorded.`,
+                    );
+                    setCashRow(null);
+                    if (previewData?.user?.userId) void openDetails(previewData.user.userId);
+                  } catch (e) {
+                    const msg =
+                      (e as { response?: { data?: { message?: string } } })?.response?.data
+                        ?.message ?? "Failed to record cash payment.";
+                    toast.error(msg);
+                  } finally {
+                    setCashSubmitting(false);
+                  }
+                }}
+              >
+                {cashSubmitting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
+                Record payment
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={waiveRow !== null}
+        onOpenChange={(open) => {
+          if (!open) setWaiveRow(null);
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Waive fine</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-2">
+            <p className="text-sm text-slate-700">
+              Fine of <span className="font-semibold">{formatInr(waiveRow?.fine ?? 0)}</span> on{" "}
+              {waiveRow?.title || "this book"} ({waiveRow?.accessNumber || "—"}).
+            </p>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="waive-amount">Waiver amount</Label>
+              <Input
+                id="waive-amount"
+                type="number"
+                min={0}
+                max={waiveRow?.fine ?? undefined}
+                value={waiveAmount}
+                onChange={(e) => setWaiveAmount(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="waive-remarks">Reason (optional)</Label>
+              <Input
+                id="waive-remarks"
+                value={waiveRemarks}
+                onChange={(e) => setWaiveRemarks(e.target.value)}
+                placeholder="Why is this fine being waived?"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" size="sm" onClick={() => setWaiveRow(null)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="bg-slate-700 text-white hover:bg-slate-800"
+                disabled={waiveSubmitting || !waiveRow || !waiveAmount}
+                onClick={async () => {
+                  if (!waiveRow) return;
+                  const amount = Number(waiveAmount);
+                  if (Number.isNaN(amount) || amount < 0) {
+                    toast.error("Enter a valid waiver amount.");
+                    return;
+                  }
+                  try {
+                    setWaiveSubmitting(true);
+                    await waiveLibraryFine(waiveRow.id, amount, waiveRemarks);
+                    toast.success(`Fine waiver of ${formatInr(amount)} recorded.`);
+                    setWaiveRow(null);
+                    if (previewData?.user?.userId) void openDetails(previewData.user.userId);
+                  } catch (e) {
+                    const msg =
+                      (e as { response?: { data?: { message?: string } } })?.response?.data
+                        ?.message ?? "Failed to waive fine.";
+                    toast.error(msg);
+                  } finally {
+                    setWaiveSubmitting(false);
+                  }
+                }}
+              >
+                {waiveSubmitting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
+                Waive
               </Button>
             </div>
           </div>
