@@ -67,7 +67,7 @@ export function Combobox({
       </PopoverTrigger>
       <PopoverContent
         className="w-[var(--radix-popover-trigger-width,240px)] p-0 max-h-80 overflow-y-auto"
-        onOpenAutoFocus={(event) => {
+        onOpenAutoFocus={(event: Event) => {
           // Radix focuses the popover content on open and the browser scrolls
           // the focused node into view while it is still being positioned,
           // yanking the page to the dropdown. Take over: focus the search
