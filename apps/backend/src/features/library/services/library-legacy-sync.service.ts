@@ -432,7 +432,9 @@ async function syncOneTable(
       )
     ).rows as Array<{ legacy_id: number }>;
     const presentIds = new Set<number>(
-      presentRows.map((r) => Number(r.legacy_id)).filter((n) => Number.isFinite(n)),
+      presentRows
+        .map((r) => Number(r.legacy_id))
+        .filter((n) => Number.isFinite(n)),
     );
     const missingIds = inScopeIds.filter((id) => !presentIds.has(id));
     const refreshIds = inScopeIds.filter((id) => presentIds.has(id));
