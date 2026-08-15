@@ -52,7 +52,6 @@ import {
   type LibraryDashboardFilters,
   type LibraryDashboardStats,
   getCirculationPolicies,
-  getLibrarySeedStatus,
   getLibraryLoadStatus,
   getCatalogueCounts,
   type LibraryCatalogueGroup,
@@ -73,8 +72,7 @@ import {
 // Raw shadcn TableCell for the rowSpan-merged cells in the Policies matrix —
 // FeesTableCell only proxies colSpan, so rowSpan={n} was being dropped.
 import { TableCell } from "@/components/ui/table";
-import { AlertTriangle, ExternalLink } from "lucide-react";
-import { Link } from "react-router-dom";
+import { AlertTriangle } from "lucide-react";
 import { HolidayMonthCalendar } from "./HolidayMonthCalendar";
 
 const DASHBOARD_TABS = [
@@ -1729,132 +1727,6 @@ function PoliciesTab() {
  * `readLibrarySeedStatus` so as staff edit or delete rows the count drops
  * accordingly, and once nothing seeded remains the dialog stops opening.
  */
-function SeedInfoDialog() {
-  const { data } = useQuery({
-    queryKey: ["library-seed-status"],
-    queryFn: getLibrarySeedStatus,
-  });
-  const [open, setOpen] = useState(false);
-
-  const anyDefault =
-    (data?.defaultsPresent.defaultBranch ?? false) ||
-    (data?.defaultsPresent.seededPatronCategories ?? 0) > 0 ||
-    (data?.defaultsPresent.seededItemCategories ?? 0) > 0 ||
-    (data?.defaultsPresent.seededZones ?? 0) > 0 ||
-    (data?.defaultsPresent.seededPolicies ?? 0) > 0;
-
-  // Open once, when the status resolves and any seeded row still exists.
-  useEffect(() => {
-    if (data?.seedRan && anyDefault) setOpen(true);
-  }, [data?.seedRan, data?.ranAt, anyDefault]);
-
-  if (!data?.seedRan || !anyDefault) return null;
-
-  const items: Array<{ label: string; count: number | string; href: string }> = [
-    {
-      label: "Main branch",
-      count: data.defaultsPresent.defaultBranch ? "added" : "removed",
-      href: "/dashboard/library/branches",
-    },
-    {
-      label: "Patron categories",
-      count: data.defaultsPresent.seededPatronCategories,
-      href: "/dashboard/library/patron-categories",
-    },
-    {
-      label: "Item categories",
-      count: data.defaultsPresent.seededItemCategories,
-      href: "/dashboard/library/item-categories",
-    },
-    {
-      label: "Zones",
-      count: data.defaultsPresent.seededZones,
-      href: "/dashboard/library/zones",
-    },
-    {
-      label: "Circulation rules",
-      count: data.defaultsPresent.seededPolicies,
-      href: "/dashboard/library/circulation-policies",
-    },
-  ];
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-amber-800">
-            <AlertTriangle className="h-5 w-5" />
-            Please review the default library settings
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-3 text-sm text-slate-700">
-          <p>
-            To get the library module running, we added a starter set of branches, patron
-            categories, item categories, zones and circulation rules.{" "}
-            <strong>The fine per day is set to ₹0 in every rule</strong>, so nothing will be charged
-            by accident. Please review and update these before you go live — your books, copies and
-            loans will stay attached to whatever you rename.
-          </p>
-          <div className="overflow-hidden rounded-md border border-[#a0a0a0]">
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-[#a0a0a0] bg-[#f0f0f0]">
-                  <th className="border-r border-[#b8b8b8] px-3 py-2 text-left text-xs font-semibold text-[#1a1a1a]">
-                    Item
-                  </th>
-                  <th className="border-r border-[#b8b8b8] px-3 py-2 text-right text-xs font-semibold text-[#1a1a1a]">
-                    Starter rows
-                  </th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold text-[#1a1a1a]">
-                    Review
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((i, idx) => (
-                  <tr
-                    key={i.label}
-                    className={idx < items.length - 1 ? "border-b border-[#c8c8c8]" : ""}
-                  >
-                    <td className="border-r border-[#b8b8b8] px-3 py-2 text-slate-700">
-                      {i.label}
-                    </td>
-                    <td className="border-r border-[#b8b8b8] px-3 py-2 text-right font-semibold tabular-nums text-slate-900">
-                      {typeof i.count === "number" ? nfmt.format(i.count) : i.count}
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <Link
-                        to={i.href}
-                        onClick={() => setOpen(false)}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-indigo-700 hover:underline"
-                      >
-                        Open <ExternalLink className="h-3 w-3" />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {data.ranAt && (
-            <p className="text-[11px] text-slate-500">
-              Set up on {new Date(data.ranAt).toLocaleString()}. This message will stop appearing
-              once you have edited or replaced these items.
-            </p>
-          )}
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" className="h-8" onClick={() => setOpen(false)}>
-            Got it
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 // ── Filters dialog ───────────────────────────────────────────────────────────
 
 function FiltersDialog({
@@ -2146,8 +2018,6 @@ export default function LibraryDashboard() {
             )}
           </Button>
         </div>
-
-        <SeedInfoDialog />
 
         {loadBanner && loadBanner.percent < 100 && (
           // Amber / progress-orange — distinct from the purple module accent
