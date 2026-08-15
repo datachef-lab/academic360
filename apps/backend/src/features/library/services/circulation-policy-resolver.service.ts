@@ -1,9 +1,10 @@
 import { db } from "@/db/index.js";
-import { and, desc, eq, isNull, or } from "drizzle-orm";
+import { and, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { circulationPolicyModel } from "@repo/db/schemas/models/library/circulation-policy.model.js";
 import { patronCategoryModel } from "@repo/db/schemas/models/library/patron-category.model.js";
 import { userModel } from "@repo/db/schemas/models/user/user.model.js";
 import { copyDetailsModel } from "@repo/db/schemas/models/library/copy-details.model.js";
+import { bookModel } from "@repo/db/schemas/models/library/book.model.js";
 import { studentModel } from "@repo/db/schemas/models/user/student.model.js";
 import { promotionModel } from "@repo/db/schemas/models/batches/promotions.model.js";
 
@@ -12,6 +13,7 @@ export type EffectivePolicy = {
   finePerDay: number;
   renewalLimit: number;
   graceDays: number;
+  maxCopiesAtOnce: number;
   skipHolidaysInFine: boolean;
   policyId: number | null;
 };
@@ -21,6 +23,7 @@ const DEFAULTS: EffectivePolicy = {
   finePerDay: 1,
   renewalLimit: 1,
   graceDays: 0,
+  maxCopiesAtOnce: 3,
   skipHolidaysInFine: true,
   policyId: null,
 };
@@ -42,24 +45,41 @@ export async function resolvePatronCategoryIdForUser(
     .where(eq(userModel.id, userId))
     .limit(1);
   if (!u?.type) return null;
-  const mappedName = NAME_BY_USER_TYPE[u.type] ?? u.type;
+  const mapped = NAME_BY_USER_TYPE[u.type] ?? u.type;
+  // Seeded categories carry the canonical uppercase `code` (STUDENT/FACULTY/
+  // STAFF/GUEST); the case-insensitive name match only covers hand-created
+  // categories that never got a code.
   const [pc] = await db
     .select({ id: patronCategoryModel.id })
     .from(patronCategoryModel)
-    .where(eq(patronCategoryModel.name, mappedName))
+    .where(
+      or(
+        eq(patronCategoryModel.code, mapped),
+        ilike(patronCategoryModel.name, mapped),
+      ),
+    )
+    .orderBy(
+      sql`CASE WHEN ${patronCategoryModel.code} = ${mapped} THEN 0 ELSE 1 END`,
+    )
     .limit(1);
   return pc?.id ?? null;
 }
 
+// Item category lives on the title (books.item_category_id_fk); the copy-level
+// column is a per-copy override for the rare titles that mix categories.
 export async function resolveItemCategoryIdForCopy(
   copyDetailsId: number,
 ): Promise<number | null> {
   const [c] = await db
-    .select({ id: copyDetailsModel.itemCategoryId })
+    .select({
+      copyItemCategoryId: copyDetailsModel.itemCategoryId,
+      bookItemCategoryId: bookModel.itemCategoryId,
+    })
     .from(copyDetailsModel)
+    .leftJoin(bookModel, eq(bookModel.id, copyDetailsModel.bookId))
     .where(eq(copyDetailsModel.id, copyDetailsId))
     .limit(1);
-  return c?.id ?? null;
+  return c?.copyItemCategoryId ?? c?.bookItemCategoryId ?? null;
 }
 
 export async function resolveEffectivePolicy(args: {
@@ -109,6 +129,7 @@ export async function resolveEffectivePolicy(args: {
     finePerDay: Number(best.finePerDay ?? DEFAULTS.finePerDay),
     renewalLimit: best.renewalLimit ?? DEFAULTS.renewalLimit,
     graceDays: best.graceDays ?? DEFAULTS.graceDays,
+    maxCopiesAtOnce: best.maxCopiesAtOnce ?? DEFAULTS.maxCopiesAtOnce,
     skipHolidaysInFine: best.skipHolidaysInFine ?? DEFAULTS.skipHolidaysInFine,
     policyId: best.id,
   };

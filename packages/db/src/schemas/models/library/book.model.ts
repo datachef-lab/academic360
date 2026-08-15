@@ -11,6 +11,8 @@ import { userModel } from "../user";
 import { libraryPeriodModel } from "./library-period.model";
 import { subjectGroupingMainModel } from "../course-design";
 import { branchModel } from "./branch.model";
+import { academicYearModel } from "../academics";
+import { itemCategoryModel } from "./item-category.model";
 
 export const bookModel = pgTable("books", {
     id: serial().primaryKey(),
@@ -19,11 +21,22 @@ export const bookModel = pgTable("books", {
         .references(() => branchModel.id),
     libraryDocumentTypeId: integer("library_document_type_id_fk")
         .references(() => libraryDocumentTypeModel.id),
+    // Title-level circulation category (Textbook/Reference/...); copy_details
+    // carries a per-copy override for the rare mixed-type titles.
+    itemCategoryId: integer("item_category_id_fk")
+        .references(() => itemCategoryModel.id),
     title: varchar({ length: 1000 }).notNull(),
     subTitle: varchar({ length: 1000 }),
     alternateTitle: varchar({ length: 1000 }),
     subjectGroupId: integer("subject_group_id_fk")
         .references(() => subjectGroupingMainModel.id),
+    // Which academic year this book's own record belongs to (distinct from
+    // subjectGroupId's academic year, which is pinned to the current year
+    // because legacy subject-group data carries no year of its own — see
+    // getSubjectGroupByOldId in old-irp-data.ts). Derived at import time from
+    // the legacy record's entry date, so it can vary per book.
+    academicYearId: integer("academic_year_id_fk")
+        .references(() => academicYearModel.id),
     languageId: integer("language_id_fk")
         .references(() => languageMediumModel.id),
     isbn: varchar({ length: 1000 }),

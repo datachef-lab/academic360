@@ -416,9 +416,43 @@ async function syncOneTable(
     const inScopeIds = inScopeRows
       .map((r) => Number(r.id))
       .filter((n) => Number.isFinite(n));
+
+    // Never-imported rows load FIRST. Without this, any table larger than the
+    // per-tick cap kept re-processing the same first-N already-imported ids
+    // forever: issuereturn (~200k, ORDER BY issueDate) sorts its NEWEST rows
+    // to the end, so new issues never made it inside the cap — "only the data
+    // already loaded was updating, no new data was loading".
+    const presentRows = (
+      await db.execute(
+        sql.raw(`
+      SELECT ${mapping.legacyIdColumn} AS legacy_id
+      FROM ${mapping.newTable}
+      WHERE ${mapping.legacyIdColumn} IS NOT NULL
+    `),
+      )
+    ).rows as Array<{ legacy_id: number }>;
+    const presentIds = new Set<number>(
+      presentRows
+        .map((r) => Number(r.legacy_id))
+        .filter((n) => Number.isFinite(n)),
+    );
+    const missingIds = inScopeIds.filter((id) => !presentIds.has(id));
+    const refreshIds = inScopeIds.filter((id) => presentIds.has(id));
+
     // Cap per-tick work — a run that returns 200k ids would overrun the
-    // 10-minute cadence. Bookmark not needed: the next tick just re-scans.
-    const scannedIds = inScopeIds.slice(0, MAX_ROWS_PER_TABLE_PER_TICK);
+    // 10-minute cadence. Missing rows take the budget first; whatever is left
+    // refreshes already-imported rows. Bookmark not needed: the next tick
+    // just re-scans, and once the missing backlog drains the full budget goes
+    // back to refreshes.
+    const scannedIds = [...missingIds, ...refreshIds].slice(
+      0,
+      MAX_ROWS_PER_TABLE_PER_TICK,
+    );
+    if (missingIds.length > 0) {
+      log.info(
+        `[${mapping.legacyTable}] ${missingIds.length} never-imported rows detected — loading them first (cap ${MAX_ROWS_PER_TABLE_PER_TICK})`,
+      );
+    }
 
     // Persist progress mid-table (fire-and-forget so workers never block on
     // the counter write) and nudge the banner at most every 5s.

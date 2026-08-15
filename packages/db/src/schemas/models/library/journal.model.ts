@@ -8,10 +8,13 @@ import { languageMediumModel } from "../resources";
 import { bindingModel } from "./binding.model";
 import { libraryPeriodModel } from "./library-period.model";
 import { subjectGroupingMainModel } from "../course-design";
+import { itemCategoryModel } from "./item-category.model";
 
 export const journalModel = pgTable("journals", {
     id: serial().primaryKey(),
     legacyJournalId: integer(),
+    itemCategoryId: integer("item_category_id_fk")
+        .references(() => itemCategoryModel.id),
     type: integer("journal_type_id_fk")
         .references(() => journalTypeModel.id),
     subjectGroupId: integer("subject_group_id_fk")

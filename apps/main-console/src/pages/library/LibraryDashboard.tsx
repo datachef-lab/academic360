@@ -6,6 +6,8 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
+  LabelList,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -42,7 +44,6 @@ import { VisualCard } from "@/features/fees-dashboard/components/VisualCard";
 import { ChartDonut } from "@/features/fees-dashboard/components/ChartDonut";
 import { LiveUpdatesBadge } from "@/features/fees-dashboard/components/LiveUpdatesBadge";
 import { formatCompactIN } from "@/features/notifications/utils/format";
-import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart";
 import { useLibraryRealtime } from "@/features/library/hooks/useLibraryRealtime";
 import { LibrarySyncBanner } from "./LibrarySyncBanner";
 import { getLibraryBranches } from "@/services/library-branches.service";
@@ -51,7 +52,6 @@ import {
   type LibraryDashboardFilters,
   type LibraryDashboardStats,
   getCirculationPolicies,
-  getLibrarySeedStatus,
   getLibraryLoadStatus,
   getCatalogueCounts,
   type LibraryCatalogueGroup,
@@ -72,16 +72,18 @@ import {
 // Raw shadcn TableCell for the rowSpan-merged cells in the Policies matrix —
 // FeesTableCell only proxies colSpan, so rowSpan={n} was being dropped.
 import { TableCell } from "@/components/ui/table";
-import { AlertTriangle, ExternalLink } from "lucide-react";
-import { Link } from "react-router-dom";
+import { AlertTriangle } from "lucide-react";
 import { HolidayMonthCalendar } from "./HolidayMonthCalendar";
 
 const DASHBOARD_TABS = [
   { value: "overview", label: "Overview" },
   { value: "circulation", label: "Circulation" },
-  { value: "holdings", label: "Holdings" },
-  { value: "footfall", label: "Footfall" },
-  { value: "fines", label: "Fines" },
+  // Values are stable keys (deep links, remounts) — only the labels were
+  // renamed to plainer words: Holdings → Catalogue, Footfall → Visits,
+  // Fines → Fines & dues.
+  { value: "holdings", label: "Catalogue" },
+  { value: "footfall", label: "Visits" },
+  { value: "fines", label: "Fines & dues" },
   { value: "policies", label: "Policies" },
   // Article entries lives as its own tab so the article-tables (books,
   // copies, journals, issues, series, LA rows) get a full row-share view
@@ -136,6 +138,27 @@ function resolveRange(preset: RangePreset, fromRaw?: string | null, toRaw?: stri
   return { dateFrom: from.toISOString(), dateTo: to.toISOString() };
 }
 
+/**
+ * The Overview trend charts (footfall, issues per day) need a trend, not a
+ * dot — on the default "Today" filter a one-point series renders as a single
+ * marker. Pad the chart window back to at least 7 calendar days ending at the
+ * filter's end date. Returns the SAME object when no widening is needed so
+ * the widened query key matches the main one and react-query dedupes instead
+ * of fetching twice.
+ */
+const MIN_CHART_DAYS = 7;
+function widenRangeForCharts(applied: LibraryDashboardFilters): LibraryDashboardFilters {
+  if (!applied.dateFrom) return applied; // all-time already spans ≥7 days
+  const to = applied.dateTo ? new Date(applied.dateTo) : new Date();
+  const from = new Date(applied.dateFrom);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return applied;
+  if (to.getTime() - from.getTime() >= (MIN_CHART_DAYS - 1) * 86_400_000) return applied;
+  const widenedFrom = new Date(to);
+  widenedFrom.setDate(widenedFrom.getDate() - (MIN_CHART_DAYS - 1));
+  widenedFrom.setHours(0, 0, 0, 0);
+  return { ...applied, dateFrom: widenedFrom.toISOString() };
+}
+
 const nfmt = new Intl.NumberFormat("en-IN");
 const inr = (n: number) =>
   new Intl.NumberFormat("en-IN", {
@@ -147,35 +170,148 @@ const inr = (n: number) =>
 /** Compact rupees for tile values — "₹1.2L" fits a KPI card, "₹1,20,000" does not. */
 const inrShort = (n: number) => `₹${formatCompactIN(n)}`;
 
-/** Config for the shadcn ChartContainer used by the Overview footfall chart —
- *  drives `var(--color-entries)` inside the SVG. Same recipe as the
- *  notifications dashboard's `trendConfig`. */
-const FOOTFALL_CHART_CONFIG = {
-  entries: { label: "Entries", color: "#7c3aed" },
-} satisfies ChartConfig;
+/** Line colours for the per-patron-type visit series, assigned by traffic
+ *  volume so the busiest patron type always gets the module violet. */
+const CATEGORY_LINE_COLORS = [
+  "#7c3aed",
+  "#0891b2",
+  "#f59e0b",
+  "#ef4444",
+  "#ec4899",
+  "#2563eb",
+  "#10b981",
+  "#64748b",
+] as const;
 
-function FootfallTooltip({
+/** Fixed hues for the types staff recognise at a glance — STUDENT wears the
+ *  module violet, STAFF wears red (mirrors the notifications trend chart's
+ *  primary/danger pairing). Everything else takes the palette in volume
+ *  order. */
+const CATEGORY_COLOR_OVERRIDES: Record<string, string> = {
+  STUDENT: "#7c3aed",
+  STAFF: "#dc2626",
+};
+
+function colorForCategory(category: string, index: number): string {
+  return (
+    CATEGORY_COLOR_OVERRIDES[category] ??
+    (CATEGORY_LINE_COLORS[index % CATEGORY_LINE_COLORS.length] as string)
+  );
+}
+
+/**
+ * Pivot the day × patron-type rows into one recharts row per day with a key
+ * per category, binning to ISO weeks past ~4 months (same reasoning as the
+ * old single-line aggregator: a multi-year daily series reads as static).
+ * Categories come back ordered by total volume for stable colour assignment.
+ */
+function pivotVisitsByCategory(rows: Array<{ day: string; category: string; count: number }>): {
+  data: Array<Record<string, number | string>>;
+  categories: string[];
+  weekly: boolean;
+} {
+  const totals = new Map<string, number>();
+  for (const r of rows) totals.set(r.category, (totals.get(r.category) ?? 0) + r.count);
+  const categories = Array.from(totals.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([c]) => c);
+
+  const dayCount = new Set(rows.map((r) => r.day)).size;
+  const weekly = dayCount > 120;
+  const includeYear = spansMultipleYears(rows.map((r) => ({ day: r.day })));
+  const fmt = (d: string) => (includeYear ? fmtDayYear(d) : fmtDay(d));
+  const keyOf = (day: string) => {
+    if (!weekly) return day;
+    const dt = new Date(day);
+    if (Number.isNaN(dt.getTime())) return day;
+    dt.setDate(dt.getDate() - dt.getDay());
+    return dt.toISOString().slice(0, 10);
+  };
+
+  const byKey = new Map<string, Record<string, number | string>>();
+  for (const r of rows) {
+    const k = keyOf(r.day);
+    let row = byKey.get(k);
+    if (!row) {
+      row = { date: fmt(k) };
+      for (const c of categories) row[c] = 0;
+      byKey.set(k, row);
+    }
+    row[r.category] = ((row[r.category] as number) ?? 0) + r.count;
+  }
+  const data = Array.from(byKey.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, v]) => v);
+  return { data, categories, weekly };
+}
+
+/** Generic multi-series tooltip — same white card as the notifications trend
+ *  tooltip, one row per line in the chart. */
+function MultiSeriesTooltip({
   active,
   payload,
+  label,
 }: {
   active?: boolean;
-  payload?: Array<{ payload?: { date?: string; entries?: number } }>;
+  payload?: Array<{ name?: string; value?: number; stroke?: string; color?: string }>;
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="grid min-w-[9rem] gap-1.5 rounded-lg border border-[#d4d4d4] bg-white px-2.5 py-2 text-xs shadow-md">
+      <p className="font-semibold text-[#1a1a1a]">{label}</p>
+      {payload.map((p) => (
+        <div key={p.name} className="flex items-center justify-between gap-4">
+          <span className="flex items-center gap-1.5 text-[#444]">
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: p.stroke ?? p.color }}
+            />
+            {p.name}
+          </span>
+          <span className="font-mono font-medium tabular-nums text-[#1a1a1a]">
+            {nfmt.format(p.value ?? 0)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Styled tooltip for the circulation trend chart — same white card recipe
+ *  as the notifications trend tooltip, instead of the default recharts box. */
+function IssuesTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload?: { issues?: number; reissues?: number; returns?: number } }>;
+  label?: string;
 }) {
   if (!active || !payload?.length) return null;
   const row = payload[0]?.payload;
   if (!row) return null;
   return (
     <div className="grid min-w-[8rem] gap-1.5 rounded-lg border border-[#d4d4d4] bg-white px-2.5 py-2 text-xs shadow-md">
-      <p className="font-semibold text-[#1a1a1a]">{row.date}</p>
-      <div className="flex items-center justify-between gap-4">
-        <span className="flex items-center gap-1.5 text-[#444]">
-          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "#7c3aed" }} />
-          Entries
-        </span>
-        <span className="font-mono font-medium tabular-nums text-[#1a1a1a]">
-          {nfmt.format(row.entries ?? 0)}
-        </span>
-      </div>
+      <p className="font-semibold text-[#1a1a1a]">{label}</p>
+      {(
+        [
+          ["Issues", row.issues ?? 0, "#7c3aed"],
+          ["Reissues", row.reissues ?? 0, "#f59e0b"],
+          ["Returns", row.returns ?? 0, "#10b981"],
+        ] as const
+      ).map(([name, val, color]) => (
+        <div key={name} className="flex items-center justify-between gap-4">
+          <span className="flex items-center gap-1.5 text-[#444]">
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+            {name}
+          </span>
+          <span className="font-mono font-medium tabular-nums text-[#1a1a1a]">
+            {nfmt.format(val)}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -190,37 +326,6 @@ const STATUS_COLOURS = [
   "#14b8a6",
   "#f43f5e",
 ];
-
-/**
- * Bin footfall points by week when the series is longer than ~4 months, so a
- * multi-year "All time" view doesn't look like static. Sums entries within
- * each ISO week starting on Sunday; leaves shorter series untouched. The
- * label for a multi-year bin includes the year — otherwise "08 May" reads
- * the same in 2019, 2024, 2026.
- */
-function aggregateFootfall(
-  rows: Array<{ day: string; count: number }>,
-): Array<{ date: string; entries: number }> {
-  const includeYear = spansMultipleYears(rows);
-  const fmt = (d: string) => (includeYear ? fmtDayYear(d) : fmtDay(d));
-
-  if (rows.length <= 120) {
-    return rows.map((d) => ({ date: fmt(d.day), entries: d.count }));
-  }
-  const bins = new Map<string, number>();
-  for (const r of rows) {
-    const dt = new Date(r.day);
-    if (Number.isNaN(dt.getTime())) continue;
-    const dow = dt.getDay();
-    dt.setDate(dt.getDate() - dow);
-    const key = dt.toISOString().slice(0, 10);
-    bins.set(key, (bins.get(key) ?? 0) + r.count);
-  }
-  return Array.from(bins.entries()).map(([k, v]) => ({
-    date: fmt(k),
-    entries: v,
-  }));
-}
 
 function spansMultipleYears(rows: Array<{ day: string }>): boolean {
   if (rows.length < 2) return false;
@@ -423,10 +528,10 @@ function EmptyPanel({ label }: { label: string }) {
  * across the console so the library tiles read as one product.
  */
 const GRADIENTS = {
-  indigo: "from-[#4338ca] via-[#6366f1] to-[#818cf8]",
+  indigo: "from-[#3730a3] via-[#4f46e5] to-[#6366f1]",
   emerald: "from-[#047857] via-[#059669] to-[#10b981]",
   amber: "from-[#b45309] via-[#d97706] to-[#f59e0b]",
-  rose: "from-[#b91c1c] via-[#e11d48] to-[#f43f5e]",
+  rose: "from-[#b91c1c] via-[#dc2626] to-[#ef4444]",
   violet: "from-[#5b21b6] via-[#7c3aed] to-[#8b5cf6]",
   cyan: "from-[#0e7490] via-[#0891b2] to-[#06b6d4]",
   sky: "from-[#1d4ed8] via-[#2563eb] to-[#3b82f6]",
@@ -495,19 +600,31 @@ function RankedList({
 
 function OverviewTab({
   stats,
-  applied,
+  chartStats,
+  chartApplied,
 }: {
   stats: LibraryDashboardStats;
-  applied: LibraryDashboardFilters;
+  /** Stats for the (possibly widened) chart window — trend charts read these
+   *  so they always cover at least the last 7 days; tiles keep `stats`. */
+  chartStats: LibraryDashboardStats;
+  chartApplied: LibraryDashboardFilters;
 }) {
-  // Title reflects the applied filter, not a hard-coded "last 14 days". When
+  // Title reflects the chart window, not a hard-coded "last 14 days". When
   // the user picks "all time" (or the range covers the full data extent) the
   // title says "all time"; otherwise it spells out the exact dd/mm/yyyy
   // window using the same helper the footfall chart uses.
-  const issueRangeLabel = formatDateRangeDMY(applied.dateFrom, applied.dateTo, {
+  const issueRangeLabel = formatDateRangeDMY(chartApplied.dateFrom, chartApplied.dateTo, {
     fallback: "all time",
-    entryDays: stats.dailyIssuesLast14,
+    entryDays: chartStats.dailyIssuesLast14,
   });
+  // One line per patron type; falls back to a single "Entries" line while an
+  // older cached stats payload (without the per-category series) is on screen.
+  const visits = useMemo(() => {
+    const rows = chartStats.entryExitByDayByCategory?.length
+      ? chartStats.entryExitByDayByCategory
+      : chartStats.entryExitByDay.map((d) => ({ day: d.day, category: "Entries", count: d.count }));
+    return pivotVisitsByCategory(rows);
+  }, [chartStats.entryExitByDayByCategory, chartStats.entryExitByDay]);
   const donutData = useMemo(
     () =>
       stats.copiesByStatus.map((s, i) => ({
@@ -523,22 +640,25 @@ function OverviewTab({
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        {/* Same six-hue spread as the notifications KPI strip — violet, blue,
+            amber, red, green, teal — so no two neighbouring tiles share a hue
+            (the old strip had Books and Active issues both purple). */}
         <GradientStatCard
-          gradient={GRADIENTS.indigo}
+          gradient={GRADIENTS.violet}
           icon={BookOpen}
           label="Books"
           value={formatCompactIN(stats.totalBooks)}
           hint="catalogued titles"
         />
         <GradientStatCard
-          gradient={GRADIENTS.cyan}
+          gradient={GRADIENTS.sky}
           icon={Boxes}
           label="Copies"
           value={formatCompactIN(stats.totalCopies)}
           hint="physical + e-copies"
         />
         <GradientStatCard
-          gradient={GRADIENTS.violet}
+          gradient={GRADIENTS.amber}
           icon={BookMarked}
           label="Active issues"
           value={formatCompactIN(stats.activeIssues)}
@@ -559,7 +679,7 @@ function OverviewTab({
           hint="in the selected range"
         />
         <GradientStatCard
-          gradient={GRADIENTS.sky}
+          gradient={GRADIENTS.cyan}
           icon={UserRoundCheck}
           label="In library now"
           value={formatCompactIN(stats.currentlyInLibrary)}
@@ -567,79 +687,84 @@ function OverviewTab({
         />
       </div>
 
-      {/* Entry–exit area chart. When the range spans more than ~90 days we
-          aggregate weekly, otherwise the daily line looks like static — a
-          multi-year window has thousands of points. Weekly bins smooth it
-          without losing the trend. */}
+      {/* Entry trend with one line per patron type — same overlaid multi-
+          line recipe as the notifications "over time" chart. Weekly bins
+          past ~4 months so a multi-year window doesn't read as static. */}
       <VisualCard
-        title={
-          stats.entryExitByDay.length > 120
-            ? "Library footfall · weekly · hover for details"
-            : "Library footfall · daily · hover for details"
-        }
+        title={`Library visits · ${visits.weekly ? "weekly" : "daily"} · one line per patron type · ${issueRangeLabel}`}
       >
-        {stats.entryExitByDay.length === 0 ? (
-          <EmptyPanel label="No visits in the selected range" />
+        {visits.data.length === 0 ? (
+          <EmptyPanel label="No visits in the last 7 days" />
         ) : (
-          <ChartContainer config={FOOTFALL_CHART_CONFIG} className="h-[240px] w-full">
-            <AreaChart
-              data={aggregateFootfall(stats.entryExitByDay)}
-              margin={{ top: 8, right: 8, left: 4, bottom: 4 }}
-            >
-              <defs>
-                <linearGradient id="libFootfallFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--color-entries)" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="var(--color-entries)" stopOpacity={0.04} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e5e5e5" />
-              <XAxis
-                dataKey="date"
-                tick={{ fontSize: 10, fill: "#666" }}
-                tickLine={false}
-                axisLine={{ stroke: "#d4d4d4" }}
-                minTickGap={40}
-              />
-              <YAxis
-                allowDecimals={false}
-                tick={{ fontSize: 10, fill: "#666" }}
-                tickLine={false}
-                axisLine={false}
-                width={44}
-              />
-              <ChartTooltip content={<FootfallTooltip />} />
-              <Area
-                type="monotone"
-                dataKey="entries"
-                stroke="var(--color-entries)"
-                fill="url(#libFootfallFill)"
-                strokeWidth={2}
-              />
-            </AreaChart>
-          </ChartContainer>
+          <div>
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={visits.data} margin={{ top: 8, right: 8, left: 4, bottom: 4 }}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e5e5e5" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 10, fill: "#666" }}
+                  tickLine={false}
+                  axisLine={{ stroke: "#d4d4d4" }}
+                  minTickGap={40}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fontSize: 10, fill: "#666" }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={44}
+                />
+                <Tooltip content={<MultiSeriesTooltip />} cursor={{ fill: "#f1f5f9" }} />
+                {visits.categories.map((c, i) => {
+                  const color = colorForCategory(c, i);
+                  return (
+                    <Area
+                      key={c}
+                      type="monotone"
+                      dataKey={c}
+                      name={c}
+                      stroke={color}
+                      strokeWidth={2}
+                      fill={color}
+                      fillOpacity={i === 0 ? 0.15 : 0.08}
+                    />
+                  );
+                })}
+              </AreaChart>
+            </ResponsiveContainer>
+            <div className="mt-1 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] text-slate-600">
+              {visits.categories.map((c, i) => (
+                <span key={c} className="flex items-center gap-1.5">
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{ backgroundColor: colorForCategory(c, i) }}
+                  />
+                  {c}
+                </span>
+              ))}
+            </div>
+          </div>
         )}
       </VisualCard>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <PanelCard title={`Issues per day · ${issueRangeLabel}`} className="lg:col-span-2">
-          {stats.dailyIssuesLast14.length === 0 ? (
-            <EmptyPanel label="No issues in the selected range" />
+        {/* Grouped bars (three per day) — deliberately a different chart
+            shape from the visits area above so the two Overview trends
+            don't read as the same widget twice. */}
+        <PanelCard
+          title={`Issues · reissues · returns · ${issueRangeLabel}`}
+          className="lg:col-span-2"
+        >
+          {chartStats.dailyIssuesLast14.length === 0 ? (
+            <EmptyPanel label="No circulation activity in the last 7 days" />
           ) : (
             <div className="h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={stats.dailyIssuesLast14.map((d) => ({ ...d, label: fmtDay(d.day) }))}
+                <BarChart
+                  data={chartStats.dailyIssuesLast14.map((d) => ({ ...d, label: fmtDay(d.day) }))}
+                  barGap={2}
+                  barCategoryGap="22%"
                 >
-                  <defs>
-                    <linearGradient id="issuesFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#6366f1" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#6366f1" stopOpacity={0.02} />
-                    </linearGradient>
-                    <linearGradient id="reissuesFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
                   <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
                   <XAxis
                     dataKey="label"
@@ -653,33 +778,21 @@ function OverviewTab({
                     tickLine={false}
                     width={30}
                   />
-                  <Tooltip cursor={{ fill: "#f1f5f9" }} />
-                  <Area
-                    type="monotone"
-                    dataKey="issues"
-                    name="Issues"
-                    stackId="circ"
-                    stroke="#6366f1"
-                    strokeWidth={2}
-                    fill="url(#issuesFill)"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="reissues"
-                    name="Reissues"
-                    stackId="circ"
-                    stroke="#f59e0b"
-                    strokeWidth={2}
-                    fill="url(#reissuesFill)"
-                  />
-                </AreaChart>
+                  <Tooltip cursor={{ fill: "#f1f5f9" }} content={<IssuesTooltip />} />
+                  <Bar dataKey="issues" name="Issues" fill="#7c3aed" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="reissues" name="Reissues" fill="#f59e0b" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="returns" name="Returns" fill="#10b981" radius={[3, 3, 0, 0]} />
+                </BarChart>
               </ResponsiveContainer>
               <div className="mt-1 flex items-center justify-center gap-4 text-[11px] text-slate-600">
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-indigo-500" /> Issues
+                  <span className="h-2 w-2 rounded-full bg-[#7c3aed]" /> Issues
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-amber-500" /> Reissues
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" /> Returns
                 </span>
               </div>
             </div>
@@ -732,10 +845,33 @@ function OverviewTab({
   );
 }
 
+/** Patron chip — STUDENT wears the module violet, STAFF red (same pairing
+ *  as the visits chart lines), FACULTY amber. */
+function UserTypeBadge({ category }: { category: string }) {
+  const cls =
+    category === "STUDENT"
+      ? "border-violet-200 bg-violet-50 text-violet-700"
+      : category === "FACULTY"
+        ? "border-amber-200 bg-amber-50 text-amber-700"
+        : "border-rose-200 bg-rose-50 text-rose-700";
+  return (
+    <Badge variant="outline" className={cls}>
+      {category}
+    </Badge>
+  );
+}
+
+/** Ageing buckets get hotter as loans get later — amber → orange → red. */
+const AGEING_BUCKETS = [
+  { key: "0-7", label: "1–7 days late", color: "#f59e0b" },
+  { key: "8-30", label: "8–30 days late", color: "#f97316" },
+  { key: ">30", label: "30+ days late", color: "#dc2626" },
+] as const;
+
 function CirculationTab({ stats }: { stats: LibraryDashboardStats }) {
-  const ageing = ["0-7", "8-30", ">30"].map((b) => {
-    const found = stats.overdueAgeing.find((r) => r.bucket === b);
-    return { bucket: b, count: found?.count ?? 0 };
+  const ageing = AGEING_BUCKETS.map((b) => {
+    const found = stats.overdueAgeing.find((r) => r.bucket === b.key);
+    return { bucket: b.label, count: found?.count ?? 0, fill: b.color };
   });
   const total = stats.activeIssues;
   const overdue = stats.overdueCount;
@@ -770,18 +906,18 @@ function CirculationTab({ stats }: { stats: LibraryDashboardStats }) {
           icon={RefreshCcw}
           label="Reissues"
           value={formatCompactIN(stats.reissueCount)}
-          hint="renewed loans"
+          hint={`in the selected range · ${formatCompactIN(stats.reissueCountAllTime)} all-time`}
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <PanelCard title="Overdue ageing" className="lg:col-span-2">
+        <PanelCard title="Overdue ageing · how late are the late ones" className="lg:col-span-2">
           {overdue === 0 ? (
             <EmptyPanel label="Nothing overdue" />
           ) : (
-            <div className="h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={ageing}>
+            <div>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={ageing} margin={{ top: 20, right: 8, left: 4, bottom: 4 }}>
                   <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
                   <XAxis
                     dataKey="bucket"
@@ -793,36 +929,149 @@ function CirculationTab({ stats }: { stats: LibraryDashboardStats }) {
                     tick={{ fontSize: 11, fill: "#64748b" }}
                     axisLine={false}
                     tickLine={false}
-                    width={30}
+                    width={40}
                   />
-                  <Tooltip cursor={{ fill: "#f1f5f9" }} />
-                  <Bar dataKey="count" fill="#f43f5e" radius={[6, 6, 0, 0]} />
+                  <Tooltip cursor={{ fill: "#f1f5f9" }} content={<MultiSeriesTooltip />} />
+                  {/* Per-bar colour comes from each row's `fill`; the value
+                      label on top saves a hover for the exact count. */}
+                  <Bar dataKey="count" name="Loans" radius={[6, 6, 0, 0]}>
+                    <LabelList
+                      dataKey="count"
+                      position="top"
+                      formatter={(v: number) => nfmt.format(v)}
+                      style={{ fontSize: 11, fill: "#475569", fontWeight: 600 }}
+                    />
+                    {ageing.map((row) => (
+                      <Cell key={row.bucket} fill={row.fill} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
+              <div className="mt-1 flex items-center justify-center gap-4 text-[11px] text-slate-600">
+                {AGEING_BUCKETS.map((b) => (
+                  <span key={b.key} className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: b.color }} />
+                    {b.label}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </PanelCard>
         <PanelCard title="Loan quality">
           <div className="grid gap-3">
-            <div className="rounded-md bg-slate-50 p-3">
-              <div className="text-xs text-slate-500">Average loan duration</div>
-              <div className="mt-1 text-lg font-semibold">
-                {stats.avgLoanDays > 0 ? `${stats.avgLoanDays.toFixed(1)} days` : "—"}
+            <div className="flex items-center gap-3 rounded-lg border border-violet-100 bg-violet-50/70 p-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-700">
+                <Clock className="h-4 w-4" />
+              </span>
+              <div>
+                <div className="text-xs text-violet-700/80">Average loan duration</div>
+                <div className="text-lg font-bold text-violet-900">
+                  {stats.avgLoanDays > 0 ? `${stats.avgLoanDays.toFixed(1)} days` : "—"}
+                </div>
               </div>
             </div>
-            <div className="rounded-md bg-slate-50 p-3">
-              <div className="text-xs text-slate-500">Forced issues</div>
-              <div className="mt-1 text-lg font-semibold">
-                {nfmt.format(stats.forcedIssueCount)}
+            <div className="flex items-center gap-3 rounded-lg border border-amber-100 bg-amber-50/70 p-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+                <AlertTriangle className="h-4 w-4" />
+              </span>
+              <div>
+                <div className="text-xs text-amber-700/80">Forced issues</div>
+                <div className="text-lg font-bold text-amber-900">
+                  {nfmt.format(stats.forcedIssueCount)}
+                </div>
               </div>
             </div>
-            <div className="rounded-md bg-slate-50 p-3">
-              <div className="text-xs text-slate-500">Fines waived this month</div>
-              <div className="mt-1 text-lg font-semibold">{inr(stats.finesWaivedThisMonth)}</div>
+            <div className="flex items-center gap-3 rounded-lg border border-emerald-100 bg-emerald-50/70 p-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+                <IndianRupee className="h-4 w-4" />
+              </span>
+              <div>
+                <div className="text-xs text-emerald-700/80">Fines waived this month</div>
+                <div className="text-lg font-bold text-emerald-900">
+                  {inr(stats.finesWaivedThisMonth)}
+                </div>
+              </div>
             </div>
           </div>
         </PanelCard>
       </div>
+
+      <PanelCard title="Top overdue borrowers (top 10)">
+        <FeesTable fixed={false} framed stickyHeader maxHeight="max-h-[420px]">
+          <FeesTableHeader>
+            <FeesTableHead className="w-[56px] text-center">Sr no</FeesTableHead>
+            <FeesTableHead>Borrower</FeesTableHead>
+            <FeesTableHead className="text-center">UID / Code</FeesTableHead>
+            <FeesTableHead className="text-center">Patron</FeesTableHead>
+            <FeesTableHead className="text-center">Books overdue</FeesTableHead>
+          </FeesTableHeader>
+          <FeesTableBody>
+            {stats.overdueByPatron.length === 0 ? (
+              <EmptyRow label="Nobody is overdue" cols={5} />
+            ) : (
+              stats.overdueByPatron.map((r, i) => (
+                <FeesTableRow key={r.userId}>
+                  <FeesTableCell className="text-center tabular-nums text-[#555]">
+                    {i + 1}
+                  </FeesTableCell>
+                  <FeesTableCell className="font-medium text-[#333]">
+                    {r.userName ?? `Patron #${r.userId}`}
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center tabular-nums text-[#555]">
+                    {r.uid ?? "—"}
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center">
+                    <UserTypeBadge category={r.category} />
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center font-semibold tabular-nums text-rose-700">
+                    {nfmt.format(r.count)}
+                  </FeesTableCell>
+                </FeesTableRow>
+              ))
+            )}
+          </FeesTableBody>
+        </FeesTable>
+      </PanelCard>
+
+      <PanelCard title="Longest overdue books (top 10)">
+        <FeesTable fixed={false} framed stickyHeader maxHeight="max-h-[420px]">
+          <FeesTableHeader>
+            <FeesTableHead>Book</FeesTableHead>
+            <FeesTableHead>Borrower</FeesTableHead>
+            <FeesTableHead className="text-center">UID / Code</FeesTableHead>
+            <FeesTableHead className="text-center">Patron</FeesTableHead>
+            <FeesTableHead className="text-center">Due on</FeesTableHead>
+            <FeesTableHead className="text-center">Days overdue</FeesTableHead>
+          </FeesTableHeader>
+          <FeesTableBody>
+            {stats.longestOverdue.length === 0 ? (
+              <EmptyRow label="Nothing overdue" cols={6} />
+            ) : (
+              stats.longestOverdue.map((r) => (
+                <FeesTableRow key={r.circulationId}>
+                  <FeesTableCell className="max-w-[380px] truncate font-medium text-[#333]">
+                    {r.title}
+                  </FeesTableCell>
+                  <FeesTableCell>{r.userName ?? "—"}</FeesTableCell>
+                  <FeesTableCell className="text-center tabular-nums text-[#555]">
+                    {r.uid ?? "—"}
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center">
+                    <UserTypeBadge category={r.category} />
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center tabular-nums">
+                    {fmtDMY(r.dueDate) ?? r.dueDate}
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center font-semibold tabular-nums text-rose-700">
+                    {nfmt.format(r.daysOverdue)}
+                  </FeesTableCell>
+                </FeesTableRow>
+              ))
+            )}
+          </FeesTableBody>
+        </FeesTable>
+      </PanelCard>
     </div>
   );
 }
@@ -833,22 +1082,24 @@ function HoldingsTab({ stats }: { stats: LibraryDashboardStats }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {/* Red → green → orange → purple spread; the per-year bar chart
+            below wears orange to echo the warm end of the strip. */}
         <GradientStatCard
-          gradient={GRADIENTS.indigo}
+          gradient={GRADIENTS.rose}
           icon={BookOpen}
           label="Books"
           value={formatCompactIN(stats.totalBooks)}
           hint="catalogued titles"
         />
         <GradientStatCard
-          gradient={GRADIENTS.cyan}
+          gradient={GRADIENTS.emerald}
           icon={Boxes}
           label="Copies"
           value={formatCompactIN(stats.totalCopies)}
           hint="physical + e-copies"
         />
         <GradientStatCard
-          gradient={GRADIENTS.emerald}
+          gradient={GRADIENTS.amber}
           icon={BookMarked}
           label="Languages"
           value={formatCompactIN(stats.totalLanguages)}
@@ -885,7 +1136,7 @@ function HoldingsTab({ stats }: { stats: LibraryDashboardStats }) {
                   width={30}
                 />
                 <Tooltip cursor={{ fill: "#f1f5f9" }} />
-                <Bar dataKey="count" fill="#8b5cf6" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="count" fill="#f97316" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -1147,23 +1398,23 @@ function FootfallTab({ stats }: { stats: LibraryDashboardStats }) {
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <GradientStatCard
-          gradient={GRADIENTS.sky}
+          gradient={GRADIENTS.cyan}
           icon={UserRoundCheck}
           label="In library now"
           value={formatCompactIN(stats.currentlyInLibrary)}
           hint="checked in, not out"
         />
         <GradientStatCard
-          gradient={GRADIENTS.indigo}
+          gradient={GRADIENTS.violet}
           icon={Users}
-          label="Entries in range"
+          label="Visits in range"
           value={formatCompactIN(stats.entryExitByDay.reduce((a, r) => a + r.count, 0))}
-          hint="library visits"
+          hint="library entries"
         />
         <GradientStatCard
-          gradient={GRADIENTS.violet}
+          gradient={GRADIENTS.amber}
           icon={Clock}
-          label="Avg visit"
+          label="Avg time spent"
           value={stats.avgVisitMinutes > 0 ? `${stats.avgVisitMinutes.toFixed(0)} min` : "—"}
           hint="entry to exit"
         />
@@ -1188,17 +1439,17 @@ function FootfallTab({ stats }: { stats: LibraryDashboardStats }) {
                 width={40}
               />
               <Tooltip cursor={{ fill: "#f1f5f9" }} />
-              <Bar dataKey="entries" name="Entries" fill="#0ea5e9" radius={[3, 3, 0, 0]} />
-              <Bar dataKey="exits" name="Exits" fill="#a78bfa" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="entries" name="Entries" fill="#7c3aed" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="exits" name="Exits" fill="#f59e0b" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
           <div className="mt-2 flex items-center justify-center gap-4 text-[11px] text-slate-600">
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2 w-3 rounded-sm bg-[#0ea5e9]" />
+              <span className="inline-block h-2 w-3 rounded-sm bg-[#7c3aed]" />
               Entries
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2 w-3 rounded-sm bg-[#a78bfa]" />
+              <span className="inline-block h-2 w-3 rounded-sm bg-[#f59e0b]" />
               Exits
             </span>
           </div>
@@ -1230,8 +1481,10 @@ function FinesTab({ stats }: { stats: LibraryDashboardStats }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {/* Tile hues mirror the chart below: Collected = violet bars,
+            Waived = teal bars; Outstanding (no series) wears amber. */}
         <GradientStatCard
-          gradient={GRADIENTS.emerald}
+          gradient={GRADIENTS.violet}
           icon={IndianRupee}
           label="Collected"
           value={inrShort(stats.finesCollectedThisMonth)}
@@ -1245,7 +1498,7 @@ function FinesTab({ stats }: { stats: LibraryDashboardStats }) {
           hint="unpaid, not waived"
         />
         <GradientStatCard
-          gradient={GRADIENTS.violet}
+          gradient={GRADIENTS.cyan}
           icon={IndianRupee}
           label="Waived"
           value={inrShort(stats.finesWaivedThisMonth)}
@@ -1253,7 +1506,7 @@ function FinesTab({ stats }: { stats: LibraryDashboardStats }) {
         />
       </div>
 
-      <PanelCard title="Fines timeline">
+      <PanelCard title="Collected vs waived · per day">
         {timeline.length === 0 ? (
           <EmptyPanel label="No fine activity" />
         ) : (
@@ -1274,8 +1527,8 @@ function FinesTab({ stats }: { stats: LibraryDashboardStats }) {
                   width={40}
                 />
                 <Tooltip cursor={{ fill: "#f1f5f9" }} />
-                <Bar dataKey="collected" fill="#10b981" radius={[4, 4, 0, 0]} name="Collected" />
-                <Bar dataKey="waived" fill="#f59e0b" radius={[4, 4, 0, 0]} name="Waived" />
+                <Bar dataKey="collected" fill="#7c3aed" radius={[4, 4, 0, 0]} name="Collected" />
+                <Bar dataKey="waived" fill="#06b6d4" radius={[4, 4, 0, 0]} name="Waived" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -1474,132 +1727,6 @@ function PoliciesTab() {
  * `readLibrarySeedStatus` so as staff edit or delete rows the count drops
  * accordingly, and once nothing seeded remains the dialog stops opening.
  */
-function SeedInfoDialog() {
-  const { data } = useQuery({
-    queryKey: ["library-seed-status"],
-    queryFn: getLibrarySeedStatus,
-  });
-  const [open, setOpen] = useState(false);
-
-  const anyDefault =
-    (data?.defaultsPresent.defaultBranch ?? false) ||
-    (data?.defaultsPresent.seededPatronCategories ?? 0) > 0 ||
-    (data?.defaultsPresent.seededItemCategories ?? 0) > 0 ||
-    (data?.defaultsPresent.seededZones ?? 0) > 0 ||
-    (data?.defaultsPresent.seededPolicies ?? 0) > 0;
-
-  // Open once, when the status resolves and any seeded row still exists.
-  useEffect(() => {
-    if (data?.seedRan && anyDefault) setOpen(true);
-  }, [data?.seedRan, data?.ranAt, anyDefault]);
-
-  if (!data?.seedRan || !anyDefault) return null;
-
-  const items: Array<{ label: string; count: number | string; href: string }> = [
-    {
-      label: "Main branch",
-      count: data.defaultsPresent.defaultBranch ? "added" : "removed",
-      href: "/dashboard/library/branches",
-    },
-    {
-      label: "Patron categories",
-      count: data.defaultsPresent.seededPatronCategories,
-      href: "/dashboard/library/patron-categories",
-    },
-    {
-      label: "Item categories",
-      count: data.defaultsPresent.seededItemCategories,
-      href: "/dashboard/library/item-categories",
-    },
-    {
-      label: "Zones",
-      count: data.defaultsPresent.seededZones,
-      href: "/dashboard/library/zones",
-    },
-    {
-      label: "Circulation rules",
-      count: data.defaultsPresent.seededPolicies,
-      href: "/dashboard/library/circulation-policies",
-    },
-  ];
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-amber-800">
-            <AlertTriangle className="h-5 w-5" />
-            Please review the default library settings
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-3 text-sm text-slate-700">
-          <p>
-            To get the library module running, we added a starter set of branches, patron
-            categories, item categories, zones and circulation rules.{" "}
-            <strong>The fine per day is set to ₹0 in every rule</strong>, so nothing will be charged
-            by accident. Please review and update these before you go live — your books, copies and
-            loans will stay attached to whatever you rename.
-          </p>
-          <div className="overflow-hidden rounded-md border border-[#a0a0a0]">
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-[#a0a0a0] bg-[#f0f0f0]">
-                  <th className="border-r border-[#b8b8b8] px-3 py-2 text-left text-xs font-semibold text-[#1a1a1a]">
-                    Item
-                  </th>
-                  <th className="border-r border-[#b8b8b8] px-3 py-2 text-right text-xs font-semibold text-[#1a1a1a]">
-                    Starter rows
-                  </th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold text-[#1a1a1a]">
-                    Review
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((i, idx) => (
-                  <tr
-                    key={i.label}
-                    className={idx < items.length - 1 ? "border-b border-[#c8c8c8]" : ""}
-                  >
-                    <td className="border-r border-[#b8b8b8] px-3 py-2 text-slate-700">
-                      {i.label}
-                    </td>
-                    <td className="border-r border-[#b8b8b8] px-3 py-2 text-right font-semibold tabular-nums text-slate-900">
-                      {typeof i.count === "number" ? nfmt.format(i.count) : i.count}
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <Link
-                        to={i.href}
-                        onClick={() => setOpen(false)}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-indigo-700 hover:underline"
-                      >
-                        Open <ExternalLink className="h-3 w-3" />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {data.ranAt && (
-            <p className="text-[11px] text-slate-500">
-              Set up on {new Date(data.ranAt).toLocaleString()}. This message will stop appearing
-              once you have edited or replaced these items.
-            </p>
-          )}
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" className="h-8" onClick={() => setOpen(false)}>
-            Got it
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 // ── Filters dialog ───────────────────────────────────────────────────────────
 
 function FiltersDialog({
@@ -1741,6 +1868,17 @@ export default function LibraryDashboard() {
     keepPreviousData: true,
   });
 
+  // Second stats fetch for the Overview trend charts, padded to ≥7 days.
+  // When the applied range already spans 7+ days, `widenRangeForCharts`
+  // returns the same object, the query keys match and react-query serves
+  // the same cache entry — no duplicate request.
+  const chartApplied = useMemo(() => widenRangeForCharts(applied), [applied]);
+  const { data: chartStats } = useQuery({
+    queryKey: ["library-dashboard-stats", chartApplied],
+    queryFn: async () => (await getLibraryDashboardStats(chartApplied)).payload!,
+    keepPreviousData: true,
+  });
+
   const [loadBanner, setLoadBanner] = useState<null | {
     label: string;
     loaded: number;
@@ -1854,11 +1992,14 @@ export default function LibraryDashboard() {
           uses it. Inline h1 keeps the module family consistent. */}
       <header className="border-b border-[#d1d1d1] bg-gradient-to-r from-[#f5f3ff] via-[#faf5ff] to-white">
         <div className="flex flex-col gap-3 px-4 py-3 pb-1 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="flex items-center gap-2 text-xl font-bold text-[#1a1a1a]">
+          <div className="flex min-w-0 items-center gap-3">
+            <h1 className="flex shrink-0 items-center gap-2 text-xl font-bold text-[#1a1a1a]">
               <LayoutDashboard className="h-5 w-5 text-[#7c3aed]" />
               Library dashboard
             </h1>
+            {/* Compact sync pill lives beside the title (was a full-width
+                banner row); hover it for the detailed sentence. */}
+            <LibrarySyncBanner />
           </div>
           <Button
             size="sm"
@@ -1877,10 +2018,6 @@ export default function LibraryDashboard() {
             )}
           </Button>
         </div>
-
-        <SeedInfoDialog />
-
-        <LibrarySyncBanner />
 
         {loadBanner && loadBanner.percent < 100 && (
           // Amber / progress-orange — distinct from the purple module accent
@@ -1992,7 +2129,11 @@ export default function LibraryDashboard() {
               ) : (
                 <>
                   <TabsContent value="overview" className="mt-0 focus-visible:outline-none">
-                    <OverviewTab stats={stats} applied={applied} />
+                    <OverviewTab
+                      stats={stats}
+                      chartStats={chartStats ?? stats}
+                      chartApplied={chartApplied}
+                    />
                   </TabsContent>
                   <TabsContent value="circulation" className="mt-0 focus-visible:outline-none">
                     <CirculationTab stats={stats} />

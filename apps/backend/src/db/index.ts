@@ -105,15 +105,18 @@ export const connectToDatabase = async () => {
       log.warn("Boot migrations orchestrator threw", { error: err }),
     );
 
-    // TEMPORARILY DISABLED 2026-08-10 (ADR 0034): the 10-min delta sync
-    // competes for DB connections with the excel-UID importer. Kept off
-    // together with the boot-load in boot-migrations.ts. Re-enable by
-    // uncommenting once the timeout fix is proven stable in prod.
-    // import("@/features/library/services/library-legacy-sync.service.js")
-    //   .then(({ startLibrarySyncScheduler }) => startLibrarySyncScheduler())
-    //   .catch((err) =>
-    //     log.warn("Library sync scheduler failed to start", { error: err }),
-    //   );
+    // Library legacy data is loaded ONCE via the marker-gated
+    // `library-legacy-load` boot migration (see db/boot-migrations.ts).
+    //
+    // The recurring 10-minute delta-sync scheduler is intentionally NOT
+    // started: it does a blanket full-column overwrite of every legacy-sourced
+    // row on every tick, which would revert any edits admin/staff make in the
+    // new system (renamed book, changed copy status, edited patron, etc.) and
+    // pins a full CPU core (a tick over the full IRP dataset runs for hours).
+    // Requirement (Harsh, 2026-08-15): load old data once, then no background
+    // sync. Re-enable this only if a change-aware, non-clobbering sync is built.
+    //   import("@/features/library/services/library-legacy-sync.service.js")
+    //     .then(({ startLibrarySyncScheduler }) => startLibrarySyncScheduler());
   } catch (error) {
     log.debug(process.env.DATABASE_URL ?? "DATABASE_URL not set");
     log.error("Failed to connect to the database ⚠", { error });

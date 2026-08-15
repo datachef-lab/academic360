@@ -33,6 +33,7 @@ import {
   classModel,
   languageMediumModel,
   programCourseModel,
+  sessionModel,
   staffModel,
   studentModel,
   subjectGroupingMainModel,
@@ -514,7 +515,7 @@ async function getSubjectGroupByOldId(oldSubjectGroupId: number | null) {
   const [academicYear] = await db
     .select()
     .from(academicYearModel)
-    .where(eq(academicYearModel.year, "2025-26"));
+    .where(eq(academicYearModel.isCurrentYear, true));
   if (!academicYear) return null;
 
   const payload = {
@@ -536,6 +537,34 @@ async function getSubjectGroupByOldId(oldSubjectGroupId: number | null) {
   return (
     await db.insert(subjectGroupingMainModel).values(payload).returning()
   )[0];
+}
+
+let sessionDateRangesPromise: Promise<
+  { from: string; to: string; academicYearId: number | null }[]
+> | null = null;
+
+async function loadSessionDateRanges() {
+  if (!sessionDateRangesPromise) {
+    sessionDateRangesPromise = db
+      .select({
+        from: sessionModel.from,
+        to: sessionModel.to,
+        academicYearId: sessionModel.academicYearId,
+      })
+      .from(sessionModel);
+  }
+  return sessionDateRangesPromise;
+}
+
+async function resolveAcademicYearIdForDate(
+  date: Date | null,
+): Promise<number | null> {
+  if (!date) return null;
+  const ymd = toYmdFromDate(date);
+  if (!ymd) return null;
+  const ranges = await loadSessionDateRanges();
+  const hit = ranges.find((r) => ymd >= r.from && ymd <= r.to);
+  return hit?.academicYearId ?? null;
 }
 
 async function getEnclosureByOldId(oldEnclosureId: number | null) {
@@ -1138,8 +1167,7 @@ async function getUserByOldId(oldStaffId: number | null) {
     "staffpersonaldetails",
     oldStaffId,
   );
-  // The old destructuring typed this as always-present, so a legacy staff id
-  // with no row reached upsertUser and threw. It is a skip, not a crash.
+
   if (!oldStaff) return;
 
   return upsertUser(oldStaff, "STAFF");
@@ -1152,10 +1180,12 @@ async function getBookByOldId(oldBookId: number | null) {
 
   if (!oldBook) return null;
 
-  const createdAt = parseMysqlAsIst(oldBook.entryDate) ?? new Date();
+  const entryDate = parseMysqlAsIst(oldBook.entryDate);
+  const createdAt = entryDate ?? new Date();
   const updatedAt = parseMysqlAsIst(oldBook.modifedDate) ?? new Date();
 
   const payload = {
+    academicYearId: await resolveAcademicYearIdForDate(entryDate),
     title: oldBook.mainTitle,
     alternateTitle: oldBook.alternateTitle,
     backCover: oldBook.backCover,
@@ -1526,17 +1556,25 @@ const IST_OFFSET = "+05:30";
  * Legacy sometimes stores counts as free text (e.g. "1032p."). Postgres integer
  * columns must get a real int or null/default.
  */
+// Postgres int4 bounds. Legacy numeric fields carry garbage like a full ISBN
+// ("9781853264184" in noOfPages) that parses fine in JS but overflows int4 and
+// kills the whole row's insert — out-of-range values are treated as absent.
+const INT4_MIN = -2147483648;
+const INT4_MAX = 2147483647;
+
 function parseLegacyOptionalInt(value: unknown): number | null {
+  const clamp = (n: number): number | null =>
+    n >= INT4_MIN && n <= INT4_MAX ? n : null;
   if (value == null) return null;
   if (typeof value === "number" && Number.isFinite(value)) {
-    return Math.trunc(value);
+    return clamp(Math.trunc(value));
   }
   const s = String(value).trim();
   if (!s) return null;
   const m = s.match(/-?\d+/);
   if (!m) return null;
   const n = Number.parseInt(m[0], 10);
-  return Number.isNaN(n) ? null : n;
+  return Number.isNaN(n) ? null : clamp(n);
 }
 
 function pad2(n: number): string {
@@ -1565,9 +1603,10 @@ function parseMysqlAsIst(value: Date | string | null | undefined): Date | null {
   if (value == null) return null;
   if (value instanceof Date) {
     if (Number.isNaN(value.getTime())) return null;
-    return new Date(
+    const fromDate = new Date(
       `${toYmdFromDate(value)}T${pad2(value.getHours())}:${pad2(value.getMinutes())}:${pad2(value.getSeconds())}${IST_OFFSET}`,
     );
+    return Number.isNaN(fromDate.getTime()) ? null : fromDate;
   }
   const trimmed = String(value).trim();
   if (!trimmed) return null;
@@ -1582,9 +1621,13 @@ function parseMysqlAsIst(value: Date | string | null | undefined): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return null;
   const timePart = (timeRaw || "00:00:00").replace(/\.\d+$/, "").slice(0, 8);
   const [h = "0", m = "0", s = "0"] = timePart.split(":");
-  return new Date(
+  const parsed = new Date(
     `${datePart}T${pad2(Number(h))}:${pad2(Number(m))}:${pad2(Number(s))}${IST_OFFSET}`,
   );
+  // MySQL zero-dates ("0000-00-00 00:00:00") pass the shape regex but produce
+  // an Invalid Date, which is truthy — it then flows into inserts and only
+  // blows up at serialization ("Invalid time value"). Treat as absent.
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 /** Calendar date string for Postgres `date` columns (day in Asia/Kolkata). */

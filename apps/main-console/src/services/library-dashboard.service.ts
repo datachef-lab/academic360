@@ -20,9 +20,16 @@ export type LibraryDashboardStats = {
     userName: string | null;
     issueCount: number;
   }>;
-  dailyIssuesLast14: Array<{ day: string; issues: number; reissues: number; count: number }>;
+  dailyIssuesLast14: Array<{
+    day: string;
+    issues: number;
+    reissues: number;
+    returns: number;
+    count: number;
+  }>;
   copiesByStatus: Array<{ statusId: number | null; statusName: string; count: number }>;
   entryExitByDay: Array<{ day: string; count: number }>;
+  entryExitByDayByCategory: Array<{ day: string; category: string; count: number }>;
 
   currentlyInLibrary: number;
   reissueCount: number;
@@ -30,6 +37,24 @@ export type LibraryDashboardStats = {
   finesWaivedThisMonth: number;
   avgLoanDays: number;
   overdueAgeing: Array<{ bucket: "0-7" | "8-30" | ">30"; count: number }>;
+  reissueCountAllTime: number;
+  overdueByPatron: Array<{
+    userId: number;
+    userName: string | null;
+    uid: string | null;
+    category: string;
+    count: number;
+  }>;
+  longestOverdue: Array<{
+    circulationId: number;
+    title: string;
+    userName: string | null;
+    uid: string | null;
+    category: string;
+    dueDate: string;
+    daysOverdue: number;
+  }>;
+  openLoansByCategory: Array<{ category: string; count: number }>;
 
   booksByLanguage: Array<{ language: string; count: number }>;
   booksByPublisher: Array<{ publisher: string; count: number }>;
