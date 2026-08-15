@@ -5,9 +5,13 @@ import {
   type ExamDashboardFilters,
 } from "../services/exam-dashboard.service";
 
-function optId(v: unknown): number | undefined {
-  const n = Number(v);
-  return Number.isFinite(n) && n > 0 ? n : undefined;
+/** Parse a repeated or CSV query param into a positive-int array. */
+function optIds(v: unknown): number[] | undefined {
+  const raw = Array.isArray(v) ? v : typeof v === "string" ? v.split(",") : [];
+  const nums = raw
+    .map((x) => Number(x))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  return nums.length ? nums : undefined;
 }
 
 function optDate(v: unknown): Date | undefined {
@@ -23,9 +27,12 @@ export const getExamDashboardStatsController = async (
 ): Promise<void> => {
   try {
     const filters: ExamDashboardFilters = {
-      academicYearId: optId(req.query.academicYearId),
-      examTypeId: optId(req.query.examTypeId),
-      classId: optId(req.query.classId),
+      academicYearIds: optIds(req.query.academicYearIds),
+      examTypeIds: optIds(req.query.examTypeIds),
+      classIds: optIds(req.query.classIds),
+      shiftIds: optIds(req.query.shiftIds),
+      programCourseIds: optIds(req.query.programCourseIds),
+      subjectTypeIds: optIds(req.query.subjectTypeIds),
       dateFrom: optDate(req.query.dateFrom),
       dateTo: optDate(req.query.dateTo),
     };
