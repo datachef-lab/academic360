@@ -6,6 +6,7 @@ import JSZip from "jszip";
 import * as paperServices from "@/features/course-design/services/paper.service";
 import { getPaperComponentById } from "@/features/course-design/services/paper-component.service";
 import { findExamComponentById } from "@/features/course-design/services/exam-component.service";
+import { emitExamDashboardUpdate } from "../middlewares/exam-broadcast.middleware";
 import { studentModel, userModel } from "@repo/db/schemas/models/user";
 import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model";
 import {
@@ -4740,6 +4741,10 @@ export async function downloadSingleAdmitCard(
         admitCardDownloadCount: sql`COALESCE(${examCandidateModel.admitCardDownloadCount}, 0) + 1`,
       })
       .where(eq(examCandidateModel.id, firstCandidateId));
+
+    // This GET mutates download tracking, so the broadcast middleware (non-GET
+    // only) never sees it — emit the dashboard hint here instead.
+    emitExamDashboardUpdate({ resource: "admit-card-download", method: "GET" });
   }
 
   return pdfBuffer;

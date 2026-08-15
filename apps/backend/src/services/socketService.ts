@@ -395,6 +395,24 @@ class SocketService {
         }
       });
 
+      socket.on("subscribe_exam_dashboard", () => {
+        try {
+          socket.join("exam_dashboard");
+          log.debug(`Socket ${socket.id} joined room: exam_dashboard`);
+        } catch (error) {
+          log.error("Error subscribing to exam dashboard room", { error });
+        }
+      });
+
+      socket.on("unsubscribe_exam_dashboard", () => {
+        try {
+          socket.leave("exam_dashboard");
+          log.debug(`Socket ${socket.id} left room: exam_dashboard`);
+        } catch (error) {
+          log.error("Error unsubscribing from exam dashboard room", { error });
+        }
+      });
+
       socket.on("subscribe_notifications_dashboard", () => {
         try {
           socket.join("notifications_dashboard");

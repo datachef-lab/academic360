@@ -214,7 +214,9 @@ import {
 import {
   admitCardRouter,
   examGroupRouter,
+  examDashboardRouter,
 } from "./features/exams/routes/index.js";
+import { examBroadcastMiddleware } from "./features/exams/middlewares/exam-broadcast.middleware.js";
 import libraryEntryExitRouter from "@/features/library/routes/library-entry-exit.route.js";
 import bookCirculationRouter from "@/features/library/routes/book-circulation.route.js";
 import journalRouter from "@/features/library/routes/journal.route.js";
@@ -758,6 +760,14 @@ app.use("/api/v1/fees", feesRouter);
 app.use("/api/v1/bulk-data-uploads", bulkDataUploadsRouter);
 app.use("/api/v1/courses", courseRouter);
 // app.use("/api/v1/fees/receipt-types", feesReceiptTypeRouter);
+// Every successful non-GET under the exam prefixes fires
+// `exam:dashboard:updated` so the exam dashboard live-refreshes on any
+// scheduling / allotment / distribution / master change (same recipe as the
+// library broadcast middleware below).
+app.use("/api/exams", examBroadcastMiddleware);
+app.use("/api/exam-groups", examBroadcastMiddleware);
+app.use("/api/admit-card", examBroadcastMiddleware);
+app.use("/api/exams/dashboard", examDashboardRouter);
 app.use("/api/exams/floors", floorRouter);
 app.use("/api/exams/rooms", roomRouter);
 app.use("/api/exams/exam-types", examTypeRouter);
