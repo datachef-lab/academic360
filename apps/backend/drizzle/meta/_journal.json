@@ -1289,6 +1289,13 @@
       "when": 1786701133485,
       "tag": "0193_library_fines_policy",
       "breakpoints": true
+    },
+    {
+      "idx": 190,
+      "version": "7",
+      "when": 1786701133486,
+      "tag": "0194_library_legacy_sync_watermark",
+      "breakpoints": true
     }
   ]
 }
