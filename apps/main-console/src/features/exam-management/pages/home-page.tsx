@@ -1,812 +1,1790 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import type { ComponentProps } from "react";
+import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-  ChartConfig,
-} from "@/components/ui/chart";
-import {
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  AreaChart,
   Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
 } from "recharts";
 import {
-  Calendar,
-  Users,
   Building2,
-  DoorOpen,
-  FileText,
+  CalendarDays,
+  ClipboardCheck,
+  ClipboardList,
   Clock,
-  CheckCircle,
-  TrendingUp,
-  BookOpen,
+  Download,
+  FileCheck2,
+  FileClock,
+  Filter,
   GraduationCap,
-  Star,
-  Award,
+  Layers,
+  LayoutDashboard,
+  Loader2,
+  MapPin,
+  Printer,
+  UserCheck,
+  Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { MultiSelect as AdvancedMultiSelect } from "@/components/ui/AdvancedMultiSelect";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { GradientStatCard } from "@/features/notifications/components/gradient-stat-card";
+import { VisualCard } from "@/features/fees-dashboard/components/VisualCard";
+import { CompactPanel } from "@/features/fees-dashboard/components/CompactPanel";
+import { LiveUpdatesBadge } from "@/features/fees-dashboard/components/LiveUpdatesBadge";
+import { formatCompactIN } from "@/features/notifications/utils/format";
+import {
+  FeesTable,
+  FeesTableBody,
+  FeesTableCell,
+  FeesTableHead,
+  FeesTableHeader,
+  FeesTableRow,
+} from "@/features/fees-dashboard/components/FeesTable";
+import { cn } from "@/lib/utils";
+import { useAcademicYear } from "@/hooks/useAcademicYear";
+import { getAllExamTypes } from "@/services/exam-type.service";
+import { getAllClasses } from "@/services/classes.service";
+import { getAllShifts } from "@/services/academic";
+import {
+  getAffiliations,
+  getProgramCourseDtos,
+  getRegulationTypes,
+  getStreams,
+  getSubjectTypes,
+} from "@/services/course-design.api";
+import { formatSemesterClassOptionLabel } from "@/features/fees-dashboard/utils/semester-display";
+import type { Class } from "@/types/academics/class";
+import type { Shift } from "@/types/academics/shift";
+import type { ProgramCourseDto } from "@repo/db/dtos/course-design";
+import type { ExamTypeT } from "@repo/db/schemas/models/exams";
+import {
+  getExamDashboardStats,
+  type ExamDashboardFilters,
+  type ExamDashboardStats,
+} from "@/services/exam-dashboard.service";
+import { useExamDashboardRealtime } from "../hooks/useExamDashboardRealtime";
 
-// Dummy data for the dashboard
-const examSummaryData = {
-  totalExams: 24,
-  upcomingExams: 8,
-  completedExams: 16,
-  totalStudents: 1245,
-  totalRooms: 45,
-  totalFloors: 5,
-  averageStudentsPerExam: 52,
-  examsThisMonth: 12,
+// ── Tabs & filters ───────────────────────────────────────────────────────────
+
+const DASHBOARD_TABS = [
+  { value: "overview", label: "Overview" },
+  { value: "resources", label: "Resources" },
+  { value: "admitcards", label: "Admit cards" },
+  { value: "formfillup", label: "Form fill-up" },
+] as const;
+
+const RANGE_PRESETS = [
+  // "All time" is the default — exams are sparse (a handful of groups per
+  // term), so a "today" default would open on an empty dashboard. Tighter
+  // windows are one click away.
+  { value: "all", label: "All time", days: null as number | null },
+  { value: "7d", label: "Last 7 days", days: 7 },
+  { value: "30d", label: "Last 30 days", days: 30 },
+  { value: "90d", label: "Last 90 days", days: 90 },
+  { value: "month", label: "This month", days: null as number | null },
+  { value: "custom", label: "Custom", days: null as number | null },
+] as const;
+
+type RangePreset = (typeof RANGE_PRESETS)[number]["value"];
+
+type DraftFilters = {
+  preset: RangePreset;
+  dateFrom: string | null;
+  dateTo: string | null;
+  academicYearIds: string[];
+  examTypeIds: string[];
+  classIds: string[];
+  shiftIds: string[];
+  /** Cascade-only: narrow the programme-course options, never sent. */
+  streamIds: string[];
+  affiliationIds: string[];
+  regulationTypeIds: string[];
+  programCourseIds: string[];
+  subjectTypeIds: string[];
 };
 
-// Exams scheduled over time (last 6 months)
-const examsOverTimeData = [
-  { month: "Jan", scheduled: 3, completed: 2 },
-  { month: "Feb", scheduled: 4, completed: 3 },
-  { month: "Mar", scheduled: 5, completed: 4 },
-  { month: "Apr", scheduled: 6, completed: 5 },
-  { month: "May", scheduled: 4, completed: 2 },
-  { month: "Jun", scheduled: 2, completed: 0 },
-];
+const DEFAULT_DRAFT: DraftFilters = {
+  preset: "all",
+  dateFrom: null,
+  dateTo: null,
+  academicYearIds: [],
+  examTypeIds: [],
+  classIds: [],
+  shiftIds: [],
+  streamIds: [],
+  affiliationIds: [],
+  regulationTypeIds: [],
+  programCourseIds: [],
+  subjectTypeIds: [],
+};
 
-const examsOverTimeConfig = {
-  scheduled: { label: "Scheduled", color: "hsl(var(--chart-1))" },
-  completed: { label: "Completed", color: "hsl(var(--chart-2))" },
-} satisfies ChartConfig;
+function resolveRange(preset: RangePreset, fromRaw?: string | null, toRaw?: string | null) {
+  const now = new Date();
+  const to = new Date(now);
+  let from = new Date(now);
+  if (preset === "all") return { dateFrom: null, dateTo: null };
+  if (preset === "month") {
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else if (preset === "custom") {
+    return { dateFrom: fromRaw ?? null, dateTo: toRaw ?? null };
+  } else {
+    const days = RANGE_PRESETS.find((r) => r.value === preset)?.days ?? 30;
+    from.setDate(from.getDate() - (days ?? 30));
+  }
+  return { dateFrom: from.toISOString(), dateTo: to.toISOString() };
+}
 
-// Students assigned per exam
-const studentsPerExamData = [
-  { exam: "Mid-Term Exam", students: 145, date: "2024-06-15" },
-  { exam: "Final Exam", students: 320, date: "2024-06-20" },
-  { exam: "Quiz 1", students: 89, date: "2024-06-10" },
-  { exam: "Assignment", students: 156, date: "2024-06-12" },
-  { exam: "Practical", students: 67, date: "2024-06-18" },
-  { exam: "Viva", students: 234, date: "2024-06-22" },
-];
+// ── Formatters ───────────────────────────────────────────────────────────────
 
-// Floor distribution
-const floorDistributionData = [
-  { floor: "Ground Floor", exams: 8, capacity: 450, usageCount: 45 },
-  { floor: "1st Floor", exams: 6, capacity: 380, usageCount: 32 },
-  { floor: "2nd Floor", exams: 5, capacity: 320, usageCount: 28 },
-  { floor: "3rd Floor", exams: 4, capacity: 280, usageCount: 18 },
-  { floor: "4th Floor", exams: 1, capacity: 150, usageCount: 5 },
-];
+const nfmt = new Intl.NumberFormat("en-IN");
 
-// Find most used floor
-const mostUsedFloor = floorDistributionData.reduce((prev, current) =>
-  prev.usageCount > current.usageCount ? prev : current,
-);
+function fmtDay(d: string) {
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return d;
+  return dt.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+}
 
-const floorConfig = {
-  exams: { label: "Exams", color: "hsl(var(--chart-1))" },
-  capacity: { label: "Capacity", color: "hsl(var(--chart-2))" },
-} satisfies ChartConfig;
+function fmtDayYear(d: string) {
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return d;
+  return dt.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
 
-// Room type distribution
-const roomTypeData = [
-  { name: "Lecture Hall", value: 12, color: "#8884d8" },
-  { name: "Lab", value: 8, color: "#82ca9d" },
-  { name: "Seminar Room", value: 15, color: "#ffc658" },
-  { name: "Conference Room", value: 5, color: "#ff7300" },
-  { name: "Auditorium", value: 5, color: "#00ff00" },
-];
+/** "2026-03" → "Mar 2026" for the papers-per-month axis. */
+function fmtMonth(m: string) {
+  const dt = new Date(`${m}-01T00:00:00`);
+  if (Number.isNaN(dt.getTime())) return m;
+  return dt.toLocaleDateString("en-IN", { month: "short", year: "numeric" });
+}
 
-// Exam type distribution
-const examTypeData = [
-  { type: "Mid-Term", count: 8, students: 420 },
-  { type: "Final", count: 6, students: 680 },
-  { type: "Quiz", count: 5, students: 245 },
-  { type: "Practical", count: 3, students: 156 },
-  { type: "Viva", count: 2, students: 98 },
-];
+/** "SEMESTER II" → "II" — the tables/tooltips label the column, so the
+ *  word itself is noise. */
+function shortClass(name: string | null | undefined): string {
+  if (!name) return "—";
+  return name.replace(/semester/gi, "").trim() || name;
+}
 
-const examTypeConfig = {
-  count: { label: "Exams", color: "hsl(var(--chart-1))" },
-  students: { label: "Students", color: "hsl(var(--chart-2))" },
-} satisfies ChartConfig;
+/** dd/mm/yyyy for a single date string — used in chart titles and tables. */
+function fmtDMY(d: string | Date | null | undefined): string | null {
+  if (!d) return null;
+  const dt = d instanceof Date ? d : new Date(d);
+  if (Number.isNaN(dt.getTime())) return null;
+  const dd = String(dt.getDate()).padStart(2, "0");
+  const mm = String(dt.getMonth() + 1).padStart(2, "0");
+  return `${dd}/${mm}/${dt.getFullYear()}`;
+}
 
-// Upcoming exams timeline
-const upcomingExamsData = [
-  { date: "2024-06-10", name: "Mathematics Mid-Term", students: 145, rooms: 3 },
-  { date: "2024-06-12", name: "Physics Quiz", students: 89, rooms: 2 },
-  { date: "2024-06-15", name: "Chemistry Final", students: 320, rooms: 5 },
-  { date: "2024-06-18", name: "Biology Practical", students: 67, rooms: 1 },
-  { date: "2024-06-20", name: "Computer Science Final", students: 234, rooms: 4 },
-];
+function fmtDateTimeIST(iso: string) {
+  const dt = new Date(iso);
+  if (Number.isNaN(dt.getTime())) return iso;
+  return dt.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "Asia/Kolkata",
+  });
+}
 
-// Room utilization with usage frequency
-const roomUtilizationData = [
-  {
-    room: "LH-101",
-    capacity: 60,
-    assigned: 58,
-    utilization: 97,
-    usageCount: 42,
-    floor: "Ground Floor",
-  },
-  {
-    room: "LH-102",
-    capacity: 60,
-    assigned: 45,
-    utilization: 75,
-    usageCount: 38,
-    floor: "Ground Floor",
-  },
-  {
-    room: "LAB-A",
-    capacity: 40,
-    assigned: 38,
-    utilization: 95,
-    usageCount: 35,
-    floor: "1st Floor",
-  },
-  {
-    room: "LAB-B",
-    capacity: 40,
-    assigned: 32,
-    utilization: 80,
-    usageCount: 28,
-    floor: "1st Floor",
-  },
-  {
-    room: "SR-201",
-    capacity: 30,
-    assigned: 28,
-    utilization: 93,
-    usageCount: 32,
-    floor: "2nd Floor",
-  },
-  {
-    room: "SR-202",
-    capacity: 30,
-    assigned: 25,
-    utilization: 83,
-    usageCount: 25,
-    floor: "2nd Floor",
-  },
-  {
-    room: "LH-201",
-    capacity: 60,
-    assigned: 55,
-    utilization: 92,
-    usageCount: 40,
-    floor: "1st Floor",
-  },
-  {
-    room: "AUD-301",
-    capacity: 150,
-    assigned: 145,
-    utilization: 97,
-    usageCount: 45,
-    floor: "Ground Floor",
-  },
-];
+/** Human range for a chart title — same helper as the library dashboard: the
+ *  explicit filter window when set, otherwise the data's own extent. */
+function formatDateRangeDMY(
+  dateFrom: string | null | undefined,
+  dateTo: string | null | undefined,
+  opts: { fallback?: string; entryDays?: Array<{ day: string }> } = {},
+): string {
+  const fromLbl = fmtDMY(dateFrom);
+  const toLbl = fmtDMY(dateTo);
+  if (fromLbl && toLbl) return `${fromLbl} – ${toLbl}`;
+  if (fromLbl) return `from ${fromLbl}`;
+  if (toLbl) return `until ${toLbl}`;
+  const days = (opts.entryDays ?? [])
+    .map((r) => r.day)
+    .filter((d): d is string => typeof d === "string" && d.length > 0)
+    .sort();
+  if (days.length >= 1) {
+    const a = fmtDMY(days[0]);
+    const b = fmtDMY(days[days.length - 1]);
+    if (a && b) return a === b ? a : `${a} – ${b}`;
+  }
+  return opts.fallback ?? "all time";
+}
 
-// Find most used rooms (top 3)
-const mostUsedRooms = [...roomUtilizationData]
-  .sort((a, b) => b.usageCount - a.usageCount)
-  .slice(0, 3);
+function spansMultipleYears(rows: Array<{ day: string }>): boolean {
+  const years = new Set<number>();
+  for (const r of rows) {
+    const y = new Date(r.day).getFullYear();
+    if (Number.isFinite(y)) years.add(y);
+  }
+  return years.size > 1;
+}
 
-const roomUtilizationConfig = {
-  capacity: { label: "Capacity", color: "hsl(var(--chart-1))" },
-  assigned: { label: "Assigned", color: "hsl(var(--chart-2))" },
-} satisfies ChartConfig;
+/**
+ * Merge one-or-more day-keyed series onto a union day axis, binning to ISO
+ * weeks past ~4 months of distinct days (same reasoning as the library visits
+ * chart — a multi-month daily series reads as noise at dashboard width).
+ */
+function mergeDailySeries(
+  series: Array<{ key: string; rows: Array<{ day: string; count: number }> }>,
+): { data: Array<Record<string, number | string>>; weekly: boolean } {
+  const allDays = new Set<string>();
+  for (const s of series) for (const r of s.rows) allDays.add(r.day);
+  const weekly = allDays.size > 120;
+  const includeYear = spansMultipleYears(Array.from(allDays).map((day) => ({ day })));
+  const fmt = (d: string) => (includeYear ? fmtDayYear(d) : fmtDay(d));
+  const keyOf = (day: string) => {
+    if (!weekly) return day;
+    const dt = new Date(day);
+    if (Number.isNaN(dt.getTime())) return day;
+    dt.setDate(dt.getDate() - dt.getDay());
+    return dt.toISOString().slice(0, 10);
+  };
 
-// Stat Card Component
-function StatCard({
-  icon,
-  title,
-  value,
-  description,
-  trend,
-  color,
+  const byKey = new Map<string, Record<string, number | string>>();
+  for (const s of series) {
+    for (const r of s.rows) {
+      const k = keyOf(r.day);
+      let row = byKey.get(k);
+      if (!row) {
+        row = { date: fmt(k) };
+        for (const other of series) row[other.key] = 0;
+        byKey.set(k, row);
+      }
+      row[s.key] = ((row[s.key] as number) ?? 0) + r.count;
+    }
+  }
+  const data = Array.from(byKey.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, v]) => v);
+  return { data, weekly };
+}
+
+// ── Shared visual bits ───────────────────────────────────────────────────────
+
+/** Gradient palette matching the notifications / library dashboards — same
+ *  visual system across the console so the exam tiles read as one product. */
+const GRADIENTS = {
+  emerald: "from-[#047857] via-[#059669] to-[#10b981]",
+  amber: "from-[#b45309] via-[#d97706] to-[#f59e0b]",
+  rose: "from-[#b91c1c] via-[#dc2626] to-[#ef4444]",
+  violet: "from-[#5b21b6] via-[#7c3aed] to-[#8b5cf6]",
+  cyan: "from-[#0e7490] via-[#0891b2] to-[#06b6d4]",
+  sky: "from-[#1d4ed8] via-[#2563eb] to-[#3b82f6]",
+} as const;
+
+/** Generic multi-series tooltip — same white card as the notifications and
+ *  library trend tooltips, one row per series. */
+function MultiSeriesTooltip({
+  active,
+  payload,
+  label,
 }: {
-  icon: React.ReactNode;
-  title: string;
-  value: string | number;
-  description?: string;
-  trend?: { value: number; isPositive: boolean };
-  color?: string;
+  active?: boolean;
+  payload?: Array<{
+    name?: string;
+    value?: number;
+    stroke?: string;
+    color?: string;
+    fill?: string;
+  }>;
+  label?: string;
 }) {
+  if (!active || !payload?.length) return null;
   return (
-    <Card className="relative overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className={`${color || "text-muted-foreground"}`}>{icon}</div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
-        {trend && (
-          <div
-            className={`flex items-center text-xs mt-2 ${trend.isPositive ? "text-green-600" : "text-red-600"}`}
-          >
-            <TrendingUp className={`h-3 w-3 mr-1 ${!trend.isPositive && "rotate-180"}`} />
-            {Math.abs(trend.value)}% from last month
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <div className="grid min-w-[9rem] gap-1.5 rounded-lg border border-[#d4d4d4] bg-white px-2.5 py-2 text-xs shadow-md">
+      <p className="font-semibold text-[#1a1a1a]">{label}</p>
+      {payload.map((p) => (
+        <div key={p.name} className="flex items-center justify-between gap-4">
+          <span className="flex items-center gap-1.5 text-[#444]">
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: p.stroke ?? p.color ?? p.fill }}
+            />
+            {p.name}
+          </span>
+          <span className="font-mono font-medium tabular-nums text-[#1a1a1a]">
+            {nfmt.format(p.value ?? 0)}
+          </span>
+        </div>
+      ))}
+    </div>
   );
 }
 
-export default function HomePage() {
+function ChartLegendDots({ items }: { items: Array<{ label: string; color: string }> }) {
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Exam Management Dashboard</h1>
-          <p className="text-muted-foreground">
-            Overview of exam schedules, students, and resources
-          </p>
-        </div>
+    <div className="mt-1 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] text-slate-600">
+      {items.map((it) => (
+        <span key={it.label} className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: it.color }} />
+          {it.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function EmptyPanel({ label }: { label: string }) {
+  return (
+    <div className="flex h-[220px] items-center justify-center text-sm text-muted-foreground">
+      {label}
+    </div>
+  );
+}
+
+/** Set true once at least one socket event has fired this session — panels
+ *  flash on socket-triggered remounts only, never on first paint. */
+const ExamFlashContext = createContext(false);
+
+function PanelCard(props: ComponentProps<typeof VisualCard>) {
+  const shouldFlash = useContext(ExamFlashContext);
+  return (
+    <VisualCard {...props} className={cn(shouldFlash && "exam-live-flash", props.className)} />
+  );
+}
+
+function TablePanel(props: ComponentProps<typeof CompactPanel>) {
+  const shouldFlash = useContext(ExamFlashContext);
+  return (
+    <CompactPanel
+      {...props}
+      noPadding
+      className={cn(shouldFlash && "exam-live-flash", props.className)}
+    />
+  );
+}
+
+/** Ranked list — rank pill, label, right-aligned tabular number. Same recipe
+ *  as the library dashboard's top-books panel. */
+function RankedList({
+  items,
+  emptyLabel,
+  accent = "text-violet-700 bg-violet-50",
+  format,
+}: {
+  items: Array<{ key: string; label: string; value: number; sublabel?: string }>;
+  emptyLabel: string;
+  accent?: string;
+  format?: (v: number) => string;
+}) {
+  if (items.length === 0) return <EmptyPanel label={emptyLabel} />;
+  return (
+    <ul className="flex flex-col divide-y divide-slate-100">
+      {items.map((it, i) => (
+        <li key={it.key} className="flex items-center gap-3 py-2 first:pt-0 last:pb-0">
+          <span
+            className={cn(
+              "flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[11px] font-semibold",
+              accent,
+            )}
+          >
+            {i + 1}
+          </span>
+          <span className="min-w-0 flex-1 truncate text-sm text-slate-700" title={it.label}>
+            {it.label}
+            {it.sublabel ? (
+              <span className="ml-1.5 text-xs text-slate-400">{it.sublabel}</span>
+            ) : null}
+          </span>
+          <span className="text-sm font-semibold tabular-nums text-slate-900">
+            {format ? format(it.value) : nfmt.format(it.value)}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Slim in-cell progress bar + percentage, violet like the notifications
+ *  templates table. */
+function InlineProgress({
+  value,
+  total,
+  color = "bg-[#7c3aed]",
+}: {
+  value: number;
+  total: number;
+  color?: string;
+}) {
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+  return (
+    <div className="flex items-center gap-2">
+      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-100">
+        <div className={cn("h-full rounded-full", color)} style={{ width: `${pct}%` }} />
       </div>
+      <span className="text-xs font-medium tabular-nums text-slate-700">{pct}%</span>
+    </div>
+  );
+}
 
-      {/* Summary Cards Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          icon={<Calendar className="h-4 w-4" />}
-          title="Total Exams"
-          value={examSummaryData.totalExams}
-          description="All scheduled exams"
-          trend={{ value: 12, isPositive: true }}
-          color="text-blue-600"
-        />
-        <StatCard
-          icon={<Clock className="h-4 w-4" />}
-          title="Upcoming Exams"
-          value={examSummaryData.upcomingExams}
-          description="Scheduled this month"
-          trend={{ value: 5, isPositive: true }}
-          color="text-orange-600"
-        />
-        <StatCard
-          icon={<Users className="h-4 w-4" />}
-          title="Total Students"
-          value={examSummaryData.totalStudents.toLocaleString()}
-          description={`Avg ${examSummaryData.averageStudentsPerExam} per exam`}
-          trend={{ value: 8, isPositive: true }}
-          color="text-green-600"
-        />
-        <StatCard
-          icon={<CheckCircle className="h-4 w-4" />}
-          title="Completed Exams"
-          value={examSummaryData.completedExams}
-          description="Successfully conducted"
-          trend={{ value: 15, isPositive: true }}
-          color="text-purple-600"
-        />
-      </div>
+/** Admit-card window status chip — Open (inside window), Upcoming, Closed. */
+function WindowStatusChip({ start, last }: { start: string | null; last: string | null }) {
+  if (!start) {
+    return (
+      <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-500">
+        Not set
+      </Badge>
+    );
+  }
+  const now = Date.now();
+  const startMs = new Date(start).getTime();
+  const lastMs = last ? new Date(last).getTime() : null;
+  if (now < startMs) {
+    return (
+      <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
+        Upcoming
+      </Badge>
+    );
+  }
+  if (lastMs != null && now > lastMs) {
+    return (
+      <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-600">
+        Closed
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+      Open
+    </Badge>
+  );
+}
 
-      {/* Secondary Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <StatCard
-          icon={<Building2 className="h-4 w-4" />}
-          title="Total Floors"
-          value={examSummaryData.totalFloors}
-          description="Active exam floors"
-          color="text-indigo-600"
-        />
-        <StatCard
-          icon={<DoorOpen className="h-4 w-4" />}
-          title="Total Rooms"
-          value={examSummaryData.totalRooms}
-          description="Available exam rooms"
-          color="text-pink-600"
-        />
-        <StatCard
-          icon={<FileText className="h-4 w-4" />}
-          title="Exams This Month"
-          value={examSummaryData.examsThisMonth}
-          description="June 2024"
-          trend={{ value: 20, isPositive: true }}
-          color="text-cyan-600"
-        />
-      </div>
+// ── Tabs ─────────────────────────────────────────────────────────────────────
 
-      {/* Main Charts Grid */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Exams Over Time */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Exams Scheduled Over Time</CardTitle>
-            <CardDescription>Monthly breakdown of scheduled vs completed exams</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={examsOverTimeConfig} className="h-[300px] w-full">
-              <AreaChart data={examsOverTimeData}>
-                <defs>
-                  <linearGradient id="fillScheduled" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0.1} />
-                  </linearGradient>
-                  <linearGradient id="fillCompleted" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0.1} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                <XAxis dataKey="month" tickLine={false} axisLine={false} />
-                <YAxis hide />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Area
-                  dataKey="scheduled"
-                  type="monotone"
-                  fill="url(#fillScheduled)"
-                  stroke="hsl(var(--chart-1))"
-                  strokeWidth={2}
-                />
-                <Area
-                  dataKey="completed"
-                  type="monotone"
-                  fill="url(#fillCompleted)"
-                  stroke="hsl(var(--chart-2))"
-                  strokeWidth={2}
-                />
-                <ChartLegend content={<ChartLegendContent />} />
-              </AreaChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
+const PENDING_ALLOTMENT_DISPLAY = 6;
 
-        {/* Students Per Exam */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Students Assigned Per Exam</CardTitle>
-            <CardDescription>Number of students for each scheduled exam</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer
-              config={{ students: { label: "Students", color: "hsl(var(--chart-1))" } }}
-              className="h-[300px] w-full"
-            >
-              <BarChart data={studentsPerExamData} layout="vertical">
-                <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-                <XAxis type="number" tickLine={false} axisLine={false} />
-                <YAxis
-                  dataKey="exam"
-                  type="category"
-                  width={120}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="students" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
+function OverviewTab({ stats, rangeLabel }: { stats: ExamDashboardStats; rangeLabel: string }) {
+  const papersByMonth = useMemo(
+    () => stats.papersByMonth.map((r) => ({ ...r, label: fmtMonth(r.month) })),
+    [stats.papersByMonth],
+  );
+  // Programme-course × semester rows behind each month bucket, keyed by the
+  // chart's axis label so the tooltip can list them.
+  const papersDetailByLabel = useMemo(() => {
+    const map = new Map<
+      string,
+      Array<{ programCourse: string; className: string | null; papers: number }>
+    >();
+    for (const d of stats.papersByMonthDetail) {
+      const key = fmtMonth(d.month);
+      const list = map.get(key) ?? [];
+      list.push(d);
+      map.set(key, list);
+    }
+    return map;
+  }, [stats.papersByMonthDetail]);
 
-        {/* Floor Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Floor Distribution</span>
-              <Badge
-                variant="outline"
-                className="bg-yellow-50 text-yellow-700 border-yellow-300 flex items-center gap-1"
-              >
-                <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                Most Used: {mostUsedFloor.floor}
-              </Badge>
-            </CardTitle>
-            <CardDescription>Exams and capacity by floor</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={floorConfig} className="h-[300px] w-full">
-              <BarChart data={floorDistributionData}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                <XAxis dataKey="floor" tickLine={false} axisLine={false} />
-                <YAxis hide />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="exams" radius={[4, 4, 0, 0]}>
-                  {floorDistributionData.map((entry, index) => (
-                    <Cell
-                      key={`cell-exams-${index}`}
-                      fill={entry.floor === mostUsedFloor.floor ? "#fbbf24" : "hsl(var(--chart-1))"}
-                    />
-                  ))}
-                </Bar>
-                <Bar dataKey="capacity" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
-                <ChartLegend content={<ChartLegendContent />} />
-              </BarChart>
-            </ChartContainer>
-            <div className="mt-4 pt-4 border-t">
-              <div className="flex items-center gap-2 text-sm">
-                <Award className="h-4 w-4 text-yellow-600" />
-                <span className="font-medium">Most Used Floor:</span>
-                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
-                  {mostUsedFloor.floor} ({mostUsedFloor.usageCount} times)
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Room Type Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Room Type Distribution</CardTitle>
-            <CardDescription>Distribution of exam rooms by type</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer
-              config={{
-                value: { label: "Rooms", color: "hsl(var(--chart-1))" },
-              }}
-              className="h-[300px] w-full"
-            >
-              <PieChart>
-                <Pie
-                  data={roomTypeData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {roomTypeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <ChartTooltip content={<ChartTooltipContent />} />
-              </PieChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        {/* Exam Type Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Exam Type Distribution</CardTitle>
-            <CardDescription>Breakdown by exam type</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={examTypeConfig} className="h-[300px] w-full">
-              <BarChart data={examTypeData}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                <XAxis dataKey="type" tickLine={false} axisLine={false} />
-                <YAxis hide />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="count" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="students" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
-                <ChartLegend content={<ChartLegendContent />} />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        {/* Room Utilization */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Room Utilization</span>
-              <Badge
-                variant="outline"
-                className="bg-yellow-50 text-yellow-700 border-yellow-300 flex items-center gap-1"
-              >
-                <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                Top Used: {mostUsedRooms[0]?.room}
-              </Badge>
-            </CardTitle>
-            <CardDescription>Capacity vs assigned students</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={roomUtilizationConfig} className="h-[300px] w-full">
-              <BarChart data={roomUtilizationData}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                <XAxis dataKey="room" tickLine={false} axisLine={false} />
-                <YAxis hide />
-                <ChartTooltip
-                  content={<ChartTooltipContent />}
-                  formatter={(
-                    value: number | string,
-                    name: string,
-                    props: { payload?: { usageCount?: number } },
-                  ) => {
-                    if (name === "assigned" && props.payload?.usageCount !== undefined) {
-                      return [`${value} (Used ${props.payload.usageCount} times)`, "Assigned"];
-                    }
-                    return [value, name];
-                  }}
-                />
-                <Bar dataKey="capacity" radius={[4, 4, 0, 0]}>
-                  {roomUtilizationData.map((entry, index) => (
-                    <Cell
-                      key={`cell-capacity-${index}`}
-                      fill={
-                        mostUsedRooms.some((r) => r.room === entry.room)
-                          ? "#fbbf24"
-                          : "hsl(var(--chart-1))"
-                      }
-                    />
-                  ))}
-                </Bar>
-                <Bar dataKey="assigned" radius={[4, 4, 0, 0]}>
-                  {roomUtilizationData.map((entry, index) => (
-                    <Cell
-                      key={`cell-assigned-${index}`}
-                      fill={
-                        mostUsedRooms.some((r) => r.room === entry.room)
-                          ? "#f59e0b"
-                          : "hsl(var(--chart-2))"
-                      }
-                    />
-                  ))}
-                </Bar>
-                <ChartLegend content={<ChartLegendContent />} />
-              </BarChart>
-            </ChartContainer>
-            <div className="mt-4 pt-4 border-t">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <Award className="h-4 w-4 text-yellow-600" />
-                  <span className="font-medium">Most Used Rooms:</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {mostUsedRooms.map((room, index) => (
-                    <Badge
-                      key={index}
-                      variant="outline"
-                      className={`${index === 0 ? "bg-yellow-50 text-yellow-700 border-yellow-300" : "bg-orange-50 text-orange-700 border-orange-300"} flex items-center gap-1`}
-                    >
-                      {index === 0 && <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />}
-                      {room.room} ({room.usageCount} times)
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Upcoming Exams Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Upcoming Exams
-          </CardTitle>
-          <CardDescription>Exams scheduled for the next 2 weeks</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-3 font-medium text-sm">Date</th>
-                  <th className="text-left p-3 font-medium text-sm">Exam Name</th>
-                  <th className="text-center p-3 font-medium text-sm">Students</th>
-                  <th className="text-center p-3 font-medium text-sm">Rooms</th>
-                  <th className="text-center p-3 font-medium text-sm">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {upcomingExamsData.map((exam, index) => (
-                  <tr key={index} className="border-b hover:bg-muted/50">
-                    <td className="p-3 text-sm">
-                      <div className="font-medium">
-                        {new Date(exam.date).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {new Date(exam.date).toLocaleDateString("en-US", { weekday: "short" })}
-                      </div>
-                    </td>
-                    <td className="p-3 text-sm font-medium">{exam.name}</td>
-                    <td className="p-3 text-sm text-center">
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                        {exam.students}
-                      </Badge>
-                    </td>
-                    <td className="p-3 text-sm text-center">
-                      <Badge
-                        variant="outline"
-                        className="bg-green-50 text-green-700 border-green-200"
-                      >
-                        {exam.rooms}
-                      </Badge>
-                    </td>
-                    <td className="p-3 text-center">
-                      <Badge
-                        variant="outline"
-                        className="bg-orange-50 text-orange-700 border-orange-200"
-                      >
-                        Scheduled
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+  function PapersTooltip({ active, label }: { active?: boolean; label?: string }) {
+    if (!active || !label) return null;
+    const details = papersDetailByLabel.get(label) ?? [];
+    const shown = details.slice(0, 6);
+    const more = details.length - shown.length;
+    const total = papersByMonth.find((r) => r.label === label)?.papers ?? 0;
+    return (
+      <div className="grid min-w-[13rem] gap-1.5 rounded-lg border border-[#d4d4d4] bg-white px-2.5 py-2 text-xs shadow-md">
+        <p className="font-semibold text-[#1a1a1a]">
+          {label} · {nfmt.format(total)} papers
+        </p>
+        {shown.map((d, i) => (
+          <div key={i} className="flex items-center justify-between gap-4">
+            <span className="truncate text-[#444]">
+              {d.programCourse}
+              {d.className ? ` · Sem ${shortClass(d.className)}` : ""}
+            </span>
+            <span className="font-mono font-medium tabular-nums text-[#1a1a1a]">
+              {nfmt.format(d.papers)}
+            </span>
           </div>
-        </CardContent>
-      </Card>
+        ))}
+        {more > 0 && <p className="text-[10px] text-slate-400">+{more} more</p>}
+      </div>
+    );
+  }
+  // One overview pulse-line per activity stream — downloads, student form
+  // submissions, desk handouts — same overlaid-lines recipe as the
+  // notifications "over time" chart.
+  const activity = useMemo(
+    () =>
+      mergeDailySeries([
+        { key: "downloads", rows: stats.downloadsByDay },
+        { key: "submissions", rows: stats.studentSubmissionsByDay },
+        { key: "handouts", rows: stats.distributionsByDay },
+      ]),
+    [stats.downloadsByDay, stats.studentSubmissionsByDay, stats.distributionsByDay],
+  );
+  const showPending = stats.pendingAllotment.length > 0;
 
-      {/* Quick Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
-              Exam Types
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {examTypeData.map((type, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <span className="text-sm">{type.type}</span>
-                  <Badge variant="outline">{type.count}</Badge>
-                </div>
-              ))}
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Staff think in exam groups (cycles), not the per-class exam rows a
+          group fans into — so the headline is groups, and every count is
+          students, never candidate × paper rows. */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        <GradientStatCard
+          gradient={GRADIENTS.violet}
+          icon={Layers}
+          label="Cycles"
+          value={formatCompactIN(stats.examGroups)}
+          hint={`exam groups · ${formatCompactIN(stats.papersScheduled)} papers`}
+        />
+        <GradientStatCard
+          gradient={GRADIENTS.emerald}
+          icon={Users}
+          label="Students"
+          value={formatCompactIN(stats.students)}
+          hint="appearing · distinct on rosters"
+        />
+        <GradientStatCard
+          gradient={GRADIENTS.amber}
+          icon={ClipboardList}
+          label="Unallotted"
+          value={formatCompactIN(stats.pendingAllotmentCount)}
+          hint="exams without rooms or students"
+        />
+        <GradientStatCard
+          gradient={GRADIENTS.cyan}
+          icon={Clock}
+          label="Today"
+          value={formatCompactIN(stats.cycleStatus.today)}
+          hint="cycles with a paper today"
+        />
+        <GradientStatCard
+          gradient={GRADIENTS.sky}
+          icon={CalendarDays}
+          label="Upcoming"
+          value={formatCompactIN(stats.cycleStatus.upcoming)}
+          hint={`cycles ahead · ${formatCompactIN(stats.upcomingPapers30d)} papers in 30 days`}
+        />
+        <GradientStatCard
+          gradient={GRADIENTS.rose}
+          icon={ClipboardCheck}
+          label="Completed"
+          value={formatCompactIN(stats.cycleStatus.completed)}
+          hint="cycles fully done"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <PanelCard
+          title={`Exam activity over time · ${activity.weekly ? "weekly" : "daily"} · ${rangeLabel}`}
+          className="lg:col-span-2"
+        >
+          {activity.data.length === 0 ? (
+            <EmptyPanel label="No exam activity in this range" />
+          ) : (
+            <div>
+              <ResponsiveContainer width="100%" height={240}>
+                <AreaChart data={activity.data} margin={{ top: 8, right: 8, left: 4, bottom: 4 }}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e5e5e5" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 10, fill: "#666" }}
+                    tickLine={false}
+                    axisLine={{ stroke: "#d4d4d4" }}
+                    minTickGap={40}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 10, fill: "#666" }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={44}
+                  />
+                  <Tooltip content={<MultiSeriesTooltip />} cursor={{ fill: "#f1f5f9" }} />
+                  <Area
+                    type="monotone"
+                    dataKey="downloads"
+                    name="Admit-card downloads"
+                    stroke="#7c3aed"
+                    strokeWidth={2}
+                    fill="#7c3aed"
+                    fillOpacity={0.12}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="submissions"
+                    name="Form submissions"
+                    stroke="#0891b2"
+                    strokeWidth={2}
+                    fill="#0891b2"
+                    fillOpacity={0.08}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="handouts"
+                    name="Physical handouts"
+                    stroke="#f59e0b"
+                    strokeWidth={2}
+                    fill="#f59e0b"
+                    fillOpacity={0.08}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+              <ChartLegendDots
+                items={[
+                  { label: "Admit-card downloads", color: "#7c3aed" },
+                  { label: "Form submissions", color: "#0891b2" },
+                  { label: "Physical handouts", color: "#f59e0b" },
+                ]}
+              />
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </PanelCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Building2 className="h-4 w-4" />
-              Floor Summary
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {floorDistributionData
-                .sort((a, b) => b.usageCount - a.usageCount)
-                .map((floor, index) => (
-                  <div
-                    key={index}
-                    className={`flex items-center justify-between p-2 rounded-md ${
-                      floor.floor === mostUsedFloor.floor
-                        ? "bg-yellow-50 border border-yellow-200"
-                        : ""
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      {floor.floor === mostUsedFloor.floor && (
-                        <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                      )}
-                      <span
-                        className={`text-sm ${floor.floor === mostUsedFloor.floor ? "font-semibold" : ""}`}
-                      >
-                        {floor.floor}
-                      </span>
-                    </div>
-                    <div className="flex gap-2">
-                      {floor.floor === mostUsedFloor.floor && (
+        <PanelCard title="Exam cycles by type">
+          <RankedList
+            emptyLabel="No exam cycles scheduled yet"
+            accent="text-sky-700 bg-sky-50"
+            items={stats.examCyclesByType.map((t) => ({
+              key: t.name,
+              label: t.name,
+              sublabel: t.shortName ?? undefined,
+              value: t.count,
+            }))}
+          />
+        </PanelCard>
+      </div>
+
+      <PanelCard title={`Papers scheduled per month · ${rangeLabel}`}>
+        {papersByMonth.length === 0 ? (
+          <EmptyPanel label="No papers scheduled in this range" />
+        ) : (
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={papersByMonth} barCategoryGap="30%">
+              <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: 11, fill: "#64748b" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                allowDecimals={false}
+                tick={{ fontSize: 11, fill: "#64748b" }}
+                axisLine={false}
+                tickLine={false}
+                width={30}
+              />
+              {/* Tooltip lists the programme courses + semesters behind the
+                  month's papers. */}
+              <Tooltip cursor={{ fill: "#f1f5f9" }} content={<PapersTooltip />} />
+              {/* Orange, per Harsh — matches the library "Books added per
+                  year" bars and keeps the big bar chart visually distinct
+                  from the violet activity lines above it. */}
+              <Bar dataKey="papers" name="Papers" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </PanelCard>
+
+      {showPending && (
+        <TablePanel
+          title="Awaiting allotment · exams without rooms or students"
+          headerRight={
+            <Link
+              to="/dashboard/exam-management/allot"
+              className="text-xs font-medium text-[#7c3aed] hover:underline"
+            >
+              Go to Allot Exam →
+            </Link>
+          }
+        >
+          <FeesTable fixed={false} dense>
+            <FeesTableHeader>
+              <FeesTableHead>Exam group</FeesTableHead>
+              <FeesTableHead>Exam type</FeesTableHead>
+              <FeesTableHead className="text-center">Semester</FeesTableHead>
+              <FeesTableHead className="text-center">First paper</FeesTableHead>
+              <FeesTableHead className="text-center">Students</FeesTableHead>
+              <FeesTableHead className="text-center">Rooms</FeesTableHead>
+              <FeesTableHead className="text-center">Missing</FeesTableHead>
+            </FeesTableHeader>
+            <FeesTableBody>
+              {stats.pendingAllotment.slice(0, PENDING_ALLOTMENT_DISPLAY).map((p) => (
+                <FeesTableRow key={p.examId}>
+                  <FeesTableCell className="font-medium">{p.examGroupName ?? "—"}</FeesTableCell>
+                  <FeesTableCell className="text-slate-600">{p.examTypeName ?? "—"}</FeesTableCell>
+                  <FeesTableCell className="text-center">{shortClass(p.className)}</FeesTableCell>
+                  <FeesTableCell className="whitespace-nowrap text-center text-slate-600">
+                    {p.firstPaperAt ? fmtDMY(p.firstPaperAt) : "—"}
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center tabular-nums">
+                    {nfmt.format(p.candidates)}
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center tabular-nums">
+                    {nfmt.format(p.rooms)}
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center">
+                    <span className="inline-flex flex-wrap justify-center gap-1">
+                      {p.rooms === 0 && (
                         <Badge
                           variant="outline"
-                          className="text-xs bg-yellow-100 text-yellow-700 border-yellow-300"
+                          className="border-amber-200 bg-amber-50 text-amber-700"
                         >
-                          Most Used
+                          Rooms
                         </Badge>
                       )}
-                      <Badge variant="outline" className="text-xs">
-                        {floor.exams} exams
-                      </Badge>
-                      <Badge variant="outline" className="text-xs bg-muted">
-                        {floor.capacity} seats
-                      </Badge>
-                      <Badge
-                        variant="outline"
-                        className="text-xs bg-blue-50 text-blue-700 border-blue-200"
-                      >
-                        {floor.usageCount}x
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <GraduationCap className="h-4 w-4" />
-              Top Exams by Students
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {studentsPerExamData
-                .sort((a, b) => b.students - a.students)
-                .slice(0, 5)
-                .map((exam, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <span className="text-sm truncate flex-1">{exam.exam}</span>
-                    <Badge variant="outline" className="ml-2">
-                      {exam.students}
-                    </Badge>
-                  </div>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Most Used Rooms Card */}
-        <Card className="md:col-span-3">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <DoorOpen className="h-4 w-4" />
-              Most Frequently Used Rooms
-            </CardTitle>
-            <CardDescription>Rooms with highest usage frequency for exams</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {mostUsedRooms.map((room, index) => (
-                <div
-                  key={index}
-                  className={`p-4 rounded-lg border-2 ${
-                    index === 0
-                      ? "bg-yellow-50 border-yellow-300"
-                      : index === 1
-                        ? "bg-orange-50 border-orange-300"
-                        : "bg-blue-50 border-blue-300"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      {index === 0 && <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />}
-                      <span className={`font-semibold ${index === 0 ? "text-yellow-900" : ""}`}>
-                        {room.room}
-                      </span>
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className={
-                        index === 0
-                          ? "bg-yellow-100 text-yellow-800 border-yellow-400"
-                          : index === 1
-                            ? "bg-orange-100 text-orange-800 border-orange-400"
-                            : "bg-blue-100 text-blue-800 border-blue-400"
-                      }
-                    >
-                      #{index + 1}
-                    </Badge>
-                  </div>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Usage Count:</span>
-                      <span className="font-medium">{room.usageCount} times</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Floor:</span>
-                      <span className="font-medium">{room.floor}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Utilization:</span>
-                      <span className="font-medium">{room.utilization}%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Capacity:</span>
-                      <span className="font-medium">{room.capacity} seats</span>
-                    </div>
-                  </div>
-                </div>
+                      {p.candidates === 0 && (
+                        <Badge
+                          variant="outline"
+                          className="border-rose-200 bg-rose-50 text-rose-700"
+                        >
+                          Students
+                        </Badge>
+                      )}
+                    </span>
+                  </FeesTableCell>
+                </FeesTableRow>
               ))}
-            </div>
-          </CardContent>
-        </Card>
+            </FeesTableBody>
+          </FeesTable>
+          {stats.pendingAllotment.length > PENDING_ALLOTMENT_DISPLAY && (
+            <p className="border-t border-[#b8b8b8] px-3 py-2 text-xs text-[#555]">
+              …and {stats.pendingAllotment.length - PENDING_ALLOTMENT_DISPLAY} more awaiting
+              allotment — see the Allot Exam page for the full queue.
+            </p>
+          )}
+        </TablePanel>
+      )}
+
+      {stats.upcomingPapers.length > 0 && (
+        <TablePanel title="Upcoming papers · next 10">
+          <FeesTable fixed={false} dense>
+            <FeesTableHeader>
+              <FeesTableHead>Date &amp; time</FeesTableHead>
+              <FeesTableHead>Subject / paper</FeesTableHead>
+              <FeesTableHead>Exam group</FeesTableHead>
+              <FeesTableHead className="text-center">Semester</FeesTableHead>
+              <FeesTableHead className="text-center">Students</FeesTableHead>
+            </FeesTableHeader>
+            <FeesTableBody>
+              {stats.upcomingPapers.map((p) => (
+                <FeesTableRow key={p.examSubjectId}>
+                  <FeesTableCell className="whitespace-nowrap text-slate-700">
+                    {fmtDateTimeIST(p.startTime)}
+                  </FeesTableCell>
+                  <FeesTableCell>
+                    <span className="font-medium text-slate-800">{p.subjectName}</span>
+                    {p.paperCode ? (
+                      <span className="ml-1.5 text-xs text-slate-500">{p.paperCode}</span>
+                    ) : null}
+                  </FeesTableCell>
+                  <FeesTableCell>{p.examGroupName ?? "—"}</FeesTableCell>
+                  <FeesTableCell className="text-center">{shortClass(p.className)}</FeesTableCell>
+                  <FeesTableCell className="text-center font-semibold tabular-nums">
+                    {nfmt.format(p.candidateCount)}
+                  </FeesTableCell>
+                </FeesTableRow>
+              ))}
+            </FeesTableBody>
+          </FeesTable>
+        </TablePanel>
+      )}
+    </div>
+  );
+}
+
+function ResourcesTab({ stats }: { stats: ExamDashboardStats }) {
+  const seatedRate =
+    stats.students > 0 ? Math.round((stats.studentsSeated / stats.students) * 100) : 0;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <GradientStatCard
+          gradient={GRADIENTS.amber}
+          icon={Building2}
+          label="Rooms"
+          value={formatCompactIN(stats.roomsInUse)}
+          hint={`in use of ${formatCompactIN(stats.roomsTotal)}`}
+        />
+        <GradientStatCard
+          gradient={GRADIENTS.cyan}
+          icon={MapPin}
+          label="Floors"
+          value={formatCompactIN(stats.floorsInUse)}
+          hint={`in use of ${formatCompactIN(stats.floorsTotal)}`}
+        />
+        <GradientStatCard
+          gradient={GRADIENTS.sky}
+          icon={Users}
+          label="Capacity"
+          value={formatCompactIN(stats.totalRoomCapacity)}
+          hint="seats across all rooms"
+        />
+        <GradientStatCard
+          gradient={GRADIENTS.emerald}
+          icon={UserCheck}
+          label="Seated"
+          value={`${seatedRate}%`}
+          hint={`${formatCompactIN(stats.studentsSeated)} of ${formatCompactIN(stats.students)} students placed`}
+          progress={seatedRate}
+        />
       </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {/* Stacked bars — "in use" fills up each floor's total room count,
+            so utilisation reads instantly; capacity rides in the tooltip. */}
+        <PanelCard title="Floor utilisation · rooms in use" className="lg:col-span-2">
+          {stats.roomsByFloor.length === 0 ? (
+            <EmptyPanel label="No rooms configured yet" />
+          ) : (
+            <div>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart
+                  data={stats.roomsByFloor.map((f) => ({
+                    ...f,
+                    label: f.floor,
+                    idle: Math.max(0, f.rooms - f.inUse),
+                  }))}
+                  barCategoryGap="35%"
+                >
+                  <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 11, fill: "#64748b" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 11, fill: "#64748b" }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={30}
+                  />
+                  <Tooltip cursor={{ fill: "#f1f5f9" }} content={<MultiSeriesTooltip />} />
+                  <Bar dataKey="inUse" name="In use" stackId="f" fill="#7c3aed" />
+                  <Bar
+                    dataKey="idle"
+                    name="Idle"
+                    stackId="f"
+                    fill="#e2e8f0"
+                    radius={[3, 3, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+              <ChartLegendDots
+                items={[
+                  { label: "In use", color: "#7c3aed" },
+                  { label: "Idle", color: "#e2e8f0" },
+                ]}
+              />
+            </div>
+          )}
+        </PanelCard>
+
+        <div className="flex flex-col gap-4">
+          <PanelCard title="Most used rooms">
+            <RankedList
+              emptyLabel="No rooms allotted yet"
+              accent="text-emerald-700 bg-emerald-50"
+              items={stats.topRooms.map((r) => ({
+                key: `${r.name}·${r.floor ?? ""}`,
+                label: r.name,
+                sublabel: `${r.floor ?? "—"} · ${nfmt.format(r.capacity)} seats`,
+                value: r.timesUsed,
+              }))}
+              format={(v) => `${nfmt.format(v)}×`}
+            />
+          </PanelCard>
+
+          <PanelCard title="Exams scheduled by · staff">
+            <RankedList
+              emptyLabel="No exams scheduled yet"
+              accent="text-violet-700 bg-violet-50"
+              items={stats.scheduledBy.map((s) => ({
+                key: s.name,
+                label: s.name,
+                value: s.count,
+              }))}
+            />
+          </PanelCard>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdmitCardsTab({ stats, rangeLabel }: { stats: ExamDashboardStats; rangeLabel: string }) {
+  const notDownloaded = Math.max(0, stats.students - stats.studentsDownloaded);
+  const digitalVsPhysical = useMemo(
+    () =>
+      mergeDailySeries([
+        { key: "downloads", rows: stats.downloadsByDay },
+        { key: "distributions", rows: stats.distributionsByDay },
+      ]),
+    [stats.downloadsByDay, stats.distributionsByDay],
+  );
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <GradientStatCard
+          gradient={GRADIENTS.violet}
+          icon={Download}
+          label="Downloaded"
+          value={formatCompactIN(stats.studentsDownloaded)}
+          hint="students · digital admit cards"
+        />
+        <GradientStatCard
+          gradient={GRADIENTS.emerald}
+          icon={ClipboardCheck}
+          label="Rate"
+          value={`${stats.downloadRate}%`}
+          hint="of students on rosters"
+          progress={stats.downloadRate}
+        />
+        <GradientStatCard
+          gradient={GRADIENTS.amber}
+          icon={FileClock}
+          label="Pending"
+          value={formatCompactIN(notDownloaded)}
+          hint="students yet to download"
+        />
+        <GradientStatCard
+          gradient={GRADIENTS.cyan}
+          icon={Printer}
+          label="Handouts"
+          value={formatCompactIN(stats.physicalDistributions)}
+          hint="physical · at the desk"
+        />
+      </div>
+
+      <PanelCard
+        title={`Admit-card activity · digital vs physical · ${digitalVsPhysical.weekly ? "weekly" : "daily"} · ${rangeLabel}`}
+      >
+        {digitalVsPhysical.data.length === 0 ? (
+          <EmptyPanel label="No admit-card activity in this range" />
+        ) : (
+          <div>
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart
+                data={digitalVsPhysical.data}
+                margin={{ top: 8, right: 8, left: 4, bottom: 4 }}
+              >
+                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e5e5e5" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 10, fill: "#666" }}
+                  tickLine={false}
+                  axisLine={{ stroke: "#d4d4d4" }}
+                  minTickGap={40}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fontSize: 10, fill: "#666" }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={44}
+                />
+                <Tooltip content={<MultiSeriesTooltip />} cursor={{ fill: "#f1f5f9" }} />
+                <Area
+                  type="monotone"
+                  dataKey="downloads"
+                  name="Digital downloads"
+                  stroke="#7c3aed"
+                  strokeWidth={2}
+                  fill="#7c3aed"
+                  fillOpacity={0.15}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="distributions"
+                  name="Physical handouts"
+                  stroke="#f59e0b"
+                  strokeWidth={2}
+                  fill="#f59e0b"
+                  fillOpacity={0.08}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+            <ChartLegendDots
+              items={[
+                { label: "Digital downloads", color: "#7c3aed" },
+                { label: "Physical handouts", color: "#f59e0b" },
+              ]}
+            />
+          </div>
+        )}
+      </PanelCard>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <TablePanel title="Downloads per exam group" className="lg:col-span-2">
+          <FeesTable fixed={false} dense>
+            <FeesTableHeader>
+              <FeesTableHead>Exam group</FeesTableHead>
+              <FeesTableHead className="text-center">Students</FeesTableHead>
+              <FeesTableHead className="text-center">Downloaded</FeesTableHead>
+              <FeesTableHead>Rate</FeesTableHead>
+              <FeesTableHead className="text-center">Window</FeesTableHead>
+              <FeesTableHead className="text-center">Status</FeesTableHead>
+            </FeesTableHeader>
+            <FeesTableBody>
+              {stats.groupStats.map((g) => (
+                <FeesTableRow key={g.examGroupId}>
+                  <FeesTableCell className="font-medium">{g.name}</FeesTableCell>
+                  <FeesTableCell className="text-center tabular-nums">
+                    {nfmt.format(g.students)}
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center tabular-nums">
+                    {nfmt.format(g.studentsDownloaded)}
+                  </FeesTableCell>
+                  <FeesTableCell>
+                    <InlineProgress value={g.studentsDownloaded} total={g.students} />
+                  </FeesTableCell>
+                  <FeesTableCell className="whitespace-nowrap text-center text-xs text-slate-600">
+                    {g.admitCardStart
+                      ? `${fmtDMY(g.admitCardStart)} – ${fmtDMY(g.admitCardLast) ?? "…"}`
+                      : "—"}
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center">
+                    <WindowStatusChip start={g.admitCardStart} last={g.admitCardLast} />
+                  </FeesTableCell>
+                </FeesTableRow>
+              ))}
+            </FeesTableBody>
+          </FeesTable>
+        </TablePanel>
+
+        <PanelCard title="Top distributors · desk handouts">
+          <RankedList
+            emptyLabel="No physical distributions yet"
+            accent="text-emerald-700 bg-emerald-50"
+            items={stats.topDistributors.map((d) => ({
+              key: d.name,
+              label: d.name,
+              value: d.count,
+            }))}
+          />
+        </PanelCard>
+      </div>
+    </div>
+  );
+}
+
+function FormFillupTab({ stats, rangeLabel }: { stats: ExamDashboardStats; rangeLabel: string }) {
+  const mismatch = stats.uploadedNotSubmitted + stats.submittedNotUploaded;
+  const sources = useMemo(
+    () =>
+      mergeDailySeries([
+        { key: "studentSide", rows: stats.studentSubmissionsByDay },
+        { key: "staffSide", rows: stats.formFillupByDay },
+      ]),
+    [stats.studentSubmissionsByDay, stats.formFillupByDay],
+  );
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Two independent sources feed form fill-up: students submit from the
+          student console, and staff bulk-upload rows via Bulk Data Upload.
+          The tab's job is the reconciliation between the two. */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <GradientStatCard
+          gradient={GRADIENTS.violet}
+          icon={ClipboardList}
+          label="Uploads"
+          value={formatCompactIN(stats.formFillupTotal)}
+          hint={`staff · Bulk Data Upload · ${formatCompactIN(stats.formFillupCompleted)} completed`}
+        />
+        <GradientStatCard
+          gradient={GRADIENTS.cyan}
+          icon={GraduationCap}
+          label="Submissions"
+          value={formatCompactIN(stats.promotionsFormSubmitted)}
+          hint="students · via student console"
+        />
+        <GradientStatCard
+          gradient={GRADIENTS.emerald}
+          icon={FileCheck2}
+          label="Linked"
+          value={formatCompactIN(stats.linkedStudents)}
+          hint="students with an uploaded form linked"
+        />
+        {/* Both directions count: staff uploaded a form but the student
+            never submitted, and submitted with nothing uploaded. */}
+        <GradientStatCard
+          gradient={GRADIENTS.amber}
+          icon={FileClock}
+          label="Mismatch"
+          value={formatCompactIN(mismatch)}
+          hint={`${formatCompactIN(stats.uploadedNotSubmitted)} not submitted · ${formatCompactIN(stats.submittedNotUploaded)} not uploaded`}
+        />
+      </div>
+
+      {/* The reconciliation table is the tab's centrepiece — full width;
+          the trend chart sits below it. */}
+      <TablePanel title="Reconciliation per programme course · student vs staff">
+        <FeesTable fixed={false} dense>
+          <FeesTableHeader>
+            <FeesTableHead>Programme course</FeesTableHead>
+            <FeesTableHead className="text-center">Student submitted</FeesTableHead>
+            <FeesTableHead className="text-center">Staff uploaded</FeesTableHead>
+            <FeesTableHead className="text-center">Linked</FeesTableHead>
+            <FeesTableHead className="text-center">Gap</FeesTableHead>
+          </FeesTableHeader>
+          <FeesTableBody>
+            {stats.formReconciliationByProgramCourse.map((r) => {
+              const gap = r.studentSubmitted - r.staffRecorded;
+              return (
+                <FeesTableRow key={r.name}>
+                  <FeesTableCell className="font-medium">{r.name}</FeesTableCell>
+                  <FeesTableCell className="text-center tabular-nums text-cyan-700">
+                    {nfmt.format(r.studentSubmitted)}
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center tabular-nums text-violet-700">
+                    {nfmt.format(r.staffRecorded)}
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center tabular-nums text-emerald-700">
+                    {nfmt.format(r.linked)}
+                  </FeesTableCell>
+                  <FeesTableCell
+                    className={cn(
+                      "text-center font-semibold tabular-nums",
+                      gap === 0 ? "text-slate-400" : "text-amber-700",
+                    )}
+                  >
+                    {gap === 0 ? "—" : nfmt.format(gap)}
+                  </FeesTableCell>
+                </FeesTableRow>
+              );
+            })}
+          </FeesTableBody>
+        </FeesTable>
+      </TablePanel>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <PanelCard
+          className="lg:col-span-2"
+          title={`Student vs staff entries · ${sources.weekly ? "weekly" : "daily"} · ${rangeLabel}`}
+        >
+          {sources.data.length === 0 ? (
+            <EmptyPanel label="No form fill-up activity in this range" />
+          ) : (
+            <div>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={sources.data} barGap={2} barCategoryGap="22%">
+                  <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 10, fill: "#666" }}
+                    axisLine={false}
+                    tickLine={false}
+                    minTickGap={30}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 10, fill: "#666" }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={40}
+                  />
+                  <Tooltip cursor={{ fill: "#f1f5f9" }} content={<MultiSeriesTooltip />} />
+                  <Bar
+                    dataKey="studentSide"
+                    name="Student submissions"
+                    fill="#06b6d4"
+                    radius={[3, 3, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="staffSide"
+                    name="Staff uploads"
+                    fill="#7c3aed"
+                    radius={[3, 3, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+              <ChartLegendDots
+                items={[
+                  { label: "Student submissions", color: "#06b6d4" },
+                  { label: "Staff uploads", color: "#7c3aed" },
+                ]}
+              />
+            </div>
+          )}
+        </PanelCard>
+
+        <PanelCard title="Forms by appear type">
+          <RankedList
+            emptyLabel="No staff-uploaded forms yet"
+            accent="text-violet-700 bg-violet-50"
+            items={stats.formsByAppearType.map((r) => ({
+              key: r.name,
+              label: r.name,
+              value: r.count,
+            }))}
+          />
+        </PanelCard>
+      </div>
+    </div>
+  );
+}
+
+// ── Filters dialog ───────────────────────────────────────────────────────────
+
+function FilterField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-xs font-semibold text-[#444]">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+/** Cohort-rich filters dialog — mirrors FeesFiltersDialog / the notifications
+ *  dashboard dialog: multi-select everywhere, programme courses cascaded from
+ *  the selected streams (streams themselves only narrow options). */
+function FiltersDialog({
+  open,
+  onOpenChange,
+  value,
+  defaultDraft,
+  onApply,
+  academicYears,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  value: DraftFilters;
+  /** What Reset restores — includes the default active-year selection. */
+  defaultDraft: DraftFilters;
+  onApply: (v: DraftFilters) => void;
+  academicYears: Array<{ id: number; year: string }>;
+}) {
+  const [draft, setDraft] = useState<DraftFilters>(value);
+  const [examTypes, setExamTypes] = useState<ExamTypeT[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [streams, setStreams] = useState<{ id: number; name: string }[]>([]);
+  const [affiliations, setAffiliations] = useState<{ id: number; name: string }[]>([]);
+  const [regulationTypes, setRegulationTypes] = useState<{ id: number; name: string }[]>([]);
+  const [subjectTypes, setSubjectTypes] = useState<{ id: number; name: string }[]>([]);
+  const [programCourses, setProgramCourses] = useState<ProgramCourseDto[]>([]);
+  const [optionsLoaded, setOptionsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (open) setDraft(value);
+  }, [open, value]);
+
+  // Load cohort options once, on first open (mirrors FeesFiltersDialog).
+  useEffect(() => {
+    if (!open || optionsLoaded) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [typeRes, classRows, shiftRows, streamRows, affRows, regRows, pcRows, stRows] =
+          await Promise.all([
+            getAllExamTypes(),
+            getAllClasses(),
+            getAllShifts(),
+            getStreams(),
+            getAffiliations(),
+            getRegulationTypes(),
+            getProgramCourseDtos(),
+            getSubjectTypes(),
+          ]);
+        if (cancelled) return;
+        const named = (rows: unknown) =>
+          (Array.isArray(rows) ? (rows as { id?: number | null; name?: string | null }[]) : [])
+            .filter((r) => r?.id != null && r?.name)
+            .map((r) => ({ id: Number(r.id), name: String(r.name) }));
+        setExamTypes((typeRes.payload ?? []).filter((t) => t.isActive !== false));
+        setClasses((classRows ?? []).filter((c) => c.isActive !== false));
+        setShifts((shiftRows ?? []).filter((s) => !s.disabled));
+        setStreams(named(streamRows));
+        setAffiliations(named(affRows));
+        setRegulationTypes(named(regRows));
+        setProgramCourses(Array.isArray(pcRows) ? pcRows : []);
+        setSubjectTypes(named(stRows));
+        setOptionsLoaded(true);
+      } catch {
+        // options stay empty; filters still usable
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, optionsLoaded]);
+
+  const update = <K extends keyof DraftFilters>(key: K, v: DraftFilters[K]) =>
+    setDraft((d) => ({ ...d, [key]: v }));
+
+  // The shared AdvancedMultiSelect trigger only renders its placeholder, so
+  // the placeholder itself carries the selection count.
+  const sel = (arr: string[], empty: string) => (arr.length ? `${arr.length} selected` : empty);
+
+  // Cascade: programme-course options narrow to the selected streams /
+  // affiliations / regulations (mirrors FeesFiltersDialog).
+  const programCourseOptions = useMemo(() => {
+    let list = programCourses.filter((pc) => pc.id != null && pc.isActive !== false);
+    if (draft.streamIds.length) {
+      const allowed = new Set(draft.streamIds.map(Number));
+      list = list.filter((pc) => pc.stream?.id != null && allowed.has(pc.stream.id));
+    }
+    if (draft.affiliationIds.length) {
+      const allowed = new Set(draft.affiliationIds.map(Number));
+      list = list.filter((pc) => pc.affiliation?.id != null && allowed.has(pc.affiliation.id));
+    }
+    if (draft.regulationTypeIds.length) {
+      const allowed = new Set(draft.regulationTypeIds.map(Number));
+      list = list.filter(
+        (pc) => pc.regulationType?.id != null && allowed.has(pc.regulationType.id),
+      );
+    }
+    return list.map((pc) => ({ value: String(pc.id), label: String(pc.name ?? `#${pc.id}`) }));
+  }, [programCourses, draft.streamIds, draft.affiliationIds, draft.regulationTypeIds]);
+
+  // Drop selected programme courses that fell out of the narrowed list.
+  useEffect(() => {
+    const valid = new Set(programCourseOptions.map((o) => o.value));
+    setDraft((d) => {
+      const pruned = d.programCourseIds.filter((id) => valid.has(id));
+      return pruned.length === d.programCourseIds.length ? d : { ...d, programCourseIds: pruned };
+    });
+  }, [programCourseOptions]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {/* Split layout: a fixed illustration rail on the left; on the right a
+          pinned header, scrollable filter body, pinned footer. */}
+      <DialogContent className="w-[95vw] max-w-4xl overflow-hidden p-0">
+        <div className="flex h-[560px] max-h-[85vh]">
+          {/* Full-bleed illustration — covers the whole rail, top to bottom. */}
+          <div className="hidden w-[320px] shrink-0 self-stretch border-r border-slate-200 bg-white sm:block">
+            <img
+              src="/exam-filters-illustration.jpg"
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          </div>
+
+          <div className="flex min-w-0 flex-1 flex-col">
+            <DialogHeader className="shrink-0 border-b border-[#e5e5e5] px-5 py-4">
+              <DialogTitle>Exam dashboard filters</DialogTitle>
+            </DialogHeader>
+
+            <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#7c3aed]">
+                Exam
+              </p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <FilterField label="Exam types">
+                  <AdvancedMultiSelect
+                    searchable
+                    resetOnDefaultValueChange
+                    modalPopover
+                    maxCount={2}
+                    className="w-full px-3"
+                    placeholder={sel(draft.examTypeIds, "All types")}
+                    options={examTypes.flatMap((t) =>
+                      t.id != null ? [{ value: String(t.id), label: t.name }] : [],
+                    )}
+                    defaultValue={draft.examTypeIds}
+                    onValueChange={(s: string[]) => update("examTypeIds", s)}
+                    popoverClassName="min-w-[260px]"
+                  />
+                </FilterField>
+                <FilterField label="Subject categories">
+                  <AdvancedMultiSelect
+                    searchable
+                    resetOnDefaultValueChange
+                    modalPopover
+                    maxCount={2}
+                    className="w-full px-3"
+                    placeholder={sel(draft.subjectTypeIds, "All categories")}
+                    options={subjectTypes.map((s) => ({ value: String(s.id), label: s.name }))}
+                    defaultValue={draft.subjectTypeIds}
+                    onValueChange={(s: string[]) => update("subjectTypeIds", s)}
+                    popoverClassName="min-w-[260px]"
+                  />
+                </FilterField>
+                <FilterField label="Time range">
+                  <Select
+                    value={draft.preset}
+                    onValueChange={(v) => update("preset", v as RangePreset)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RANGE_PRESETS.map((r) => (
+                        <SelectItem key={r.value} value={r.value}>
+                          {r.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FilterField>
+              </div>
+
+              {draft.preset === "custom" && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <FilterField label="From">
+                    <Input
+                      type="date"
+                      value={draft.dateFrom ?? ""}
+                      onChange={(e) => update("dateFrom", e.target.value)}
+                    />
+                  </FilterField>
+                  <FilterField label="To">
+                    <Input
+                      type="date"
+                      value={draft.dateTo ?? ""}
+                      onChange={(e) => update("dateTo", e.target.value)}
+                    />
+                  </FilterField>
+                </div>
+              )}
+
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#7c3aed]">
+                Cohort
+              </p>
+              {/* 4-up: row 1 = years / affiliations / regulations / streams;
+                  row 2 = programme courses / semesters / shifts. */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+                <FilterField label="Academic years">
+                  <AdvancedMultiSelect
+                    searchable
+                    resetOnDefaultValueChange
+                    modalPopover
+                    maxCount={2}
+                    className="w-full px-3"
+                    placeholder={sel(draft.academicYearIds, "All years")}
+                    options={academicYears.map((y) => ({ value: String(y.id), label: y.year }))}
+                    defaultValue={draft.academicYearIds}
+                    onValueChange={(s: string[]) => update("academicYearIds", s)}
+                    popoverClassName="min-w-[260px]"
+                  />
+                </FilterField>
+                <FilterField label="Affiliations">
+                  <AdvancedMultiSelect
+                    searchable
+                    resetOnDefaultValueChange
+                    modalPopover
+                    maxCount={2}
+                    className="w-full px-3"
+                    placeholder={sel(draft.affiliationIds, "All affiliations")}
+                    options={affiliations.map((a) => ({ value: String(a.id), label: a.name }))}
+                    defaultValue={draft.affiliationIds}
+                    onValueChange={(s: string[]) => update("affiliationIds", s)}
+                    popoverClassName="min-w-[260px]"
+                  />
+                </FilterField>
+                <FilterField label="Regulations">
+                  <AdvancedMultiSelect
+                    searchable
+                    resetOnDefaultValueChange
+                    modalPopover
+                    maxCount={2}
+                    className="w-full px-3"
+                    placeholder={sel(draft.regulationTypeIds, "All regulations")}
+                    options={regulationTypes.map((r) => ({ value: String(r.id), label: r.name }))}
+                    defaultValue={draft.regulationTypeIds}
+                    onValueChange={(s: string[]) => update("regulationTypeIds", s)}
+                    popoverClassName="min-w-[260px]"
+                  />
+                </FilterField>
+                <FilterField label="Streams">
+                  <AdvancedMultiSelect
+                    searchable
+                    resetOnDefaultValueChange
+                    modalPopover
+                    maxCount={2}
+                    className="w-full px-3"
+                    placeholder={sel(draft.streamIds, "All streams")}
+                    options={streams.map((s) => ({ value: String(s.id), label: s.name }))}
+                    defaultValue={draft.streamIds}
+                    onValueChange={(s: string[]) => update("streamIds", s)}
+                    popoverClassName="min-w-[260px]"
+                  />
+                </FilterField>
+                <FilterField label="Programme courses">
+                  <AdvancedMultiSelect
+                    searchable
+                    resetOnDefaultValueChange
+                    modalPopover
+                    maxCount={2}
+                    className="w-full px-3"
+                    placeholder={sel(draft.programCourseIds, "All courses")}
+                    options={programCourseOptions}
+                    defaultValue={draft.programCourseIds}
+                    onValueChange={(s: string[]) => update("programCourseIds", s)}
+                    popoverClassName="min-w-[300px]"
+                  />
+                </FilterField>
+                <FilterField label="Semesters">
+                  <AdvancedMultiSelect
+                    searchable
+                    resetOnDefaultValueChange
+                    modalPopover
+                    maxCount={2}
+                    className="w-full px-3"
+                    placeholder={sel(draft.classIds, "All semesters")}
+                    options={classes.flatMap((c) =>
+                      c.id != null
+                        ? [{ value: String(c.id), label: formatSemesterClassOptionLabel(c.name) }]
+                        : [],
+                    )}
+                    defaultValue={draft.classIds}
+                    onValueChange={(s: string[]) => update("classIds", s)}
+                    popoverClassName="min-w-[260px]"
+                  />
+                </FilterField>
+                <FilterField label="Shifts">
+                  <AdvancedMultiSelect
+                    searchable
+                    resetOnDefaultValueChange
+                    modalPopover
+                    maxCount={2}
+                    className="w-full px-3"
+                    placeholder={sel(draft.shiftIds, "All shifts")}
+                    options={shifts.flatMap((s) =>
+                      s.id != null ? [{ value: String(s.id), label: s.name }] : [],
+                    )}
+                    defaultValue={draft.shiftIds}
+                    onValueChange={(s: string[]) => update("shiftIds", s)}
+                    popoverClassName="min-w-[260px]"
+                  />
+                </FilterField>
+              </div>
+            </div>
+
+            <DialogFooter className="shrink-0 gap-2 border-t border-[#e5e5e5] px-5 py-3 sm:justify-between">
+              <Button
+                variant="outline"
+                className="sm:mr-auto"
+                onClick={() => setDraft(defaultDraft)}
+              >
+                Reset
+              </Button>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                className="bg-[#7c3aed] hover:bg-[#6d28d9]"
+                onClick={() => {
+                  onApply(draft);
+                  onOpenChange(false);
+                }}
+              >
+                Apply
+              </Button>
+            </DialogFooter>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
+
+export default function HomePage() {
+  const [activeTab, setActiveTab] = useState<(typeof DASHBOARD_TABS)[number]["value"]>("overview");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [draft, setDraft] = useState<DraftFilters>(DEFAULT_DRAFT);
+
+  const { availableAcademicYears, loadAcademicYears } = useAcademicYear();
+  useEffect(() => {
+    loadAcademicYears();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Active (current) academic years are pre-selected — the dashboard opens
+  // scoped to the running year(s); Reset restores this same default.
+  const defaultYearIds = useMemo(
+    () =>
+      (availableAcademicYears ?? [])
+        .filter((y) => y.isCurrentYear === true && y.id != null)
+        .map((y) => String(y.id)),
+    [availableAcademicYears],
+  );
+  const defaultDraft = useMemo<DraftFilters>(
+    () => ({ ...DEFAULT_DRAFT, academicYearIds: defaultYearIds }),
+    [defaultYearIds],
+  );
+  const seededYearsRef = useRef(false);
+  useEffect(() => {
+    if (seededYearsRef.current || defaultYearIds.length === 0) return;
+    seededYearsRef.current = true;
+    setDraft((d) => (d.academicYearIds.length ? d : { ...d, academicYearIds: defaultYearIds }));
+  }, [defaultYearIds]);
+
+  const applied = useMemo<ExamDashboardFilters>(() => {
+    const range = resolveRange(draft.preset, draft.dateFrom, draft.dateTo);
+    const nums = (v: string[]) => (v.length ? v.map(Number) : undefined);
+    return {
+      academicYearIds: nums(draft.academicYearIds),
+      examTypeIds: nums(draft.examTypeIds),
+      classIds: nums(draft.classIds),
+      shiftIds: nums(draft.shiftIds),
+      programCourseIds: nums(draft.programCourseIds),
+      subjectTypeIds: nums(draft.subjectTypeIds),
+      ...range,
+    };
+  }, [draft]);
+
+  // The default active-year selection doesn't count as a user filter — the
+  // badge only reflects deviations from the default view.
+  const yearsAreDefault =
+    draft.academicYearIds.length === defaultYearIds.length &&
+    draft.academicYearIds.every((id) => defaultYearIds.includes(id));
+  const activeFilterCount =
+    (draft.academicYearIds.length && !yearsAreDefault ? 1 : 0) +
+    (draft.examTypeIds.length ? 1 : 0) +
+    (draft.classIds.length ? 1 : 0) +
+    (draft.shiftIds.length ? 1 : 0) +
+    (draft.streamIds.length ? 1 : 0) +
+    (draft.affiliationIds.length ? 1 : 0) +
+    (draft.regulationTypeIds.length ? 1 : 0) +
+    (draft.programCourseIds.length ? 1 : 0) +
+    (draft.subjectTypeIds.length ? 1 : 0) +
+    (draft.preset !== "all" ? 1 : 0);
+
+  const {
+    data: stats,
+    isLoading,
+    isError,
+    isFetching,
+  } = useQuery({
+    queryKey: ["exam-dashboard-stats", applied],
+    queryFn: async () => (await getExamDashboardStats(applied)).payload!,
+    keepPreviousData: true,
+    // Socket events are the primary refresh signal; the 60s poll is the
+    // safety net when the socket drops (same fallback as notifications).
+    refetchInterval: 60_000,
+  });
+
+  const { isConnected, eventCounter } = useExamDashboardRealtime();
+
+  const rangeLabel = formatDateRangeDMY(applied.dateFrom, applied.dateTo, {
+    fallback: "all time",
+    entryDays: stats?.downloadsByDay ?? [],
+  });
+
+  return (
+    // `min-h-full bg-[#eaeaea]` — same wrapper as the notifications, fees and
+    // library dashboards so the module family reads as one product.
+    <div className="min-h-full min-w-0 bg-[#eaeaea]">
+      <header className="border-b border-[#d1d1d1] bg-gradient-to-r from-[#f5f3ff] via-[#faf5ff] to-white">
+        <div className="flex flex-col gap-3 px-4 py-3 pb-1 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="flex shrink-0 items-center gap-2 text-xl font-bold text-[#1a1a1a]">
+            <LayoutDashboard className="h-5 w-5 text-[#7c3aed]" />
+            Exam dashboard
+          </h1>
+          <Button
+            size="sm"
+            className="relative h-8 shrink-0 rounded-md bg-[#7c3aed] pr-3 text-xs text-white hover:bg-[#6d28d9]"
+            onClick={() => setFiltersOpen(true)}
+          >
+            <Filter className="mr-1.5 h-3.5 w-3.5" />
+            Filters
+            {activeFilterCount > 0 && (
+              <Badge
+                variant="secondary"
+                className="ml-1.5 h-5 min-w-5 justify-center rounded-full border-0 bg-white px-1.5 text-[10px] font-bold text-[#7c3aed]"
+              >
+                {activeFilterCount}
+              </Badge>
+            )}
+          </Button>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+          <div className="overflow-x-auto border-t border-[#e5e5e5] bg-white/80 px-2">
+            <TabsList className="inline-flex h-11 w-max min-w-full justify-start gap-0.5 rounded-none bg-transparent p-0">
+              {DASHBOARD_TABS.map((t) => (
+                <TabsTrigger
+                  key={t.value}
+                  value={t.value}
+                  className="rounded-none border-b-[3px] border-transparent px-4 text-sm font-medium text-slate-600 shadow-none data-[state=active]:border-[#7c3aed] data-[state=active]:bg-transparent data-[state=active]:font-semibold data-[state=active]:text-[#7c3aed] data-[state=active]:shadow-none"
+                >
+                  {t.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+
+          {/* `key={eventCounter}` remounts the tab body on every socket event,
+              restarting the amber flash animation on every PanelCard so the
+              operator can see widgets were refreshed by real activity. The
+              context flag keeps the very first render flash-free. */}
+          <ExamFlashContext.Provider value={eventCounter > 0}>
+            <div key={eventCounter} className="p-3 lg:p-4">
+              {isLoading && !stats ? (
+                <div className="flex min-h-[70vh] items-center justify-center text-sm text-slate-500">
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Loading dashboard…
+                </div>
+              ) : isError || !stats ? (
+                <div className="flex min-h-[70vh] items-center justify-center text-sm text-red-600">
+                  Failed to load dashboard.
+                </div>
+              ) : (
+                <>
+                  <TabsContent value="overview" className="mt-0 focus-visible:outline-none">
+                    <OverviewTab stats={stats} rangeLabel={rangeLabel} />
+                  </TabsContent>
+                  <TabsContent value="resources" className="mt-0 focus-visible:outline-none">
+                    <ResourcesTab stats={stats} />
+                  </TabsContent>
+                  <TabsContent value="admitcards" className="mt-0 focus-visible:outline-none">
+                    <AdmitCardsTab stats={stats} rangeLabel={rangeLabel} />
+                  </TabsContent>
+                  <TabsContent value="formfillup" className="mt-0 focus-visible:outline-none">
+                    <FormFillupTab stats={stats} rangeLabel={rangeLabel} />
+                  </TabsContent>
+                </>
+              )}
+              {isFetching && !isLoading && (
+                <div className="mt-2 flex items-center justify-end text-[11px] text-slate-400">
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" /> refreshing…
+                </div>
+              )}
+            </div>
+          </ExamFlashContext.Provider>
+        </Tabs>
+      </header>
+
+      <FiltersDialog
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+        value={draft}
+        defaultDraft={defaultDraft}
+        onApply={setDraft}
+        academicYears={(availableAcademicYears ?? []).flatMap((y) =>
+          y.id != null ? [{ id: y.id, year: y.year }] : [],
+        )}
+      />
+
+      {/* Floating status pill — red pulse while the socket is live, matching
+          every other dashboard in the console. */}
+      <LiveUpdatesBadge connected={isConnected} loading={isFetching && !stats} />
     </div>
   );
 }

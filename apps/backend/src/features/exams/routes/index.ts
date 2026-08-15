@@ -4,6 +4,7 @@ import examTypeRouter from "./exam-type.routes.js";
 import examScheduleRouter from "./exam-schedule.routes.js";
 import examGroupRouter from "./exam-group.routes.js";
 import admitCardRouter from "./admit-card.routes.js";
+import examDashboardRouter from "./exam-dashboard.routes.js";
 
 export {
   floorRouter,
@@ -12,4 +13,5 @@ export {
   examScheduleRouter,
   examGroupRouter,
   admitCardRouter,
+  examDashboardRouter,
 };
