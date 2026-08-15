@@ -477,7 +477,8 @@ export default function SubjectSelectionForm({
       const autos = [...new Set(views.flatMap((v) => v.autoAssignSubjects))];
       for (const auto of autos) {
         if (views.some((v) => selectionsByMeta[v.metaId] === auto)) continue;
-        newErrors.push(`${auto} is mandatory and must be selected`);
+        const categoryName = code === "MN" ? "minor" : code;
+        newErrors.push(`It is mandatory to select ${auto} as one of the ${categoryName} subjects`);
       }
     }
 

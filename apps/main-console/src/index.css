@@ -375,3 +375,8 @@ html[data-env="development"] {
   animation: libraryLiveFlash 1.2s ease-out;
   border-radius: 0.5rem;
 }
+/* Same amber pulse for the exam dashboard's socket-refreshed panels. */
+.exam-live-flash {
+  animation: libraryLiveFlash 1.2s ease-out;
+  border-radius: 0.5rem;
+}
