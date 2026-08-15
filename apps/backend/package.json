@@ -25,6 +25,8 @@
     "db:studio": "pnpm run build && drizzle-kit studio",
     "lint": "eslint . --ext .ts,.js",
     "seed:library": "tsx scripts/seed-library.ts",
+    "verify:library-fines": "tsx scripts/verify-library-fines.ts",
+    "sweep:library-fines": "tsx scripts/run-fine-sweep.ts",
     "smoke:library": "tsx scripts/smoke-library.ts",
     "smoke:idcard": "tsx scripts/smoke-idcard.ts",
     "smoke:idcard:http": "tsx scripts/smoke-idcard-http.ts",

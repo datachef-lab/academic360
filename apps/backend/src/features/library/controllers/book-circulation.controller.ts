@@ -227,6 +227,7 @@ export const getBookCirculationPolicyController = async (
           finePerDay: policy.finePerDay,
           graceDays: policy.graceDays,
           renewalLimit: policy.renewalLimit,
+          maxCopiesAtOnce: policy.maxCopiesAtOnce,
           policyId: policy.policyId ?? null,
           dueDate: due.toISOString(),
         },
