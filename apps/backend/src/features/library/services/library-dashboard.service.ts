@@ -624,21 +624,32 @@ export async function getLibraryDashboardStats(
         ),
       ),
     // Fines timeline: paid (from payments) + waived (from circulation), per day.
-    // Uses db.execute so the raw SQL below can construct the whole SELECT —
-    // drizzle's .from(sql`...`) does not accept join clauses as a single raw
-    // string, which is what the earlier draft tried and returned 500.
+    // Each source is pre-aggregated to ONE row per day in its own subquery
+    // BEFORE joining the day spine. Joining the two one-to-many children
+    // (payments, book_circulation) directly to the spine and SUM-ing produced a
+    // P×C cartesian per day — on any day with both a payment and a waiver,
+    // `collected` was multiplied by the waiver count and `waived` by the payment
+    // count. Pre-aggregating keeps each join one-row-per-day, so no fan-out.
     db.execute(sql`
       SELECT d::date::text AS day,
-             COALESCE(SUM(p.amount), 0) AS collected,
-             COALESCE(SUM(c.fine_waiver), 0) AS waived
+             COALESCE(pay.collected, 0) AS collected,
+             COALESCE(wv.waived, 0) AS waived
       FROM generate_series(${fineTimelineStart}::date, NOW()::date, INTERVAL '1 day') AS d
-      LEFT JOIN payments p
-        ON p.created_at::date = d::date
-       AND p.context = 'LIBRARY_FINE'
-       AND p.status = 'SUCCESS'
-      LEFT JOIN book_circulation c
-        ON c.fine_waived_at::date = d::date
-      GROUP BY d
+      LEFT JOIN (
+        SELECT created_at::date AS day, SUM(amount) AS collected
+        FROM payments
+        WHERE context = 'LIBRARY_FINE'
+          AND status = 'SUCCESS'
+          AND created_at::date >= ${fineTimelineStart}::date
+        GROUP BY created_at::date
+      ) pay ON pay.day = d::date
+      LEFT JOIN (
+        SELECT fine_waived_at::date AS day, SUM(fine_waiver) AS waived
+        FROM book_circulation
+        WHERE fine_waived_at IS NOT NULL
+          AND fine_waived_at::date >= ${fineTimelineStart}::date
+        GROUP BY fine_waived_at::date
+      ) wv ON wv.day = d::date
       ORDER BY d
     `),
     db

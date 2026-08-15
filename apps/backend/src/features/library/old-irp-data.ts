@@ -69,8 +69,9 @@ import {
   holidayModel,
   VendorT,
   vendorModel,
+  libraryLegacySyncWatermarkModel,
 } from "@repo/db/schemas/models/library";
-import { and, eq, ilike, sql as drizzleSql } from "drizzle-orm";
+import { and, eq, ilike, sql as drizzleSql, type SQL } from "drizzle-orm";
 import ExcelJS from "exceljs";
 import fs from "fs";
 import path from "path";
@@ -80,6 +81,102 @@ import {
 } from "../user/services/refactor-old-migration.service";
 import { OldStaff } from "@repo/db/legacy-system-types/users";
 import { bookReissueModel } from "@repo/db/schemas/models/library/book-reissue.model";
+
+// ── Admin-edit-preserving legacy upsert ──────────────────────────────────────
+// A legacy write (insert or update from old IRP) stamps a watermark row; an
+// admin/staff edit in the new system bumps the row's own updatedAt but not the
+// watermark. So `updatedAt > watermark.syncedAt (+ tolerance)` ⇒ the row was
+// edited in the new system after its last legacy write ⇒ preserve it. Every
+// library resolver routes its insert/update through `legacyGuardedUpsert` so a
+// re-load never reverts admin/staff changes.
+//
+// Tolerance: on a legacy write the row's updatedAt and the watermark's syncedAt
+// land within the same transaction (sub-second). A real admin edit is always
+// many seconds/minutes/hours later. 10s cleanly separates the two.
+const LEGACY_EDIT_TOLERANCE_MS = 10_000;
+
+async function recordLegacyWatermark(
+  tableName: string,
+  rowId: number,
+): Promise<void> {
+  if (!Number.isFinite(rowId)) return;
+  await db
+    .insert(libraryLegacySyncWatermarkModel)
+    .values({ tableName, rowId, syncedAt: new Date() })
+    .onConflictDoUpdate({
+      target: [
+        libraryLegacySyncWatermarkModel.tableName,
+        libraryLegacySyncWatermarkModel.rowId,
+      ],
+      set: { syncedAt: new Date() },
+    });
+}
+
+/**
+ * Insert-or-update a legacy-sourced row while PRESERVING admin/staff edits.
+ *
+ * @param model      the drizzle table (must expose `id`; `updatedAt` optional)
+ * @param tableName  the physical table name, used as the watermark key
+ * @param matchWhere the lookup predicate (e.g. eq(model.legacyXId, oldId))
+ * @param payload    the full legacy-derived column set
+ *
+ * Returns the existing row untouched when it was edited in the new system after
+ * its last legacy write; otherwise applies the payload and re-stamps the
+ * watermark. Tables without `updatedAt` (pure logs) always upsert.
+ */
+export async function legacyGuardedUpsert<
+  TRow extends { id: number; updatedAt?: unknown },
+>(
+  model: any,
+  tableName: string,
+  matchWhere: SQL,
+  payload: unknown,
+): Promise<TRow | undefined> {
+  const [existing] = (await db
+    .select()
+    .from(model)
+    .where(matchWhere)
+    .limit(1)) as TRow[];
+  if (existing) {
+    const [wm] = await db
+      .select({ syncedAt: libraryLegacySyncWatermarkModel.syncedAt })
+      .from(libraryLegacySyncWatermarkModel)
+      .where(
+        and(
+          eq(libraryLegacySyncWatermarkModel.tableName, tableName),
+          eq(libraryLegacySyncWatermarkModel.rowId, existing.id),
+        ),
+      )
+      .limit(1);
+    const updatedAtMs = existing.updatedAt
+      ? new Date(existing.updatedAt as string).getTime()
+      : null;
+    const syncedAtMs = wm?.syncedAt
+      ? new Date(wm.syncedAt as unknown as string).getTime()
+      : null;
+    if (
+      updatedAtMs != null &&
+      syncedAtMs != null &&
+      updatedAtMs > syncedAtMs + LEGACY_EDIT_TOLERANCE_MS
+    ) {
+      // Edited in the new system after the last legacy write — preserve it.
+      return existing;
+    }
+    const [updated] = (await db
+      .update(model)
+      .set(payload as never)
+      .where(eq(model.id, existing.id))
+      .returning()) as TRow[];
+    await recordLegacyWatermark(tableName, existing.id);
+    return updated;
+  }
+  const [inserted] = (await db
+    .insert(model)
+    .values(payload as never)
+    .returning()) as TRow[];
+  if (inserted) await recordLegacyWatermark(tableName, inserted.id);
+  return inserted;
+}
 import {
   OldClass,
   OldCourse,
@@ -422,22 +519,12 @@ async function getSeriesByOldId(oldSeriesId: number | null) {
     legacySeriesId: oldSeries.id,
     name: oldSeries.seriesName,
   };
-  const [existingSeries] = await db
-    .select()
-    .from(seriesModel)
-    .where(eq(seriesModel.legacySeriesId, oldSeriesId));
-
-  if (existingSeries) {
-    return (
-      await db
-        .update(seriesModel)
-        .set(payload)
-        .where(eq(seriesModel.id, existingSeries.id))
-        .returning()
-    )[0];
-  }
-
-  return (await db.insert(seriesModel).values(payload).returning())[0];
+  return legacyGuardedUpsert(
+    seriesModel,
+    "series",
+    eq(seriesModel.legacySeriesId, oldSeriesId),
+    payload,
+  );
 }
 
 async function getPublisherByOldId(oldPublisherId: number | null) {
@@ -456,18 +543,12 @@ async function getPublisherByOldId(oldPublisherId: number | null) {
     code: oldPublisher.publisherCode?.toString?.() ?? null,
   };
 
-  const [existingPublisher] = await db
-    .select()
-    .from(publisherModel)
-    .where(eq(publisherModel.legacyPublisherId, oldPublisherId));
-
-  const [publisher] = existingPublisher
-    ? await db
-        .update(publisherModel)
-        .set(payload)
-        .where(eq(publisherModel.id, existingPublisher.id))
-        .returning()
-    : await db.insert(publisherModel).values(payload).returning();
+  const publisher = await legacyGuardedUpsert<{ id: number }>(
+    publisherModel,
+    "publishers",
+    eq(publisherModel.legacyPublisherId, oldPublisherId),
+    payload,
+  );
 
   if (publisher) {
     const [existingAddress] = await db
@@ -581,22 +662,12 @@ async function getEnclosureByOldId(oldEnclosureId: number | null) {
     legacyEnclosureId: oldEnclosureId,
     name: oldEnclosure.enclosetypeName.trim(),
   };
-  const [existingEnclosure] = await db
-    .select()
-    .from(enclosureModel)
-    .where(eq(enclosureModel.legacyEnclosureId, oldEnclosureId));
-
-  if (existingEnclosure) {
-    return (
-      await db
-        .update(enclosureModel)
-        .set(payload)
-        .where(eq(enclosureModel.id, existingEnclosure.id))
-        .returning()
-    )[0];
-  }
-
-  return (await db.insert(enclosureModel).values(payload).returning())[0];
+  return legacyGuardedUpsert(
+    enclosureModel,
+    "enclosures",
+    eq(enclosureModel.legacyEnclosureId, oldEnclosureId),
+    payload,
+  );
 }
 
 async function getEntryModeByOldId(oldEntryModeId: number | null) {
@@ -613,20 +684,12 @@ async function getEntryModeByOldId(oldEntryModeId: number | null) {
     legacyEntryModeId: oldEntryModeId,
     name: oldEntryMode.entrymodeName.trim(),
   };
-  const [existingEntryMode] = await db
-    .select()
-    .from(entryModeModel)
-    .where(eq(entryModeModel.legacyEntryModeId, oldEntryModeId));
-  if (existingEntryMode) {
-    return (
-      await db
-        .update(entryModeModel)
-        .set(payload)
-        .where(eq(entryModeModel.id, existingEntryMode.id))
-        .returning()
-    )[0];
-  }
-  return (await db.insert(entryModeModel).values(payload).returning())[0];
+  return legacyGuardedUpsert(
+    entryModeModel,
+    "entry_modes",
+    eq(entryModeModel.legacyEntryModeId, oldEntryModeId),
+    payload,
+  );
 }
 
 async function getJournalTypeByOldId(oldJournalTypeId: number | null) {
@@ -643,20 +706,12 @@ async function getJournalTypeByOldId(oldJournalTypeId: number | null) {
     legacyJournalTypeId: oldJournalTypeId,
     name: oldJournalType.journalType.trim(),
   };
-  const [existingJournalType] = await db
-    .select()
-    .from(journalTypeModel)
-    .where(eq(journalTypeModel.legacyJournalTypeId, oldJournalTypeId));
-  if (existingJournalType) {
-    return (
-      await db
-        .update(journalTypeModel)
-        .set(payload)
-        .where(eq(journalTypeModel.id, existingJournalType.id))
-        .returning()
-    )[0];
-  }
-  return (await db.insert(journalTypeModel).values(payload).returning())[0];
+  return legacyGuardedUpsert(
+    journalTypeModel,
+    "journal_types",
+    eq(journalTypeModel.legacyJournalTypeId, oldJournalTypeId),
+    payload,
+  );
 }
 
 async function getLibraryStatusByOldId(oldLibraryStatusId: number | null) {
@@ -671,20 +726,12 @@ async function getLibraryStatusByOldId(oldLibraryStatusId: number | null) {
     name: oldStatus.statusName.trim(),
     issuedTo: String(oldStatus.issueto),
   };
-  const [existingLibraryStatus] = await db
-    .select()
-    .from(statusModel)
-    .where(eq(statusModel.legacyStatusId, oldLibraryStatusId));
-  if (existingLibraryStatus) {
-    return (
-      await db
-        .update(statusModel)
-        .set(payload)
-        .where(eq(statusModel.id, existingLibraryStatus.id))
-        .returning()
-    )[0];
-  }
-  return (await db.insert(statusModel).values(payload).returning())[0];
+  return legacyGuardedUpsert(
+    statusModel,
+    "library_statuses",
+    eq(statusModel.legacyStatusId, oldLibraryStatusId),
+    payload,
+  );
 }
 
 async function getRackByOldId(oldRackId: number | null) {
@@ -698,20 +745,12 @@ async function getRackByOldId(oldRackId: number | null) {
     legacyRackId: oldRackId,
     name: oldRack.rackName.trim(),
   };
-  const [existingRack] = await db
-    .select()
-    .from(rackModel)
-    .where(eq(rackModel.legacyRackId, oldRackId));
-  if (existingRack) {
-    return (
-      await db
-        .update(rackModel)
-        .set(payload)
-        .where(eq(rackModel.id, existingRack.id))
-        .returning()
-    )[0];
-  }
-  return (await db.insert(rackModel).values(payload).returning())[0];
+  return legacyGuardedUpsert(
+    rackModel,
+    "racks",
+    eq(rackModel.legacyRackId, oldRackId),
+    payload,
+  );
 }
 
 async function getShelfByOldId(oldShelfId: number | null) {
@@ -725,20 +764,12 @@ async function getShelfByOldId(oldShelfId: number | null) {
     legacyShelfId: oldShelfId,
     name: oldShelf.shelfName.trim(),
   };
-  const [existingShelf] = await db
-    .select()
-    .from(shelfModel)
-    .where(eq(shelfModel.legacyShelfId, oldShelfId));
-  if (existingShelf) {
-    return (
-      await db
-        .update(shelfModel)
-        .set(payload)
-        .where(eq(shelfModel.id, existingShelf.id))
-        .returning()
-    )[0];
-  }
-  return (await db.insert(shelfModel).values(payload).returning())[0];
+  return legacyGuardedUpsert(
+    shelfModel,
+    "shelfs",
+    eq(shelfModel.legacyShelfId, oldShelfId),
+    payload,
+  );
 }
 
 async function getBindingTypeByOldId(oldBindingId: number | null) {
@@ -755,20 +786,12 @@ async function getBindingTypeByOldId(oldBindingId: number | null) {
     legacyBindingId: oldBindingId,
     name: oldBindingType.bindingTypeName.trim(),
   };
-  const [existingBindingType] = await db
-    .select()
-    .from(bindingModel)
-    .where(eq(bindingModel.legacyBindingId, oldBindingId));
-  if (existingBindingType) {
-    return (
-      await db
-        .update(bindingModel)
-        .set(payload)
-        .where(eq(bindingModel.id, existingBindingType.id))
-        .returning()
-    )[0];
-  }
-  return (await db.insert(bindingModel).values(payload).returning())[0];
+  return legacyGuardedUpsert(
+    bindingModel,
+    "binding_types",
+    eq(bindingModel.legacyBindingId, oldBindingId),
+    payload,
+  );
 }
 
 async function getPeriodByOldId(oldPeriodId: number | null) {
@@ -782,20 +805,12 @@ async function getPeriodByOldId(oldPeriodId: number | null) {
     legacyLibraryPeriodId: oldPeriodId,
     name: oldPeriod.periodName.trim(),
   };
-  const [existingPeriod] = await db
-    .select()
-    .from(libraryPeriodModel)
-    .where(eq(libraryPeriodModel.legacyLibraryPeriodId, oldPeriodId));
-  if (existingPeriod) {
-    return (
-      await db
-        .update(libraryPeriodModel)
-        .set(payload)
-        .where(eq(libraryPeriodModel.id, existingPeriod.id))
-        .returning()
-    )[0];
-  }
-  return (await db.insert(libraryPeriodModel).values(payload).returning())[0];
+  return legacyGuardedUpsert(
+    libraryPeriodModel,
+    "library_periods",
+    eq(libraryPeriodModel.legacyLibraryPeriodId, oldPeriodId),
+    payload,
+  );
 }
 
 async function getAuthorTypeByOldId(oldAuthorTypeId: number | null) {
@@ -810,23 +825,12 @@ async function getAuthorTypeByOldId(oldAuthorTypeId: number | null) {
     legacyAuthorTypeId: oldAuthorTypeId,
     name: oldAuthorType.authortypeName.trim(),
   };
-  const [existingAuthorType] = await db
-    .select()
-    .from(authorTypeModel)
-    .where(eq(authorTypeModel.legacyAuthorTypeId, oldAuthorTypeId!));
-
-  // Every sibling resolver is find-or-CREATE; this one had no insert branch, so
-  // it returned undefined whenever the type was not already present — and
-  // author_types starts empty. author_details.author_type_id_fk is NOT NULL and
-  // is filled from here, so all 25,288 authordetailsub rows failed to insert and
-  // every author-book link was lost.
-  const [authorType] = existingAuthorType
-    ? await db
-        .update(authorTypeModel)
-        .set(payload)
-        .where(eq(authorTypeModel.id, existingAuthorType.id))
-        .returning()
-    : await db.insert(authorTypeModel).values(payload).returning();
+  const authorType = await legacyGuardedUpsert(
+    authorTypeModel,
+    "author_types",
+    eq(authorTypeModel.legacyAuthorTypeId, oldAuthorTypeId!),
+    payload,
+  );
 
   return authorType;
 }
@@ -846,20 +850,12 @@ async function getAuthorByOldId(oldAuthorId: number | null) {
     shortName: oldAuthor.shortName,
     notes: oldAuthor.notes,
   };
-  const [existingAuthor] = await db
-    .select()
-    .from(authorModel)
-    .where(eq(authorModel.legacyAuthorId, oldAuthorId));
-  if (existingAuthor) {
-    return (
-      await db
-        .update(authorModel)
-        .set(payload)
-        .where(eq(authorModel.id, existingAuthor.id))
-        .returning()
-    )[0];
-  }
-  return (await db.insert(authorModel).values(payload).returning())[0];
+  return legacyGuardedUpsert(
+    authorModel,
+    "authors",
+    eq(authorModel.legacyAuthorId, oldAuthorId),
+    payload,
+  );
 }
 
 async function getAuthorDetailByOldId(oldAuthorDetailId: number | null) {
@@ -891,21 +887,12 @@ async function getAuthorDetailByOldId(oldAuthorDetailId: number | null) {
     authorTypeId,
     authorId,
   };
-  const [existingAuthorDetail] = await db
-    .select()
-    .from(authorDetailsModel)
-    .where(eq(authorDetailsModel.legacyAuthorDetailsId, oldAuthorDetailId));
-  if (existingAuthorDetail) {
-    return (
-      await db
-        .update(authorDetailsModel)
-        .set(payload)
-        .where(eq(authorDetailsModel.id, existingAuthorDetail.id))
-        .returning()
-    )[0];
-  }
-
-  return (await db.insert(authorDetailsModel).values(payload).returning())[0];
+  return legacyGuardedUpsert(
+    authorDetailsModel,
+    "author_details",
+    eq(authorDetailsModel.legacyAuthorDetailsId, oldAuthorDetailId),
+    payload,
+  );
 }
 
 async function getHolidayByOldId(oldHolidayId: number | null) {
@@ -926,20 +913,12 @@ async function getHolidayByOldId(oldHolidayId: number | null) {
     to,
     remarks: oldHoliday.remarks,
   };
-  const [existingHoliday] = await db
-    .select()
-    .from(holidayModel)
-    .where(eq(holidayModel.legacyHolidayId, oldHolidayId));
-  if (existingHoliday) {
-    return (
-      await db
-        .update(holidayModel)
-        .set(payload)
-        .where(eq(holidayModel.id, existingHoliday.id))
-        .returning()
-    )[0];
-  }
-  return (await db.insert(holidayModel).values(payload).returning())[0];
+  return legacyGuardedUpsert(
+    holidayModel,
+    "holidays",
+    eq(holidayModel.legacyHolidayId, oldHolidayId),
+    payload,
+  );
 }
 
 async function getClassHolidayByOldId(oldClassHolidayId: number | null) {
@@ -985,22 +964,12 @@ async function getClassHolidayByOldId(oldClassHolidayId: number | null) {
     classId: classM.id,
     isHoliday: bitToBool(oldClassHoliday.isHoliday),
   };
-  const [existingClassHoliday] = await db
-    .select()
-    .from(classHolidayModel)
-    .where(
-      eq(classHolidayModel.legacyHolidayStudentMappingId, oldClassHolidayId),
-    );
-  if (existingClassHoliday) {
-    return (
-      await db
-        .update(classHolidayModel)
-        .set(payload)
-        .where(eq(classHolidayModel.id, existingClassHoliday.id))
-        .returning()
-    )[0];
-  }
-  return (await db.insert(classHolidayModel).values(payload).returning())[0];
+  return legacyGuardedUpsert(
+    classHolidayModel,
+    "class_holidays",
+    eq(classHolidayModel.legacyHolidayStudentMappingId, oldClassHolidayId),
+    payload,
+  );
 }
 
 async function getLibraryArticleByOldId(oldLibraryArticleId: number | null) {
@@ -1034,20 +1003,12 @@ async function getLibraryArticleByOldId(oldLibraryArticleId: number | null) {
     isUniqueAccessNumber: bitToBool(oldLibraryArticle.isUniqueAccessNo),
     isVoucher: bitToBool(oldLibraryArticle.isVoucher),
   };
-  const [existingLibraryArticle] = await db
-    .select()
-    .from(libraryArticleModel)
-    .where(eq(libraryArticleModel.legacyLibraryArticleId, oldLibraryArticleId));
-  if (existingLibraryArticle) {
-    return (
-      await db
-        .update(libraryArticleModel)
-        .set(payload)
-        .where(eq(libraryArticleModel.id, existingLibraryArticle.id))
-        .returning()
-    )[0];
-  }
-  return (await db.insert(libraryArticleModel).values(payload).returning())[0];
+  return legacyGuardedUpsert(
+    libraryArticleModel,
+    "library_articles",
+    eq(libraryArticleModel.legacyLibraryArticleId, oldLibraryArticleId),
+    payload,
+  );
 }
 
 async function getLibraryDocumentByOldId(oldLibraryDocumentId: number | null) {
@@ -1066,27 +1027,15 @@ async function getLibraryDocumentByOldId(oldLibraryDocumentId: number | null) {
     libraryArticleId: (await getLibraryArticleByOldId(oldLibraryDoc.parent_id))
       ?.id,
   };
-  const [existingLibraryDoc] = await db
-    .select()
-    .from(libraryDocumentTypeModel)
-    .where(
-      eq(
-        libraryDocumentTypeModel.legacyLibraryDocumentTypeId,
-        oldLibraryDocumentId,
-      ),
-    );
-  if (existingLibraryDoc) {
-    return (
-      await db
-        .update(libraryDocumentTypeModel)
-        .set(payload)
-        .where(eq(libraryDocumentTypeModel.id, existingLibraryDoc.id))
-        .returning()
-    )[0];
-  }
-  return (
-    await db.insert(libraryDocumentTypeModel).values(payload).returning()
-  )[0];
+  return legacyGuardedUpsert(
+    libraryDocumentTypeModel,
+    "library_document_types",
+    eq(
+      libraryDocumentTypeModel.legacyLibraryDocumentTypeId,
+      oldLibraryDocumentId,
+    ),
+    payload,
+  );
 }
 
 async function getBorrowingTypeByOldId(oldBorrowingTypeId: number | null) {
@@ -1104,20 +1053,12 @@ async function getBorrowingTypeByOldId(oldBorrowingTypeId: number | null) {
     legacyBorrowingTypeId: oldBorrowingTypeId,
     searchGuideline: bitToBool(oldBorrowingType.searchGuideline),
   };
-  const [existingBorrowingType] = await db
-    .select()
-    .from(borrowingTypeModel)
-    .where(eq(borrowingTypeModel.legacyBorrowingTypeId, oldBorrowingTypeId));
-  if (existingBorrowingType) {
-    return (
-      await db
-        .update(borrowingTypeModel)
-        .set(payload)
-        .where(eq(borrowingTypeModel.id, existingBorrowingType.id))
-        .returning()
-    )[0];
-  }
-  return (await db.insert(borrowingTypeModel).values(payload).returning())[0];
+  return legacyGuardedUpsert(
+    borrowingTypeModel,
+    "borrowing_types",
+    eq(borrowingTypeModel.legacyBorrowingTypeId, oldBorrowingTypeId),
+    payload,
+  );
 }
 
 async function getJournalByOldId(oldJournalId: number | null) {
@@ -1144,20 +1085,12 @@ async function getJournalByOldId(oldJournalId: number | null) {
       ?.id,
     type: (await getJournalTypeByOldId(oldJournal.journalTypeId))?.id,
   };
-  const [existingJournal] = await db
-    .select()
-    .from(journalModel)
-    .where(eq(journalModel.legacyJournalId, oldJournalId));
-  if (existingJournal) {
-    return (
-      await db
-        .update(journalModel)
-        .set(payload)
-        .where(eq(journalModel.id, existingJournal.id))
-        .returning()
-    )[0];
-  }
-  return (await db.insert(journalModel).values(payload).returning())[0];
+  return legacyGuardedUpsert(
+    journalModel,
+    "journals",
+    eq(journalModel.legacyJournalId, oldJournalId),
+    payload,
+  );
 }
 
 async function getUserByOldId(oldStaffId: number | null) {
@@ -1230,20 +1163,12 @@ async function getBookByOldId(oldBookId: number | null) {
     updatedById: (await getUserByOldId(oldBook.modifiedById))?.id,
   } as BookT;
 
-  const [existingBook] = await db
-    .select()
-    .from(bookModel)
-    .where(eq(bookModel.legacyBooksId, oldBookId));
-  if (existingBook) {
-    return (
-      await db
-        .update(bookModel)
-        .set(payload)
-        .where(eq(bookModel.id, existingBook.id))
-        .returning()
-    )[0];
-  }
-  return (await db.insert(bookModel).values(payload).returning())[0];
+  return legacyGuardedUpsert<BookT & { id: number }>(
+    bookModel,
+    "books",
+    eq(bookModel.legacyBooksId, oldBookId),
+    payload,
+  );
 }
 
 async function getEntryExitByOldId(oldEntryExitId: number) {
@@ -1354,20 +1279,12 @@ async function getCopyDetailsByOldId(oldCopyId: number | null) {
     updatedById: (await getUserByOldId(oldCopy.modifiedById))?.id,
   } as CopyDetailsT;
 
-  const [existingCopy] = await db
-    .select()
-    .from(copyDetailsModel)
-    .where(eq(copyDetailsModel.legacyCopyDetailsId, oldCopyId));
-  if (existingCopy) {
-    return (
-      await db
-        .update(copyDetailsModel)
-        .set(payload)
-        .where(eq(copyDetailsModel.id, existingCopy.id))
-        .returning()
-    )[0];
-  }
-  return (await db.insert(copyDetailsModel).values(payload).returning())[0];
+  return legacyGuardedUpsert(
+    copyDetailsModel,
+    "copy_details",
+    eq(copyDetailsModel.legacyCopyDetailsId, oldCopyId),
+    payload,
+  );
 }
 
 async function getBookCirculationByOldId(oldIssueReturnId: number | null) {
@@ -1458,20 +1375,16 @@ async function getBookCirculationByOldId(oldIssueReturnId: number | null) {
     remarks: oldIssueReturn.remarks,
   } as BookCirculationT;
 
-  const [existingIssueReturn] = await db
-    .select()
-    .from(bookCirculationModel)
-    .where(eq(bookCirculationModel.legacyBookCirculationId, oldIssueReturnId));
+  const newIssueReturn = await legacyGuardedUpsert<
+    BookCirculationT & { id: number }
+  >(
+    bookCirculationModel,
+    "book_circulation",
+    eq(bookCirculationModel.legacyBookCirculationId, oldIssueReturnId),
+    payload,
+  );
 
-  const [newIssueReturn] = existingIssueReturn
-    ? await db
-        .update(bookCirculationModel)
-        .set(payload)
-        .where(eq(bookCirculationModel.id, existingIssueReturn.id))
-        .returning()
-    : await db.insert(bookCirculationModel).values(payload).returning();
-
-  if (newIssueReturn.isReIssued) {
+  if (newIssueReturn?.isReIssued) {
     // Guard against duplicates: this path re-runs on every upsert of the same
     // circulation (restartable loads + the delta-sync), and book_reissue has
     // no unique constraint to catch the repeat insert.
@@ -1514,22 +1427,12 @@ async function getVendorByOldId(oldVendorId: number | null) {
     personOfContactPhone: oldVendor.contactpersonphnoneNumber,
     pan: oldVendor.panNumber,
   } as VendorT;
-  const [existingVendor] = await db
-    .select()
-    .from(vendorModel)
-    .where(eq(vendorModel.legacyVendorId, oldVendorId));
-  if (existingVendor) {
-    return (
-      await db
-        .update(vendorModel)
-        .set(payload)
-        .where(eq(vendorModel.id, existingVendor.id))
-        .returning()
-    )[0];
-  }
-  const newVendor = (
-    await db.insert(vendorModel).values(payload).returning()
-  )[0];
+  const newVendor = await legacyGuardedUpsert<{ id: number }>(
+    vendorModel,
+    "vendors",
+    eq(vendorModel.legacyVendorId, oldVendorId),
+    payload,
+  );
   if (newVendor) {
     const [existingAddress] = await db
       .select()
@@ -1964,47 +1867,13 @@ async function loadLibraryTable(
     ? await readSuccessfulLegacyIdsFromWorkbook(workbookPath)
     : new Set<number>();
 
-  // Restart-friendliness: on any run beyond the first, the new DB already has
-  // rows keyed on legacy_x_id for whatever this table loaded last time. Skip
-  // those IDs so a crashed / re-triggered load only processes what's actually
-  // missing, instead of walking every row from row 1 through the (idempotent
-  // but slow) upsert path again. Ongoing edits from old IRP are picked up by
-  // the delta-sync service, not this loader.
-  const { findLegacyMapping } =
-    await import("./services/library-legacy-mapping.js");
-  const mapping = findLegacyMapping(ele.table);
-  if (mapping) {
-    try {
-      const loadedRows = (
-        await db.execute(
-          drizzleSql.raw(`
-            SELECT ${mapping.legacyIdColumn} AS id
-            FROM ${mapping.newTable}
-            WHERE ${mapping.legacyIdColumn} IS NOT NULL
-          `),
-        )
-      ).rows as Array<{ id: number }>;
-      let skippedCount = 0;
-      for (const r of loadedRows) {
-        const id = Number(r.id);
-        if (Number.isFinite(id) && !alreadySuccessful.has(id)) {
-          alreadySuccessful.add(id);
-          skippedCount++;
-        }
-      }
-      if (skippedCount > 0) {
-        log(
-          `[library-load] ${ele.table}: skipping ${skippedCount} row(s) already present in ${mapping.newTable}`,
-        );
-      }
-    } catch (err) {
-      log(
-        `[library-load] ${ele.table}: skip-lookup failed (${
-          err instanceof Error ? err.message : String(err)
-        }) — will process every row`,
-      );
-    }
-  }
+  // Existing rows are NO LONGER skipped: the loader now UPSERTS them so the
+  // new DB reflects the old system, and every resolver routes through
+  // `legacyGuardedUpsert`, which PRESERVES rows edited in the new system after
+  // their last legacy write (admin/staff changes are not reset). Missing rows
+  // are still inserted; already-loaded rows get refreshed unless locally
+  // edited. `alreadySuccessful` now only carries this-run workbook progress
+  // (crash-restart dedup), not a blanket skip of present rows.
 
   // Prefer the ids already fetched during the planning phase — saves a
   // second run of `ele.sql` per table (some of those SELECTs have expensive

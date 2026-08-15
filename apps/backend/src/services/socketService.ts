@@ -7,6 +7,7 @@ import {
 } from "@/utils/realtime-tracker-filters.js";
 import type { DefaultEventsMap } from "socket.io";
 import * as userService from "@/features/user/services/user.service";
+import * as studentService from "@/features/user/services/student.service";
 import { getRedisPubClient } from "@/config/redis.js";
 
 import { createLogger } from "@/config/logger.js";
@@ -880,6 +881,14 @@ class SocketService {
               type: user.type as "ADMIN" | "STAFF" | "STUDENT",
               tabActive: true,
             });
+
+            // Push the new student's full row data over the socket so the
+            // online-students modal can splice it in directly instead of
+            // refetching the whole list. Fire-and-forget: must not delay
+            // the count broadcast below, which drives the header widget.
+            if (user.type === "STUDENT") {
+              void this.emitStudentOnlineDetail(userId);
+            }
           }
         }
       } catch (error) {
@@ -911,6 +920,36 @@ class SocketService {
     }
   }
 
+  // Build and emit the full row data for a student who just came online, so
+  // the online-students modal can append it to its list without a refetch.
+  // Mirrors the per-student enrichment the REST getOnlineStudents controller
+  // already does (findByUserId + loginTime + activeClassName) so the emitted
+  // shape matches OnlineStudentDto exactly.
+  private async emitStudentOnlineDetail(userId: string) {
+    try {
+      const userIdNum = Number(userId);
+      if (Number.isNaN(userIdNum)) return;
+
+      const student = await studentService.findByUserId(userIdNum);
+      if (!student) return;
+
+      const [loginTime, activeClassName] = await Promise.all([
+        this.getOnlineStudentLoginTime(userIdNum),
+        studentService.getActiveClassNameForStudent(student.id as number),
+      ]);
+
+      this.io?.emit("student_online_detail", {
+        ...student,
+        loginTime,
+        activeClassName,
+      });
+    } catch (error) {
+      log.error(`Error building online-student detail for ${userId}`, {
+        error,
+      });
+    }
+  }
+
   private recomputeUserTabActive(userId: string) {
     const sockets = this.activeConnections.get(userId);
     if (!sockets || sockets.size === 0) return;
@@ -936,10 +975,14 @@ class SocketService {
     this.socketToUserId.delete(socketId);
     this.socketTabActive.delete(socketId);
 
+    let wasStudent = false;
     this.activeConnections.forEach((sockets, userId) => {
       if (sockets.has(socketId)) {
         sockets.delete(socketId);
         if (sockets.size === 0) {
+          if (this.userInfoCache.get(userId)?.type === "STUDENT") {
+            wasStudent = true;
+          }
           this.activeConnections.delete(userId);
           this.userConnectedAt.delete(userId);
           // Remove from cache when user has no active connections
@@ -968,6 +1011,11 @@ class SocketService {
           if (pub) {
             await pub.sRem(ONLINE_USERS_SET, userIdForSocket);
             await pub.del(userInfoKey(userIdForSocket));
+          }
+          if (wasStudent) {
+            this.io?.emit("student_offline_detail", {
+              userId: Number(userIdForSocket),
+            });
           }
         }
       } catch (error) {
