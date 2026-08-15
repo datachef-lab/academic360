@@ -3,17 +3,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { studentAvatarUrl } from "@/utils/studentAvatarUrl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { AlertCircle, DoorOpen, List, Loader2, LogIn, LogOut, Search } from "lucide-react";
+import { AlertCircle, DoorOpen, Loader2, LogIn, LogOut, Search } from "lucide-react";
 import { toast } from "sonner";
 import { getColorFromName } from "@/utils/avatar";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useSocket } from "@/hooks/useSocket";
 import {
   createLibraryEntryExit,
-  downloadLibraryEntryExitExcel,
   getLibraryEntryExitPreview,
   getLibraryEntryExitList,
   LibraryCurrentStatus,
@@ -289,27 +287,6 @@ export default function EntryExitPage() {
     };
   }, [socket, isConnected, previewData?.user.userId, loadCandidateByUserId]);
 
-  const handleDownload = () => {
-    const run = async () => {
-      try {
-        const blob = await downloadLibraryEntryExitExcel({ date: today });
-        const url = URL.createObjectURL(blob);
-        const anchor = document.createElement("a");
-        anchor.href = url;
-        anchor.download = `library-entry-exit-${today}.xlsx`;
-        document.body.appendChild(anchor);
-        anchor.click();
-        document.body.removeChild(anchor);
-        URL.revokeObjectURL(url);
-      } catch (error) {
-        toast.error("Failed to download Excel");
-        console.error(error);
-      }
-    };
-
-    void run();
-  };
-
   const handleCandidateSearch = async () => {
     const term = candidateSearchTerm.trim();
     if (!term) {
@@ -428,79 +405,53 @@ export default function EntryExitPage() {
 
   return (
     <div className="min-h-screen py-2 sm:py-4">
-      <div className="max-w-6xl mx-auto px-2 sm:px-4">
+      <div className="px-2 sm:px-4">
         <LibraryPageHeader
           icon={DoorOpen}
           title="Library Entry / Exit"
           subtitle="Search users and record library check-in or check-out."
-          actions={
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleDownload}
-              className="w-full sm:w-auto shrink-0"
-            >
-              <List className="w-4 h-4 mr-2" />
-              Download Report
-            </Button>
-          }
         />
 
-        <Card className="mb-4 sm:mb-6">
-          <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-              <Search className="h-4 w-4 sm:h-5 sm:w-5" />
-              Search User
-            </CardTitle>
-            <CardDescription className="text-sm sm:text-base mt-1">
-              Student: UID, RFID, Registration, or Roll Number â€” Staff: UID, Code, or Attendance
-              Code
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-              <div className="flex-1">
-                <Label htmlFor="candidate-search" className="text-sm sm:text-base">
-                  Identifier
-                </Label>
-                <div className="relative mt-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="candidate-search"
-                    type="text"
-                    value={candidateSearchTerm}
-                    onChange={(e) => setCandidateSearchTerm(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") void handleCandidateSearch();
-                    }}
-                    placeholder="Search by UID, RFID, Registration, Roll, or Staff Code..."
-                    disabled={candidateSearchLoading}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              <div className="flex items-end gap-2">
-                <Button
-                  onClick={() => void handleCandidateSearch()}
-                  disabled={candidateSearchLoading || !candidateSearchTerm.trim()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
-                >
-                  {candidateSearchLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Searching...
-                    </>
-                  ) : (
-                    <>
-                      <Search className="w-4 h-4 mr-2" />
-                      Search
-                    </>
-                  )}
-                </Button>
+        <div className="mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  id="candidate-search"
+                  type="text"
+                  value={candidateSearchTerm}
+                  onChange={(e) => setCandidateSearchTerm(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void handleCandidateSearch();
+                  }}
+                  placeholder="Search by UID, RFID, Registration, Roll, or Staff Code..."
+                  disabled={candidateSearchLoading}
+                  className="pl-10"
+                />
               </div>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex items-end gap-2">
+              <Button
+                onClick={() => void handleCandidateSearch()}
+                disabled={candidateSearchLoading || !candidateSearchTerm.trim()}
+                className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
+              >
+                {candidateSearchLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Searching...
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-4 h-4 mr-2" />
+                    Search
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
 
         {renderCandidateResult()}
       </div>

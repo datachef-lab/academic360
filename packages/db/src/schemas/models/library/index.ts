@@ -46,3 +46,4 @@ export * from "./floor-plan.model";
 export * from "./cdl-session.model";
 export * from "./library-fine-mapping.model";
 export * from "./library-fine-settings.model";
+export * from "./library-legacy-sync-watermark.model";
