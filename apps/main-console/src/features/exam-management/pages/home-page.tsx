@@ -49,7 +49,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import MultiSelectDropdown from "@/components/ui/MultiSelect";
+import { MultiSelect as AdvancedMultiSelect } from "@/components/ui/AdvancedMultiSelect";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GradientStatCard } from "@/features/notifications/components/gradient-stat-card";
 import { VisualCard } from "@/features/fees-dashboard/components/VisualCard";
@@ -179,6 +179,13 @@ function fmtMonth(m: string) {
   const dt = new Date(`${m}-01T00:00:00`);
   if (Number.isNaN(dt.getTime())) return m;
   return dt.toLocaleDateString("en-IN", { month: "short", year: "numeric" });
+}
+
+/** "SEMESTER II" → "II" — the tables/tooltips label the column, so the
+ *  word itself is noise. */
+function shortClass(name: string | null | undefined): string {
+  if (!name) return "—";
+  return name.replace(/semester/gi, "").trim() || name;
 }
 
 /** dd/mm/yyyy for a single date string — used in chart titles and tables. */
@@ -508,7 +515,7 @@ function OverviewTab({ stats, rangeLabel }: { stats: ExamDashboardStats; rangeLa
           <div key={i} className="flex items-center justify-between gap-4">
             <span className="truncate text-[#444]">
               {d.programCourse}
-              {d.className ? ` · ${d.className}` : ""}
+              {d.className ? ` · Sem ${shortClass(d.className)}` : ""}
             </span>
             <span className="font-mono font-medium tabular-nums text-[#1a1a1a]">
               {nfmt.format(d.papers)}
@@ -690,7 +697,7 @@ function OverviewTab({ stats, rangeLabel }: { stats: ExamDashboardStats; rangeLa
               {/* Orange, per Harsh — matches the library "Books added per
                   year" bars and keeps the big bar chart visually distinct
                   from the violet activity lines above it. */}
-              <Bar dataKey="papers" name="Papers" fill="#f97316" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="papers" name="Papers" fill="#3b82f6" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )}
@@ -723,7 +730,7 @@ function OverviewTab({ stats, rangeLabel }: { stats: ExamDashboardStats; rangeLa
                 <FeesTableRow key={p.examId}>
                   <FeesTableCell className="font-medium">{p.examGroupName ?? "—"}</FeesTableCell>
                   <FeesTableCell className="text-slate-600">{p.examTypeName ?? "—"}</FeesTableCell>
-                  <FeesTableCell className="text-center">{p.className ?? "—"}</FeesTableCell>
+                  <FeesTableCell className="text-center">{shortClass(p.className)}</FeesTableCell>
                   <FeesTableCell className="whitespace-nowrap text-center text-slate-600">
                     {p.firstPaperAt ? fmtDMY(p.firstPaperAt) : "—"}
                   </FeesTableCell>
@@ -789,7 +796,7 @@ function OverviewTab({ stats, rangeLabel }: { stats: ExamDashboardStats; rangeLa
                     ) : null}
                   </FeesTableCell>
                   <FeesTableCell>{p.examGroupName ?? "—"}</FeesTableCell>
-                  <FeesTableCell className="text-center">{p.className ?? "—"}</FeesTableCell>
+                  <FeesTableCell className="text-center">{shortClass(p.className)}</FeesTableCell>
                   <FeesTableCell className="text-center font-semibold tabular-nums">
                     {nfmt.format(p.candidateCount)}
                   </FeesTableCell>
@@ -842,18 +849,21 @@ function ResourcesTab({ stats }: { stats: ExamDashboardStats }) {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Grouped bars instead of a table — rooms vs rooms-in-use per
-            floor at a glance; capacity rides in the tooltip. */}
-        <PanelCard title="Floor utilisation · rooms vs in use" className="lg:col-span-2">
+        {/* Stacked bars — "in use" fills up each floor's total room count,
+            so utilisation reads instantly; capacity rides in the tooltip. */}
+        <PanelCard title="Floor utilisation · rooms in use" className="lg:col-span-2">
           {stats.roomsByFloor.length === 0 ? (
             <EmptyPanel label="No rooms configured yet" />
           ) : (
             <div>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart
-                  data={stats.roomsByFloor.map((f) => ({ ...f, label: f.floor }))}
-                  barGap={2}
-                  barCategoryGap="26%"
+                  data={stats.roomsByFloor.map((f) => ({
+                    ...f,
+                    label: f.floor,
+                    idle: Math.max(0, f.rooms - f.inUse),
+                  }))}
+                  barCategoryGap="35%"
                 >
                   <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
                   <XAxis
@@ -870,14 +880,20 @@ function ResourcesTab({ stats }: { stats: ExamDashboardStats }) {
                     width={30}
                   />
                   <Tooltip cursor={{ fill: "#f1f5f9" }} content={<MultiSeriesTooltip />} />
-                  <Bar dataKey="rooms" name="Rooms" fill="#06b6d4" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="inUse" name="In use" fill="#7c3aed" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="inUse" name="In use" stackId="f" fill="#7c3aed" />
+                  <Bar
+                    dataKey="idle"
+                    name="Idle"
+                    stackId="f"
+                    fill="#e2e8f0"
+                    radius={[3, 3, 0, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
               <ChartLegendDots
                 items={[
-                  { label: "Rooms", color: "#06b6d4" },
                   { label: "In use", color: "#7c3aed" },
+                  { label: "Idle", color: "#e2e8f0" },
                 ]}
               />
             </div>
@@ -906,33 +922,61 @@ function ResourcesTab({ stats }: { stats: ExamDashboardStats }) {
           {stats.groupStats.length === 0 ? (
             <EmptyPanel label="No exam groups in this scope" />
           ) : (
-            <ul className="flex flex-col divide-y divide-slate-100">
+            /* Gauge grid — one circular progress ring per exam group, a
+               different shape from every bar/line widget on the dashboard. */
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
               {stats.groupStats.map((g) => {
                 const pct = g.students > 0 ? Math.round((g.studentsSeated / g.students) * 100) : 0;
+                const ring = pct >= 100 ? "#10b981" : pct > 0 ? "#f59e0b" : "#cbd5e1";
+                const R = 26;
+                const C = 2 * Math.PI * R;
                 return (
-                  <li key={g.examGroupId} className="flex flex-col gap-1 py-2 first:pt-0 last:pb-0">
-                    <div className="flex items-baseline justify-between gap-3">
-                      <span className="min-w-0 truncate text-sm text-slate-700" title={g.name}>
-                        {g.name}
-                        <span className="ml-1.5 text-xs text-slate-400">
-                          {fmtDMY(g.commencementDate) ?? ""}
-                        </span>
-                      </span>
-                      <span className="shrink-0 text-xs font-medium tabular-nums text-slate-600">
-                        {nfmt.format(g.studentsSeated)} / {nfmt.format(g.students)} seated ·{" "}
-                        {nfmt.format(g.rooms)} rooms
-                      </span>
-                    </div>
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                      <div
-                        className="h-full rounded-full bg-emerald-500"
-                        style={{ width: `${pct}%` }}
+                  <div
+                    key={g.examGroupId}
+                    className="flex flex-col items-center gap-1.5 rounded-md border border-slate-100 bg-slate-50/60 px-2 py-3 text-center"
+                  >
+                    <svg width="64" height="64" viewBox="0 0 64 64" className="-rotate-90">
+                      <circle cx="32" cy="32" r={R} fill="none" stroke="#e2e8f0" strokeWidth="6" />
+                      <circle
+                        cx="32"
+                        cy="32"
+                        r={R}
+                        fill="none"
+                        stroke={ring}
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                        strokeDasharray={`${(pct / 100) * C} ${C}`}
                       />
-                    </div>
-                  </li>
+                      <text
+                        x="32"
+                        y="32"
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        transform="rotate(90 32 32)"
+                        fontSize="13"
+                        fontWeight="700"
+                        fill="#1e293b"
+                      >
+                        {pct}%
+                      </text>
+                    </svg>
+                    <span
+                      className="line-clamp-2 w-full text-xs font-medium leading-tight text-slate-700"
+                      title={g.name}
+                    >
+                      {g.name}
+                    </span>
+                    <span className="text-[11px] tabular-nums text-slate-500">
+                      {nfmt.format(g.studentsSeated)}/{nfmt.format(g.students)} seated ·{" "}
+                      {nfmt.format(g.rooms)} rooms
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      {fmtDMY(g.commencementDate) ?? ""}
+                    </span>
+                  </div>
                 );
               })}
-            </ul>
+            </div>
           )}
         </PanelCard>
 
@@ -1158,8 +1202,50 @@ function FormFillupTab({ stats, rangeLabel }: { stats: ExamDashboardStats; range
         />
       </div>
 
+      {/* The reconciliation table is the tab's centrepiece — full width;
+          the trend chart sits below it. */}
+      <TablePanel title="Reconciliation per programme course · student vs staff">
+        <FeesTable fixed={false} dense>
+          <FeesTableHeader>
+            <FeesTableHead>Programme course</FeesTableHead>
+            <FeesTableHead className="text-center">Student submitted</FeesTableHead>
+            <FeesTableHead className="text-center">Staff uploaded</FeesTableHead>
+            <FeesTableHead className="text-center">Linked</FeesTableHead>
+            <FeesTableHead className="text-center">Gap</FeesTableHead>
+          </FeesTableHeader>
+          <FeesTableBody>
+            {stats.formReconciliationByProgramCourse.map((r) => {
+              const gap = r.studentSubmitted - r.staffRecorded;
+              return (
+                <FeesTableRow key={r.name}>
+                  <FeesTableCell className="font-medium">{r.name}</FeesTableCell>
+                  <FeesTableCell className="text-center tabular-nums text-cyan-700">
+                    {nfmt.format(r.studentSubmitted)}
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center tabular-nums text-violet-700">
+                    {nfmt.format(r.staffRecorded)}
+                  </FeesTableCell>
+                  <FeesTableCell className="text-center tabular-nums text-emerald-700">
+                    {nfmt.format(r.linked)}
+                  </FeesTableCell>
+                  <FeesTableCell
+                    className={cn(
+                      "text-center font-semibold tabular-nums",
+                      gap === 0 ? "text-slate-400" : "text-amber-700",
+                    )}
+                  >
+                    {gap === 0 ? "—" : nfmt.format(gap)}
+                  </FeesTableCell>
+                </FeesTableRow>
+              );
+            })}
+          </FeesTableBody>
+        </FeesTable>
+      </TablePanel>
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <PanelCard
+          className="lg:col-span-2"
           title={`Student vs staff entries · ${sources.weekly ? "weekly" : "daily"} · ${rangeLabel}`}
         >
           {sources.data.length === 0 ? (
@@ -1208,50 +1294,6 @@ function FormFillupTab({ stats, rangeLabel }: { stats: ExamDashboardStats; range
           )}
         </PanelCard>
 
-        <TablePanel
-          title="Reconciliation per programme course · student vs staff"
-          className="lg:col-span-2"
-        >
-          <FeesTable fixed={false} dense>
-            <FeesTableHeader>
-              <FeesTableHead>Programme course</FeesTableHead>
-              <FeesTableHead className="text-center">Student submitted</FeesTableHead>
-              <FeesTableHead className="text-center">Staff uploaded</FeesTableHead>
-              <FeesTableHead className="text-center">Linked</FeesTableHead>
-              <FeesTableHead className="text-center">Gap</FeesTableHead>
-            </FeesTableHeader>
-            <FeesTableBody>
-              {stats.formReconciliationByProgramCourse.map((r) => {
-                const gap = r.studentSubmitted - r.staffRecorded;
-                return (
-                  <FeesTableRow key={r.name}>
-                    <FeesTableCell className="font-medium">{r.name}</FeesTableCell>
-                    <FeesTableCell className="text-center tabular-nums text-cyan-700">
-                      {nfmt.format(r.studentSubmitted)}
-                    </FeesTableCell>
-                    <FeesTableCell className="text-center tabular-nums text-violet-700">
-                      {nfmt.format(r.staffRecorded)}
-                    </FeesTableCell>
-                    <FeesTableCell className="text-center tabular-nums text-emerald-700">
-                      {nfmt.format(r.linked)}
-                    </FeesTableCell>
-                    <FeesTableCell
-                      className={cn(
-                        "text-center font-semibold tabular-nums",
-                        gap === 0 ? "text-slate-400" : "text-amber-700",
-                      )}
-                    >
-                      {gap === 0 ? "—" : nfmt.format(gap)}
-                    </FeesTableCell>
-                  </FeesTableRow>
-                );
-              })}
-            </FeesTableBody>
-          </FeesTable>
-        </TablePanel>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <PanelCard title="Forms by appear type">
           <RankedList
             emptyLabel="No staff-uploaded forms yet"
@@ -1356,6 +1398,10 @@ function FiltersDialog({
   const update = <K extends keyof DraftFilters>(key: K, v: DraftFilters[K]) =>
     setDraft((d) => ({ ...d, [key]: v }));
 
+  // The shared AdvancedMultiSelect trigger only renders its placeholder, so
+  // the placeholder itself carries the selection count.
+  const sel = (arr: string[], empty: string) => (arr.length ? `${arr.length} selected` : empty);
+
   // Cascade: programme-course options narrow to the selected streams /
   // affiliations / regulations (mirrors FeesFiltersDialog).
   const programCourseOptions = useMemo(() => {
@@ -1390,11 +1436,12 @@ function FiltersDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* Split layout: a fixed illustration rail on the left; on the right a
           pinned header, scrollable filter body, pinned footer. */}
-      <DialogContent className="w-[95vw] max-w-3xl overflow-hidden p-0">
-        <div className="flex max-h-[85vh]">
-          <div className="hidden w-[200px] shrink-0 self-stretch border-r border-[#ede9fe] bg-[#f5f3ff] sm:block">
+      <DialogContent className="w-[95vw] max-w-4xl overflow-hidden p-0">
+        <div className="flex h-[560px] max-h-[85vh]">
+          {/* Full-bleed illustration — covers the whole rail, top to bottom. */}
+          <div className="hidden w-[320px] shrink-0 self-stretch border-r border-slate-200 bg-white sm:block">
             <img
-              src="/modern-analytics-visualization-business-insights-vector.jpg"
+              src="/exam-filters-illustration.jpg"
               alt=""
               className="h-full w-full object-cover"
             />
@@ -1411,23 +1458,33 @@ function FiltersDialog({
               </p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <FilterField label="Exam types">
-                  <MultiSelectDropdown
-                    placeholder="All exam types"
+                  <AdvancedMultiSelect
+                    searchable
+                    resetOnDefaultValueChange
+                    modalPopover
+                    maxCount={2}
+                    className="w-full px-3"
+                    placeholder={sel(draft.examTypeIds, "All types")}
                     options={examTypes.flatMap((t) =>
                       t.id != null ? [{ value: String(t.id), label: t.name }] : [],
                     )}
-                    selectedOptions={draft.examTypeIds}
-                    onChange={(s: string[]) => update("examTypeIds", s)}
-                    contentClassName="min-w-[260px]"
+                    defaultValue={draft.examTypeIds}
+                    onValueChange={(s: string[]) => update("examTypeIds", s)}
+                    popoverClassName="min-w-[260px]"
                   />
                 </FilterField>
                 <FilterField label="Subject categories">
-                  <MultiSelectDropdown
-                    placeholder="All categories"
+                  <AdvancedMultiSelect
+                    searchable
+                    resetOnDefaultValueChange
+                    modalPopover
+                    maxCount={2}
+                    className="w-full px-3"
+                    placeholder={sel(draft.subjectTypeIds, "All categories")}
                     options={subjectTypes.map((s) => ({ value: String(s.id), label: s.name }))}
-                    selectedOptions={draft.subjectTypeIds}
-                    onChange={(s: string[]) => update("subjectTypeIds", s)}
-                    contentClassName="min-w-[260px]"
+                    defaultValue={draft.subjectTypeIds}
+                    onValueChange={(s: string[]) => update("subjectTypeIds", s)}
+                    popoverClassName="min-w-[260px]"
                   />
                 </FilterField>
                 <FilterField label="Time range">
@@ -1471,74 +1528,111 @@ function FiltersDialog({
               <p className="text-[11px] font-semibold uppercase tracking-wider text-[#7c3aed]">
                 Cohort
               </p>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {/* 4-up: row 1 = years / affiliations / regulations / streams;
+                  row 2 = programme courses / semesters / shifts. */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
                 <FilterField label="Academic years">
-                  <MultiSelectDropdown
-                    placeholder="All academic years"
+                  <AdvancedMultiSelect
+                    searchable
+                    resetOnDefaultValueChange
+                    modalPopover
+                    maxCount={2}
+                    className="w-full px-3"
+                    placeholder={sel(draft.academicYearIds, "All years")}
                     options={academicYears.map((y) => ({ value: String(y.id), label: y.year }))}
-                    selectedOptions={draft.academicYearIds}
-                    onChange={(s: string[]) => update("academicYearIds", s)}
-                    contentClassName="min-w-[260px]"
+                    defaultValue={draft.academicYearIds}
+                    onValueChange={(s: string[]) => update("academicYearIds", s)}
+                    popoverClassName="min-w-[260px]"
                   />
                 </FilterField>
                 <FilterField label="Affiliations">
-                  <MultiSelectDropdown
-                    placeholder="All affiliations"
+                  <AdvancedMultiSelect
+                    searchable
+                    resetOnDefaultValueChange
+                    modalPopover
+                    maxCount={2}
+                    className="w-full px-3"
+                    placeholder={sel(draft.affiliationIds, "All affiliations")}
                     options={affiliations.map((a) => ({ value: String(a.id), label: a.name }))}
-                    selectedOptions={draft.affiliationIds}
-                    onChange={(s: string[]) => update("affiliationIds", s)}
-                    contentClassName="min-w-[260px]"
+                    defaultValue={draft.affiliationIds}
+                    onValueChange={(s: string[]) => update("affiliationIds", s)}
+                    popoverClassName="min-w-[260px]"
                   />
                 </FilterField>
                 <FilterField label="Regulations">
-                  <MultiSelectDropdown
-                    placeholder="All regulations"
+                  <AdvancedMultiSelect
+                    searchable
+                    resetOnDefaultValueChange
+                    modalPopover
+                    maxCount={2}
+                    className="w-full px-3"
+                    placeholder={sel(draft.regulationTypeIds, "All regulations")}
                     options={regulationTypes.map((r) => ({ value: String(r.id), label: r.name }))}
-                    selectedOptions={draft.regulationTypeIds}
-                    onChange={(s: string[]) => update("regulationTypeIds", s)}
-                    contentClassName="min-w-[260px]"
+                    defaultValue={draft.regulationTypeIds}
+                    onValueChange={(s: string[]) => update("regulationTypeIds", s)}
+                    popoverClassName="min-w-[260px]"
                   />
                 </FilterField>
                 <FilterField label="Streams">
-                  <MultiSelectDropdown
-                    placeholder="All streams"
+                  <AdvancedMultiSelect
+                    searchable
+                    resetOnDefaultValueChange
+                    modalPopover
+                    maxCount={2}
+                    className="w-full px-3"
+                    placeholder={sel(draft.streamIds, "All streams")}
                     options={streams.map((s) => ({ value: String(s.id), label: s.name }))}
-                    selectedOptions={draft.streamIds}
-                    onChange={(s: string[]) => update("streamIds", s)}
-                    contentClassName="min-w-[260px]"
+                    defaultValue={draft.streamIds}
+                    onValueChange={(s: string[]) => update("streamIds", s)}
+                    popoverClassName="min-w-[260px]"
                   />
                 </FilterField>
                 <FilterField label="Programme courses">
-                  <MultiSelectDropdown
-                    placeholder="All programme courses"
+                  <AdvancedMultiSelect
+                    searchable
+                    resetOnDefaultValueChange
+                    modalPopover
+                    maxCount={2}
+                    className="w-full px-3"
+                    placeholder={sel(draft.programCourseIds, "All courses")}
                     options={programCourseOptions}
-                    selectedOptions={draft.programCourseIds}
-                    onChange={(s: string[]) => update("programCourseIds", s)}
-                    contentClassName="min-w-[300px]"
+                    defaultValue={draft.programCourseIds}
+                    onValueChange={(s: string[]) => update("programCourseIds", s)}
+                    popoverClassName="min-w-[300px]"
                   />
                 </FilterField>
                 <FilterField label="Semesters">
-                  <MultiSelectDropdown
-                    placeholder="All semesters"
+                  <AdvancedMultiSelect
+                    searchable
+                    resetOnDefaultValueChange
+                    modalPopover
+                    maxCount={2}
+                    className="w-full px-3"
+                    placeholder={sel(draft.classIds, "All semesters")}
                     options={classes.flatMap((c) =>
                       c.id != null
                         ? [{ value: String(c.id), label: formatSemesterClassOptionLabel(c.name) }]
                         : [],
                     )}
-                    selectedOptions={draft.classIds}
-                    onChange={(s: string[]) => update("classIds", s)}
-                    contentClassName="min-w-[260px]"
+                    defaultValue={draft.classIds}
+                    onValueChange={(s: string[]) => update("classIds", s)}
+                    popoverClassName="min-w-[260px]"
                   />
                 </FilterField>
                 <FilterField label="Shifts">
-                  <MultiSelectDropdown
-                    placeholder="All shifts"
+                  <AdvancedMultiSelect
+                    searchable
+                    resetOnDefaultValueChange
+                    modalPopover
+                    maxCount={2}
+                    className="w-full px-3"
+                    placeholder={sel(draft.shiftIds, "All shifts")}
                     options={shifts.flatMap((s) =>
                       s.id != null ? [{ value: String(s.id), label: s.name }] : [],
                     )}
-                    selectedOptions={draft.shiftIds}
-                    onChange={(s: string[]) => update("shiftIds", s)}
-                    contentClassName="min-w-[260px]"
+                    defaultValue={draft.shiftIds}
+                    onValueChange={(s: string[]) => update("shiftIds", s)}
+                    popoverClassName="min-w-[260px]"
                   />
                 </FilterField>
               </div>
