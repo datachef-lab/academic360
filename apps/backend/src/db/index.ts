@@ -105,15 +105,18 @@ export const connectToDatabase = async () => {
       log.warn("Boot migrations orchestrator threw", { error: err }),
     );
 
-    // RE-ENABLED 2026-08-14 (Harsh): was disabled 2026-08-10 per ADR 0034
-    // while the excel-UID importer competed for DB connections; that import
-    // is done. The tick now also backfills rows missing by legacy id before
-    // applying the modified-since delta, so never-imported old-DB rows load.
-    import("@/features/library/services/library-legacy-sync.service.js")
-      .then(({ startLibrarySyncScheduler }) => startLibrarySyncScheduler())
-      .catch((err) =>
-        log.warn("Library sync scheduler failed to start", { error: err }),
-      );
+    // Library legacy data is loaded ONCE via the marker-gated
+    // `library-legacy-load` boot migration (see db/boot-migrations.ts).
+    //
+    // The recurring 10-minute delta-sync scheduler is intentionally NOT
+    // started: it does a blanket full-column overwrite of every legacy-sourced
+    // row on every tick, which would revert any edits admin/staff make in the
+    // new system (renamed book, changed copy status, edited patron, etc.) and
+    // pins a full CPU core (a tick over the full IRP dataset runs for hours).
+    // Requirement (Harsh, 2026-08-15): load old data once, then no background
+    // sync. Re-enable this only if a change-aware, non-clobbering sync is built.
+    //   import("@/features/library/services/library-legacy-sync.service.js")
+    //     .then(({ startLibrarySyncScheduler }) => startLibrarySyncScheduler());
   } catch (error) {
     log.debug(process.env.DATABASE_URL ?? "DATABASE_URL not set");
     log.error("Failed to connect to the database ⚠", { error });
