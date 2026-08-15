@@ -900,97 +900,33 @@ function ResourcesTab({ stats }: { stats: ExamDashboardStats }) {
           )}
         </PanelCard>
 
-        <PanelCard title="Most used rooms">
-          <RankedList
-            emptyLabel="No rooms allotted yet"
-            accent="text-emerald-700 bg-emerald-50"
-            items={stats.topRooms.map((r) => ({
-              key: `${r.name}·${r.floor ?? ""}`,
-              label: r.name,
-              sublabel: `${r.floor ?? "—"} · ${nfmt.format(r.capacity)} seats`,
-              value: r.timesUsed,
-            }))}
-            format={(v) => `${nfmt.format(v)}×`}
-          />
-        </PanelCard>
-      </div>
+        <div className="flex flex-col gap-4">
+          <PanelCard title="Most used rooms">
+            <RankedList
+              emptyLabel="No rooms allotted yet"
+              accent="text-emerald-700 bg-emerald-50"
+              items={stats.topRooms.map((r) => ({
+                key: `${r.name}·${r.floor ?? ""}`,
+                label: r.name,
+                sublabel: `${r.floor ?? "—"} · ${nfmt.format(r.capacity)} seats`,
+                value: r.timesUsed,
+              }))}
+              format={(v) => `${nfmt.format(v)}×`}
+            />
+          </PanelCard>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Coverage list instead of a table — one row per exam group with an
-            inline seated/total bar. */}
-        <PanelCard title="Seating coverage per exam group" className="lg:col-span-2">
-          {stats.groupStats.length === 0 ? (
-            <EmptyPanel label="No exam groups in this scope" />
-          ) : (
-            /* Gauge grid — one circular progress ring per exam group, a
-               different shape from every bar/line widget on the dashboard. */
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-              {stats.groupStats.map((g) => {
-                const pct = g.students > 0 ? Math.round((g.studentsSeated / g.students) * 100) : 0;
-                const ring = pct >= 100 ? "#10b981" : pct > 0 ? "#f59e0b" : "#cbd5e1";
-                const R = 26;
-                const C = 2 * Math.PI * R;
-                return (
-                  <div
-                    key={g.examGroupId}
-                    className="flex flex-col items-center gap-1.5 rounded-md border border-slate-100 bg-slate-50/60 px-2 py-3 text-center"
-                  >
-                    <svg width="64" height="64" viewBox="0 0 64 64" className="-rotate-90">
-                      <circle cx="32" cy="32" r={R} fill="none" stroke="#e2e8f0" strokeWidth="6" />
-                      <circle
-                        cx="32"
-                        cy="32"
-                        r={R}
-                        fill="none"
-                        stroke={ring}
-                        strokeWidth="6"
-                        strokeLinecap="round"
-                        strokeDasharray={`${(pct / 100) * C} ${C}`}
-                      />
-                      <text
-                        x="32"
-                        y="32"
-                        textAnchor="middle"
-                        dominantBaseline="central"
-                        transform="rotate(90 32 32)"
-                        fontSize="13"
-                        fontWeight="700"
-                        fill="#1e293b"
-                      >
-                        {pct}%
-                      </text>
-                    </svg>
-                    <span
-                      className="line-clamp-2 w-full text-xs font-medium leading-tight text-slate-700"
-                      title={g.name}
-                    >
-                      {g.name}
-                    </span>
-                    <span className="text-[11px] tabular-nums text-slate-500">
-                      {nfmt.format(g.studentsSeated)}/{nfmt.format(g.students)} seated ·{" "}
-                      {nfmt.format(g.rooms)} rooms
-                    </span>
-                    <span className="text-[10px] text-slate-400">
-                      {fmtDMY(g.commencementDate) ?? ""}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </PanelCard>
-
-        <PanelCard title="Exams scheduled by · staff">
-          <RankedList
-            emptyLabel="No exams scheduled yet"
-            accent="text-violet-700 bg-violet-50"
-            items={stats.scheduledBy.map((s) => ({
-              key: s.name,
-              label: s.name,
-              value: s.count,
-            }))}
-          />
-        </PanelCard>
+          <PanelCard title="Exams scheduled by · staff">
+            <RankedList
+              emptyLabel="No exams scheduled yet"
+              accent="text-violet-700 bg-violet-50"
+              items={stats.scheduledBy.map((s) => ({
+                key: s.name,
+                label: s.name,
+                value: s.count,
+              }))}
+            />
+          </PanelCard>
+        </div>
       </div>
     </div>
   );
