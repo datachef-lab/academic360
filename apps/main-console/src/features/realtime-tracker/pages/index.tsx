@@ -142,6 +142,7 @@ function TrackerMain({
     queryFn: () => fetchFeeMis(apiFilters),
     enabled: filtersReady && activeTab === "fee_mis" && hasDashboardScope(apiFilters),
     staleTime: 30_000,
+    keepPreviousData: true,
   });
 
   const handleSocketError = useCallback((msg: string) => {
@@ -175,8 +176,13 @@ function TrackerMain({
     [queryClient, filtersKey, apiFilters],
   );
 
+  const feeMisRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onFeeMisRefresh = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ["rt-fee-mis", filtersKey] });
+    if (feeMisRefreshTimer.current) clearTimeout(feeMisRefreshTimer.current);
+    feeMisRefreshTimer.current = setTimeout(() => {
+      feeMisRefreshTimer.current = null;
+      void queryClient.invalidateQueries({ queryKey: ["rt-fee-mis", filtersKey] });
+    }, 1000);
   }, [queryClient, filtersKey]);
 
   // Global affiliation refresh: refetch with OUR filters. Trailing debounce so
@@ -326,10 +332,7 @@ function TrackerMain({
                 Select at least one filter (e.g. academic year or semester) to load Fee MIS.
               </div>
             ) : (
-              <FeeMisTab
-                data={feeMisData ?? null}
-                isLoading={feeMisLoading || feeMisQuery.isFetching}
-              />
+              <FeeMisTab data={feeMisData ?? null} isLoading={feeMisLoading} />
             )}
           </div>
         </TabsContent>
