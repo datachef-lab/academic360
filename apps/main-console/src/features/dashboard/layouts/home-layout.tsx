@@ -55,6 +55,8 @@ import {
   FEE_PAYMENT_MARKING_PATH,
   isFeeMarkingOnlyUser,
   isLibraryOnlyUser,
+  isLibraryStaffRestrictedUser,
+  LIBRARY_ENTRY_EXIT_PATH,
   LIBRARY_MODULE_PATH_PREFIX,
   TEMP_USER_EMAILS,
   TEMP_USER_HOME_PATH,
@@ -172,18 +174,21 @@ function LayoutHeader({
   const { toggleSidebar } = useSidebar();
   const { user } = useAuth();
   const libraryOnly = isLibraryOnlyUser(user?.email);
+  const libraryStaffRestricted = isLibraryStaffRestrictedUser(user?.email);
   const feeMarkingOnly = isFeeMarkingOnlyUser(user?.email);
   const tempUser = !!user?.email && TEMP_USER_EMAILS.includes(user.email);
-  const hideGlobalSearch = libraryOnly || feeMarkingOnly;
+  const hideGlobalSearch = libraryOnly || libraryStaffRestricted || feeMarkingOnly;
   // Restricted users must not hit `/dashboard` (the route guard would redirect
   // them → visible flash). Point their "Dashboard" breadcrumb at their landing page.
   const moduleOnlyHomePath = libraryOnly
     ? LIBRARY_MODULE_PATH_PREFIX
-    : feeMarkingOnly
-      ? FEE_PAYMENT_MARKING_PATH
-      : tempUser
-        ? TEMP_USER_HOME_PATH
-        : null;
+    : libraryStaffRestricted
+      ? LIBRARY_ENTRY_EXIT_PATH
+      : feeMarkingOnly
+        ? FEE_PAYMENT_MARKING_PATH
+        : tempUser
+          ? TEMP_USER_HOME_PATH
+          : null;
 
   return (
     <header className="flex justify-between border-b py-2 h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
@@ -216,9 +221,13 @@ function LayoutHeader({
               const linkTo =
                 moduleOnlyHomePath && index === 0 && segment === "dashboard"
                   ? moduleOnlyHomePath
-                  : yearFolded
-                    ? `${path}/${next}`
-                    : path;
+                  : // Library-staff tier may not open the library home either —
+                    // send the "Library" crumb to their landing page too.
+                    libraryStaffRestricted && path === LIBRARY_MODULE_PATH_PREFIX
+                    ? LIBRARY_ENTRY_EXIT_PATH
+                    : yearFolded
+                      ? `${path}/${next}`
+                      : path;
               const Icon = pathIconMap[segment];
               const label =
                 yearFolded && next
@@ -341,9 +350,14 @@ export default function HomeLayout() {
     }
   }
 
-  // Keyboard shortcut handler (disabled for library-only accounts)
+  // Keyboard shortcut handler (disabled for restricted accounts)
   useEffect(() => {
-    if (isLibraryOnlyUser(user?.email) || isFeeMarkingOnlyUser(user?.email)) return;
+    if (
+      isLibraryOnlyUser(user?.email) ||
+      isLibraryStaffRestrictedUser(user?.email) ||
+      isFeeMarkingOnlyUser(user?.email)
+    )
+      return;
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
