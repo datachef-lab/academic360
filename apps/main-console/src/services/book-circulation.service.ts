@@ -103,6 +103,8 @@ export type BookCirculationMetaPayload = {
     onLoan: boolean;
     borrowerName: string | null;
     borrowerDueDate: string | null;
+    /** Copy's item category (falls back to the book's). */
+    itemCategoryName: string | null;
   }>;
   borrowingTypeOptions: Array<{ id: number; name: string }>;
 };
