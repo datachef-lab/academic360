@@ -71,14 +71,14 @@ const quickLinks = [
     icon: Newspaper,
   },
   {
-    title: "Reports",
-    url: "/dashboard/library/reports",
-    icon: FileBarChart,
-  },
-  {
     title: "Digital Twin",
     url: "/dashboard/library/digital-twin",
     icon: MapPin,
+  },
+  {
+    title: "Reports",
+    url: "/dashboard/library/reports",
+    icon: FileBarChart,
   },
 ];
 

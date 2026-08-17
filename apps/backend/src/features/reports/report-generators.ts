@@ -32,6 +32,7 @@ import { exportStockSummaryExcel } from "@/features/library/services/report-exce
 import { exportPopularBooksExcel } from "@/features/library/services/report-excel/popular-books-excel.service.js";
 import { exportEntryExitExcel } from "@/features/library/services/report-excel/entry-exit-excel.service.js";
 import { exportHoldingsExcel } from "@/features/library/services/report-excel/holdings-excel.service.js";
+import { exportAvailableCopiesExcel } from "@/features/library/services/report-excel/available-copies-excel.service.js";
 import { exportPublicationsExcel } from "@/features/library/services/report-excel/publications-excel.service.js";
 import { exportBookDemandForecastExcel } from "@/features/library/services/report-excel/book-demand-forecast-excel.service.js";
 import { exportFootfallForecastExcel } from "@/features/library/services/report-excel/footfall-forecast-excel.service.js";
@@ -419,6 +420,15 @@ const DESCRIPTORS: ReportDescriptor[] = [
     generate: async ({ req }) => ({
       buffer: await exportHoldingsExcel(parseLibraryReportFilters(req)),
       fileName: `Library_Holdings_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      contentType: XLSX,
+    }),
+  },
+  {
+    key: "library-available-copies",
+    label: "Library — Available copies (not on loan)",
+    generate: async ({ req }) => ({
+      buffer: await exportAvailableCopiesExcel(parseLibraryReportFilters(req)),
+      fileName: `Library_Available_Copies_${new Date().toISOString().slice(0, 10)}.xlsx`,
       contentType: XLSX,
     }),
   },

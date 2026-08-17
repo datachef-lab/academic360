@@ -29,7 +29,8 @@ import {
   CalendarClock,
   Download,
   Filter,
-  IndianRupee,
+  // IndianRupee, // used by the hidden Pay Fine button
+  Info,
   Loader2,
   Plus,
   RotateCcw,
@@ -57,8 +58,8 @@ import {
   upsertBookCirculationRows,
 } from "@/services/book-circulation.service";
 import {
-  initiateLibraryFinePayment,
-  openPaytmCheckoutForFine,
+  // initiateLibraryFinePayment, // used by the hidden Pay Fine button
+  // openPaytmCheckoutForFine, // used by the hidden Pay Fine button
   recordLibraryFineCashPayment,
   waiveLibraryFine,
 } from "@/services/library-fine-payment.service";
@@ -180,16 +181,7 @@ export default function BookCirculationPage() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewData, setPreviewData] = useState<BookCirculationPreviewPayload | null>(null);
   const [editableRows, setEditableRows] = useState<EditablePreviewRow[]>([]);
-  const [bookOptions, setBookOptions] = useState<
-    Array<{
-      copyDetailsId: number;
-      accessNumber: string | null;
-      title: string | null;
-      author: string | null;
-      publication: string | null;
-      frontCover: string | null;
-    }>
-  >([]);
+  const [bookOptions, setBookOptions] = useState<BookOption[]>([]);
   const [borrowingTypeOptions, setBorrowingTypeOptions] = useState<
     Array<{ id: number; name: string }>
   >([]);
@@ -198,6 +190,19 @@ export default function BookCirculationPage() {
   const [reissueDate, setReissueDate] = useState<Date | undefined>(undefined);
   const [stagedBookKey, setStagedBookKey] = useState<string>("");
   const [stagedBookLabel, setStagedBookLabel] = useState<string>("");
+  // Full option captured at selection time. `pickerOptions` is cleared whenever
+  // the search input empties (popover reopen), so Add must NOT re-look the key
+  // up there — that made the Add button silently no-op for any copy outside
+  // the 500-row meta seed list.
+  const [stagedBookOption, setStagedBookOption] = useState<BookOption | null>(null);
+  // Policy for the SELECTED copy, fetched at selection time so the copy-cap
+  // check can block Add (with a visible reason) BEFORE staging, instead of
+  // only warning after.
+  const [stagedPolicyInfo, setStagedPolicyInfo] = useState<StagedRowPolicy | null>(null);
+  const [stagedPolicyLoading, setStagedPolicyLoading] = useState(false);
+  const stagedPolicyReqRef = useRef(0);
+  // "Why can't this copy be issued" info dialog (on-loan selections).
+  const [onLoanInfoOpen, setOnLoanInfoOpen] = useState(false);
   const [pickerOptions, setPickerOptions] = useState<BookOption[]>([]);
   const [pickerLoading, setPickerLoading] = useState(false);
   const [addingStagedBook, setAddingStagedBook] = useState(false);
@@ -220,6 +225,9 @@ export default function BookCirculationPage() {
       pickerOptions.map((option) => ({
         value: String(option.copyDetailsId),
         label: `${option.accessNumber || "-"} — ${option.title || "-"}`,
+        badge: option.onLoan
+          ? { label: "ON LOAN", className: "border-red-200 bg-red-50 text-red-600" }
+          : undefined,
       })),
     [pickerOptions],
   );
@@ -357,6 +365,8 @@ export default function BookCirculationPage() {
       setActiveDialogTab("issue");
       setStagedBookKey("");
       setStagedBookLabel("");
+      setStagedBookOption(null);
+      setStagedPolicyInfo(null);
       setPickerOptions([]);
       setPickerLoading(false);
       setDetailsOpen(true);
@@ -377,9 +387,29 @@ export default function BookCirculationPage() {
   const addStagedBook = async () => {
     if (!stagedBookKey || !previewData?.user?.userId) return;
     const picked =
+      stagedBookOption ??
       pickerOptions.find((o) => String(o.copyDetailsId) === stagedBookKey) ??
       bookOptions.find((o) => String(o.copyDetailsId) === stagedBookKey);
-    if (!picked) return;
+    if (!picked) {
+      toast.error("Pick a book from the search list first.");
+      return;
+    }
+    if (picked.onLoan) {
+      toast.error(
+        `Copy ${picked.accessNumber || ""} is on loan to ${picked.borrowerName || "another patron"} — it must be returned before it can be issued again.`,
+      );
+      return;
+    }
+    if (stagedPolicyInfo && stagedPolicyInfo.maxCopiesAtOnce > 0) {
+      const openCount = editableRows.filter((r) => !r.isNew && !r.actualReturnTimestamp).length;
+      const staged = editableRows.filter((r) => r.isNew).length;
+      if (openCount + staged + 1 > stagedPolicyInfo.maxCopiesAtOnce) {
+        toast.error(
+          `Copy cap reached — the patron holds ${openCount} open + ${staged} staged; policy allows ${stagedPolicyInfo.maxCopiesAtOnce} at once.`,
+        );
+        return;
+      }
+    }
     let returnDate = getDefaultReturnDate().toISOString();
     let stagedPolicy: StagedRowPolicy | null = null;
     try {
@@ -409,6 +439,7 @@ export default function BookCirculationPage() {
         copyDetailsId: picked.copyDetailsId,
         borrowingTypeId: null,
         accessNumber: picked.accessNumber,
+        itemCategoryName: picked.itemCategoryName ?? null,
         title: picked.title,
         author: picked.author,
         publication: picked.publication,
@@ -435,6 +466,8 @@ export default function BookCirculationPage() {
     ]);
     setStagedBookKey("");
     setStagedBookLabel("");
+    setStagedBookOption(null);
+    setStagedPolicyInfo(null);
   };
 
   const hasInvalidStagedRows = editableRows.some(
@@ -446,6 +479,25 @@ export default function BookCirculationPage() {
   // rejects it; staff can then confirm a forced issue).
   const openLoanCount = editableRows.filter((r) => !r.isNew && !r.actualReturnTimestamp).length;
   const stagedCount = editableRows.filter((r) => r.isNew).length;
+
+  // Why the Add button is blocked for the CURRENT selection (null = addable).
+  // On-loan copies are searchable by design but can never be staged; the copy
+  // cap blocks before staging (policy fetched at selection time).
+  const capExceeded =
+    !!stagedPolicyInfo &&
+    stagedPolicyInfo.maxCopiesAtOnce > 0 &&
+    openLoanCount + stagedCount + 1 > stagedPolicyInfo.maxCopiesAtOnce;
+  const addBlockedReason = !stagedBookOption
+    ? null
+    : stagedBookOption.onLoan
+      ? `On loan to ${stagedBookOption.borrowerName || "another patron"}${
+          stagedBookOption.borrowerDueDate
+            ? ` (due ${formatDateOnly(stagedBookOption.borrowerDueDate)})`
+            : ""
+        } — must be returned before it can be issued again.`
+      : capExceeded
+        ? `Copy cap reached — patron holds ${openLoanCount} open + ${stagedCount} staged; policy allows ${stagedPolicyInfo!.maxCopiesAtOnce} at once.`
+        : null;
 
   const formatDateChip = (isoDate: string) => {
     const parsed = new Date(`${isoDate}T00:00:00`);
@@ -568,37 +620,38 @@ export default function BookCirculationPage() {
     variant: "issue" | "history",
   ) => {
     const showReturnedOn = variant === "history";
-    const showFine = variant === "history";
-    const colCount = 7 + (showReturnedOn ? 1 : 0) + (showFine ? 1 : 0);
+    const colCount = 6 + (showReturnedOn ? 1 : 0);
     const headBase = cn(
       STICKY_TH_BASE,
-      "sticky top-0 z-30 bg-slate-100 text-center border-r border-slate-400",
+      "sticky top-0 z-30 bg-slate-100 text-center border-r border-slate-300",
     );
     const headLeft = cn(
       STICKY_TH_LEFT,
-      "sticky top-0 z-30 w-10 bg-slate-100 text-center border-r border-slate-400",
+      "sticky top-0 z-30 w-10 bg-slate-100 text-center border-r border-slate-300",
     );
     const headRight = cn(
       STICKY_TH_RIGHT,
-      "sticky top-0 z-30 bg-slate-100 text-center border-l border-slate-400",
+      "sticky top-0 z-30 bg-slate-100 text-center border-l border-slate-300",
     );
     const cellBase = "border-r border-slate-300 text-center";
     return (
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden rounded-md border">
-        <Table className="w-full table-fixed">
+        {/* overflow-visible: the outer div above is the scroll container, so the
+            sticky header must not be trapped inside the Table's own
+            overflow-auto wrapper (sticky anchors to the nearest scrolling
+            ancestor — with the default wrapper the header scrolls away). */}
+        <Table className="w-full table-fixed" containerClassName="overflow-visible">
           <TableHeader className={STICKY_THEAD_CLASS}>
             <TableRow className="bg-slate-100">
               <TableHead className={headLeft}>#</TableHead>
-              <TableHead className={cn(headBase, "w-[28%]")}>Book</TableHead>
-              <TableHead className={cn(headBase, "w-[10%]")}>Access No.</TableHead>
-              <TableHead className={cn(headBase, "w-[15%]")}>Borrowing Type</TableHead>
-              <TableHead className={cn(headBase, "w-[12%]")}>Issued At</TableHead>
-              <TableHead className={cn(headBase, "w-[12%]")}>Return Date</TableHead>
+              <TableHead className={cn(headBase, "w-[32%]")}>Book</TableHead>
+              <TableHead className={cn(headBase, "w-[16%]")}>Borrowing Type</TableHead>
+              <TableHead className={cn(headBase, "w-[13%]")}>Issued At</TableHead>
+              <TableHead className={cn(headBase, "w-[13%]")}>Return Date</TableHead>
               {showReturnedOn ? (
-                <TableHead className={cn(headBase, "w-[10%]")}>Returned On</TableHead>
+                <TableHead className={cn(headBase, "w-[11%]")}>Returned On</TableHead>
               ) : null}
-              {showFine ? <TableHead className={cn(headBase, "w-[6%]")}>Fine</TableHead> : null}
-              <TableHead className={cn(headRight, "w-[14%]")}>
+              <TableHead className={cn(headRight, "w-[15%]")}>
                 <span className="inline-flex items-center justify-center gap-1">
                   <Settings2 className="h-3.5 w-3.5" />
                   Actions
@@ -628,6 +681,16 @@ export default function BookCirculationPage() {
                       <p className="truncate text-xs font-semibold text-slate-800">
                         {item.title || "—"}
                       </p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                        <Badge className="border border-violet-200 bg-violet-100 px-1.5 py-0 text-[10px] font-semibold text-violet-700 hover:bg-violet-100">
+                          {item.accessNumber || "—"}
+                        </Badge>
+                        {item.itemCategoryName ? (
+                          <Badge className="border border-emerald-200 bg-emerald-100 px-1.5 py-0 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100">
+                            {item.itemCategoryName}
+                          </Badge>
+                        ) : null}
+                      </div>
                       {item.author ? (
                         <p className="truncate text-[11px] text-slate-500">{item.author}</p>
                       ) : null}
@@ -650,11 +713,6 @@ export default function BookCirculationPage() {
                         </>
                       ) : null}
                     </div>
-                  </TableCell>
-                  <TableCell className={cellBase}>
-                    <span className="text-xs font-medium text-slate-700">
-                      {item.accessNumber || "—"}
-                    </span>
                   </TableCell>
                   <TableCell className={cellBase}>
                     <Combobox
@@ -721,57 +779,42 @@ export default function BookCirculationPage() {
                       </span>
                     </TableCell>
                   ) : null}
-                  {showFine ? (
-                    <TableCell className={cellBase}>
-                      {item.finePaid ? (
-                        <span className="inline-flex flex-col items-center">
-                          <span>{formatInr(item.fine - item.fineWaiver)}</span>
-                          <span className="rounded bg-emerald-100 px-1 text-[10px] font-semibold text-emerald-700">
-                            PAID
-                          </span>
-                        </span>
-                      ) : (
-                        formatInr(item.netFine)
-                      )}
-                    </TableCell>
-                  ) : null}
                   <TableCell className={cellBase}>
                     <div className="flex flex-wrap items-center justify-center gap-1.5">
-                      {variant === "history" ? (
+                      {variant === "history" && item.actualReturnTimestamp ? (
+                        // Returned rows are done — no actions to offer.
+                        <span className="text-xs text-slate-400">—</span>
+                      ) : variant === "history" ? (
                         <>
-                          {!item.actualReturnTimestamp ? (
-                            <Button
-                              size="sm"
-                              className="h-8 bg-violet-600 px-2 text-xs text-white hover:bg-violet-700"
-                              variant="default"
-                              type="button"
-                              onClick={() => {
-                                setEditableRows((prev) =>
-                                  prev.map((row) =>
-                                    row.id === item.id
-                                      ? {
-                                          ...row,
-                                          actualReturnTimestamp: new Date().toISOString(),
-                                        }
-                                      : row,
-                                  ),
-                                );
-                              }}
-                            >
-                              <RotateCcw className="mr-1 h-3.5 w-3.5" />
-                              Return
-                            </Button>
-                          ) : null}
+                          <Button
+                            size="sm"
+                            className="h-8 bg-violet-600 px-2 text-xs text-white hover:bg-violet-700"
+                            variant="default"
+                            type="button"
+                            onClick={() => {
+                              setEditableRows((prev) =>
+                                prev.map((row) =>
+                                  row.id === item.id
+                                    ? {
+                                        ...row,
+                                        actualReturnTimestamp: new Date().toISOString(),
+                                      }
+                                    : row,
+                                ),
+                              );
+                            }}
+                          >
+                            <RotateCcw className="mr-1 h-3.5 w-3.5" />
+                            Return
+                          </Button>
                           <Button
                             size="sm"
                             variant="outline"
                             className="h-8 border-blue-300 bg-blue-50 px-2 text-xs text-blue-700 hover:bg-blue-100"
                             type="button"
-                            disabled={
-                              !!item.actualReturnTimestamp || item.reissuesUsed >= item.renewalLimit
-                            }
+                            disabled={item.reissuesUsed >= item.renewalLimit}
                             title={
-                              item.reissuesUsed >= item.renewalLimit && !item.actualReturnTimestamp
+                              item.reissuesUsed >= item.renewalLimit
                                 ? `Renewal limit reached (${item.reissuesUsed}/${item.renewalLimit})`
                                 : `Renewals used: ${item.reissuesUsed}/${item.renewalLimit}`
                             }
@@ -788,6 +831,8 @@ export default function BookCirculationPage() {
                             <CalendarClock className="mr-1 h-3.5 w-3.5" />
                             Re-issue
                           </Button>
+                          {/* Fine actions hidden for now (2026-08-17, per Harsh) — restore by
+                              uncommenting; the Cash/Waive dialogs + services below stay wired.
                           <Button
                             size="sm"
                             variant="outline"
@@ -860,6 +905,7 @@ export default function BookCirculationPage() {
                           >
                             Waive
                           </Button>
+                          */}
                         </>
                       ) : (
                         <Button
@@ -951,9 +997,13 @@ export default function BookCirculationPage() {
 
           <div className="relative" style={{ height: "600px" }}>
             <div className="h-full overflow-y-auto overflow-x-hidden">
+              {/* overflow-visible: the div above is the scroll container — the
+                  Table's default overflow-auto wrapper would trap the sticky
+                  header so it scrolled away with the rows. */}
               <Table
                 className="border rounded-md w-full text-[14px]"
                 style={{ tableLayout: "fixed" }}
+                containerClassName="overflow-visible"
               >
                 <TableHeader className={STICKY_THEAD_CLASS}>
                   <TableRow>
@@ -992,23 +1042,15 @@ export default function BookCirculationPage() {
                     <TableHead
                       className={cn(
                         STICKY_TH_BASE,
-                        "bg-slate-100 w-[9%] px-1 sm:px-3 text-[14px] sm:text-xs",
+                        "bg-slate-100 w-[13%] px-1 sm:px-3 text-[14px] sm:text-xs",
                       )}
                     >
                       No. of Days Late
                     </TableHead>
                     <TableHead
                       className={cn(
-                        STICKY_TH_BASE,
-                        "bg-slate-100 w-[9%] px-1 sm:px-3 text-[14px] sm:text-xs",
-                      )}
-                    >
-                      Fine
-                    </TableHead>
-                    <TableHead
-                      className={cn(
                         STICKY_TH_RIGHT,
-                        "bg-slate-100 w-[13%] px-1 sm:px-3 text-[14px] sm:text-xs",
+                        "bg-slate-100 w-[18%] px-1 sm:px-3 text-[14px] sm:text-xs",
                       )}
                     >
                       Last Updated
@@ -1018,7 +1060,7 @@ export default function BookCirculationPage() {
                 <TableBody className="text-[14px]">
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-6">
+                      <TableCell colSpan={6} className="text-center py-6">
                         <div className="inline-flex items-center gap-2 text-slate-500">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           Loading circulation data...
@@ -1027,7 +1069,7 @@ export default function BookCirculationPage() {
                     </TableRow>
                   ) : rows.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-6 text-slate-500">
+                      <TableCell colSpan={6} className="text-center py-6 text-slate-500">
                         No circulation records found.
                       </TableCell>
                     </TableRow>
@@ -1088,7 +1130,6 @@ export default function BookCirculationPage() {
                           </div>
                         </TableCell>
                         <TableCell className="px-1 sm:px-3 py-2">{row.daysLate}</TableCell>
-                        <TableCell className="px-1 sm:px-3 py-2">{row.fine.toFixed(2)}</TableCell>
                         <TableCell className="px-1 sm:px-3 py-2 text-[13px]">
                           {formatDateTime(row.lastUpdatedAt)}
                         </TableCell>
@@ -1300,36 +1341,110 @@ export default function BookCirculationPage() {
                           onSearch={(term) => void handlePickerSearch(term)}
                           isSearching={pickerLoading}
                           selectedLabel={stagedBookLabel}
+                          selectedBadge={
+                            stagedBookOption?.onLoan
+                              ? {
+                                  label: "ON LOAN",
+                                  className: "border-red-200 bg-red-50 text-red-600",
+                                }
+                              : null
+                          }
                           onChange={(value) => {
                             setStagedBookKey(value);
                             const picked = pickerOptions.find(
                               (o) => String(o.copyDetailsId) === value,
                             );
+                            // Keep the full option — pickerOptions gets cleared
+                            // when the search input empties, so Add relies on
+                            // this captured copy instead.
+                            setStagedBookOption(picked ?? null);
                             setStagedBookLabel(
                               picked
                                 ? `${picked.accessNumber || "-"} — ${picked.title || "-"}`
                                 : "",
                             );
+                            // Fetch the policy now so the copy-cap check can
+                            // block Add (with reason) before staging.
+                            setStagedPolicyInfo(null);
+                            const reqId = ++stagedPolicyReqRef.current;
+                            if (picked && !picked.onLoan && previewData?.user?.userId) {
+                              setStagedPolicyLoading(true);
+                              getBookCirculationPolicy(
+                                previewData.user.userId,
+                                picked.copyDetailsId,
+                              )
+                                .then((res) => {
+                                  if (reqId !== stagedPolicyReqRef.current) return;
+                                  setStagedPolicyInfo(
+                                    res.payload
+                                      ? {
+                                          loanDays: res.payload.loanDays,
+                                          finePerDay: res.payload.finePerDay,
+                                          graceDays: res.payload.graceDays,
+                                          renewalLimit: res.payload.renewalLimit,
+                                          maxCopiesAtOnce: res.payload.maxCopiesAtOnce,
+                                        }
+                                      : null,
+                                  );
+                                })
+                                .catch(() => {
+                                  if (reqId !== stagedPolicyReqRef.current) return;
+                                  setStagedPolicyInfo(null);
+                                })
+                                .finally(() => {
+                                  if (reqId === stagedPolicyReqRef.current)
+                                    setStagedPolicyLoading(false);
+                                });
+                            } else {
+                              setStagedPolicyLoading(false);
+                            }
                           }}
                         />
                       </div>
-                      <Button
-                        variant="default"
-                        className="bg-emerald-600 text-white hover:bg-emerald-700"
-                        size="sm"
-                        disabled={!stagedBookKey || addingStagedBook}
-                        onClick={() => void addStagedBook()}
-                      >
-                        {addingStagedBook ? (
-                          <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Plus className="mr-1 h-4 w-4" />
-                        )}
-                        Add
-                      </Button>
+                      {stagedBookOption?.onLoan ? (
+                        // Unavailable copy: Add is replaced by an info trigger
+                        // explaining WHY it cannot be issued.
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+                          onClick={() => setOnLoanInfoOpen(true)}
+                        >
+                          <Info className="mr-1 h-4 w-4" />
+                          Not available
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="default"
+                          className="bg-emerald-600 text-white hover:bg-emerald-700"
+                          size="sm"
+                          disabled={
+                            !stagedBookKey ||
+                            addingStagedBook ||
+                            stagedPolicyLoading ||
+                            !!addBlockedReason
+                          }
+                          title={addBlockedReason ?? undefined}
+                          onClick={() => void addStagedBook()}
+                        >
+                          {addingStagedBook || stagedPolicyLoading ? (
+                            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Plus className="mr-1 h-4 w-4" />
+                          )}
+                          Add
+                        </Button>
+                      )}
                     </div>
                   ) : null}
                 </div>
+                {/* Reason the Add button is blocked (cap reached etc.) — the
+                    on-loan case gets the info dialog instead. */}
+                {activeDialogTab === "issue" && addBlockedReason && !stagedBookOption?.onLoan ? (
+                  <p className="mt-1 text-right text-[11px] font-medium text-red-600">
+                    {addBlockedReason}
+                  </p>
+                ) : null}
                 <TabsContent
                   value="issue"
                   className="mt-2 flex flex-1 min-h-0 flex-col gap-2 data-[state=inactive]:hidden"
@@ -1469,6 +1584,46 @@ export default function BookCirculationPage() {
                 Force issue
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Why-can't-this-be-issued info (on-loan selection in the issue picker) */}
+      <Dialog open={onLoanInfoOpen} onOpenChange={setOnLoanInfoOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Copy not available for issue</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 text-sm">
+            <p className="font-semibold text-slate-800">{stagedBookOption?.title || "—"}</p>
+            <div className="flex flex-wrap items-center gap-1">
+              <Badge className="border border-violet-200 bg-violet-100 px-1.5 py-0 text-[10px] font-semibold text-violet-700 hover:bg-violet-100">
+                {stagedBookOption?.accessNumber || "—"}
+              </Badge>
+              {stagedBookOption?.itemCategoryName ? (
+                <Badge className="border border-emerald-200 bg-emerald-100 px-1.5 py-0 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100">
+                  {stagedBookOption.itemCategoryName}
+                </Badge>
+              ) : null}
+            </div>
+            <p className="text-slate-600">
+              This copy is currently <span className="font-semibold text-red-600">on loan</span>
+              {stagedBookOption?.borrowerName ? (
+                <>
+                  {" "}
+                  to <span className="font-semibold">{stagedBookOption.borrowerName}</span>
+                </>
+              ) : null}
+              {stagedBookOption?.borrowerDueDate ? (
+                <> — due back on {formatDateOnly(stagedBookOption.borrowerDueDate)}</>
+              ) : null}
+              . It must be returned before it can be issued to another patron.
+            </p>
+          </div>
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" onClick={() => setOnLoanInfoOpen(false)}>
+              Close
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
