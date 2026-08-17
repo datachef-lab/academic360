@@ -229,8 +229,10 @@ export default function LibraryMaster() {
     : quickLinks;
   const visibleMasterLinks = libraryStaffAllowedPaths ? [] : masterLinks;
 
+  // No justify-between: with the Masters section hidden (restricted library
+  // staff) it would push the quick links to the bottom of the panel.
   const rightBarContent = (
-    <div className="flex h-full flex-col justify-between gap-4 py-3">
+    <div className="flex h-full flex-col gap-4 py-3">
       <div>
         <LibraryBranchSelector />
       </div>
