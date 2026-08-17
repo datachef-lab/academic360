@@ -5,6 +5,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 /** Main-console routes under `LibraryMaster` (see `LibraryMaster.tsx`). */
 export const LIBRARY_MODULE_PATH_PREFIX = "/dashboard/library";
 
+/** Individual library sub-pages (see `LibraryMaster.tsx` quickLinks). */
+export const LIBRARY_ENTRY_EXIT_PATH = "/dashboard/library/entry-exit";
+export const LIBRARY_BOOK_CIRCULATION_PATH = "/dashboard/library/book-circulation";
+export const LIBRARY_ARTICLE_ENTRY_PATH = "/dashboard/library/article-entry";
+
 /** Fee payment marking page only (see `FeePaymentMarkingPage`, `FeesMasterLayout`). */
 export const FEE_PAYMENT_MARKING_PATH = "/dashboard/fees/marking";
 
@@ -41,6 +46,49 @@ export function isFeeMarkingOnlyUser(email: string | null | undefined): boolean 
   return email.trim().toLowerCase() === FEE_MARKING_ONLY_USER_EMAIL;
 }
 
+/**
+ * Library staff pinned to a subset of the library module's operational pages —
+ * like `isLibraryOnlyUser`, but further scoped to specific sub-pages instead of
+ * the whole library subtree. Two tiers:
+ *   - circulation desk: Entry / Exit + Book Circulation
+ *   - circulation + articles: the above plus Article Entry
+ * Their landing page is Entry / Exit (the first allowed path).
+ */
+const LIBRARY_CIRCULATION_ONLY_EMAILS: string[] = [
+  "achinta.nanda@thebges.edu.in",
+  "amarnath.shaw@thebges.edu.in",
+  "kamalkumar.mishra@thebges.edu.in",
+  "subhadeep.manna@thebges.edu.in",
+];
+
+const LIBRARY_CIRCULATION_ARTICLE_EMAILS: string[] = [
+  "rabindranath.giri@thebges.edu.in",
+  "sachinkumar.mukhiya@thebges.edu.in",
+  "subhajit.mohanta@thebges.edu.in",
+];
+
+/**
+ * The library sub-pages a restricted library-staff email may access, in nav
+ * order (the first entry doubles as their landing page). Returns `null` for any
+ * email that is not a restricted library-staff user.
+ */
+export function getLibraryStaffAllowedPaths(email: string | null | undefined): string[] | null {
+  const normalized = email?.trim().toLowerCase();
+  if (!normalized) return null;
+  if (LIBRARY_CIRCULATION_ONLY_EMAILS.includes(normalized)) {
+    return [LIBRARY_ENTRY_EXIT_PATH, LIBRARY_BOOK_CIRCULATION_PATH];
+  }
+  if (LIBRARY_CIRCULATION_ARTICLE_EMAILS.includes(normalized)) {
+    return [LIBRARY_ENTRY_EXIT_PATH, LIBRARY_BOOK_CIRCULATION_PATH, LIBRARY_ARTICLE_ENTRY_PATH];
+  }
+  return null;
+}
+
+/** True when the email is pinned to a subset of library sub-pages. */
+export function isLibraryStaffRestrictedUser(email: string | null | undefined): boolean {
+  return getLibraryStaffAllowedPaths(email) !== null;
+}
+
 export const TEMP_USER_EMAILS: string[] = [
   "sreya.sengupta@thebges.edu.in",
   "suman.pal@thebges.edu.in",
@@ -63,6 +111,18 @@ export const useRestrictTempUsers = () => {
 
   useEffect(() => {
     if (!user?.email) return;
+
+    const libraryStaffAllowedPaths = getLibraryStaffAllowedPaths(user.email);
+    if (libraryStaffAllowedPaths) {
+      const isOnAllowedPath = libraryStaffAllowedPaths.some(
+        (path) => location.pathname === path || location.pathname.startsWith(`${path}/`),
+      );
+      if (!isOnAllowedPath) {
+        // First allowed path is always Entry / Exit — their landing page.
+        navigate(LIBRARY_ENTRY_EXIT_PATH);
+      }
+      return;
+    }
 
     if (isLibraryOnlyUser(user.email)) {
       const isOnLibraryPath =
