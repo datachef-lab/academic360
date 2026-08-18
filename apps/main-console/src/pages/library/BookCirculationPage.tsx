@@ -640,7 +640,7 @@ export default function BookCirculationPage() {
     variant: "issue" | "history",
   ) => {
     const showReturnedOn = variant === "history";
-    const colCount = 7 + (showReturnedOn ? 1 : 0);
+    const colCount = 8 + (showReturnedOn ? 1 : 0);
     const headBase = cn(
       STICKY_TH_BASE,
       "sticky top-0 z-30 bg-slate-100 text-center border-r border-slate-300",
@@ -664,11 +664,12 @@ export default function BookCirculationPage() {
           <TableHeader className={STICKY_THEAD_CLASS}>
             <TableRow className="bg-slate-100">
               <TableHead className={headLeft}>#</TableHead>
-              <TableHead className={cn(headBase, "w-[26%]")}>Book</TableHead>
-              <TableHead className={cn(headBase, "w-[15%]")}>Author / Publisher</TableHead>
-              <TableHead className={cn(headBase, "w-[14%]")}>Borrowing Type</TableHead>
-              <TableHead className={cn(headBase, "w-[12%]")}>Issued At</TableHead>
-              <TableHead className={cn(headBase, "w-[11%]")}>Return Date</TableHead>
+              <TableHead className={cn(headBase, "w-[9%]")}>Access No.</TableHead>
+              <TableHead className={cn(headBase, "w-[24%]")}>Book</TableHead>
+              <TableHead className={cn(headBase, "w-[12%]")}>Publisher</TableHead>
+              <TableHead className={cn(headBase, "w-[13%]")}>Borrowing Type</TableHead>
+              <TableHead className={cn(headBase, "w-[11%]")}>Issued At</TableHead>
+              <TableHead className={cn(headBase, "w-[10%]")}>Return Date</TableHead>
               {showReturnedOn ? (
                 <TableHead className={cn(headBase, "w-[10%]")}>Returned On</TableHead>
               ) : null}
@@ -700,26 +701,31 @@ export default function BookCirculationPage() {
                 >
                   {/* Serial counts down: newest row (top) shows the total. */}
                   <TableCell className={cellBase}>{rowsToShow.length - index}</TableCell>
+                  <TableCell className={cellBase}>
+                    <Badge className="border border-indigo-300 bg-indigo-100 px-1.5 py-0 text-[10px] font-semibold text-indigo-800 hover:bg-indigo-100">
+                      {item.accessNumber || "—"}
+                    </Badge>
+                    {item.oldAccessNumber && item.oldAccessNumber !== item.accessNumber ? (
+                      <p className="mt-0.5 text-[10px] text-slate-400 line-through">
+                        {item.oldAccessNumber}
+                      </p>
+                    ) : null}
+                  </TableCell>
                   <TableCell className={cn(cellBase, "text-left")}>
                     <div className="min-w-0">
                       <p className="truncate text-xs font-semibold text-slate-800">
                         {item.title || "—"}
                       </p>
-                      <div className="mt-0.5 flex flex-wrap items-center gap-1">
-                        <Badge className="border border-indigo-300 bg-indigo-100 px-1.5 py-0 text-[10px] font-semibold text-indigo-800 hover:bg-indigo-100">
-                          {item.accessNumber || "—"}
-                        </Badge>
-                        {item.oldAccessNumber && item.oldAccessNumber !== item.accessNumber ? (
-                          <Badge className="border border-slate-300 bg-slate-100 px-1.5 py-0 text-[10px] font-semibold text-slate-600 hover:bg-slate-100">
-                            Old: {item.oldAccessNumber}
-                          </Badge>
-                        ) : null}
-                        {item.itemCategoryName ? (
+                      {item.author ? (
+                        <p className="truncate text-[11px] text-slate-500">{item.author}</p>
+                      ) : null}
+                      {item.itemCategoryName ? (
+                        <div className="mt-0.5 flex flex-wrap items-center gap-1">
                           <Badge className="border border-amber-300 bg-amber-100 px-1.5 py-0 text-[10px] font-semibold text-amber-800 hover:bg-amber-100">
                             {item.itemCategoryName}
                           </Badge>
-                        ) : null}
-                      </div>
+                        </div>
+                      ) : null}
                       {item.isNew && item.policy ? (
                         <>
                           <p className="truncate text-[11px] text-blue-700">
@@ -741,8 +747,7 @@ export default function BookCirculationPage() {
                     </div>
                   </TableCell>
                   <TableCell className={cn(cellBase, "text-left")}>
-                    <p className="truncate text-xs text-slate-700">{item.author || "—"}</p>
-                    <p className="truncate text-[11px] text-slate-500">{item.publication || "—"}</p>
+                    <p className="truncate text-xs text-slate-700">{item.publication || "—"}</p>
                   </TableCell>
                   <TableCell className={cellBase}>
                     {item.actualReturnTimestamp ? (
