@@ -652,7 +652,7 @@ export default function BookCirculationPage() {
       STICKY_TH_RIGHT,
       "sticky top-0 z-30 bg-slate-100 text-center border-l border-slate-300",
     );
-    const cellBase = "border-r border-slate-300 text-center";
+    const cellBase = "border-r border-slate-300 px-2 py-2 text-center";
     return (
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden rounded-md border">
         {/* overflow-visible: the outer div above is the scroll container, so the
@@ -743,7 +743,7 @@ export default function BookCirculationPage() {
                       </span>
                     ) : (
                       <Combobox
-                        className="h-9 w-full bg-white text-sm font-medium text-slate-800"
+                        className="h-8 w-full bg-white text-xs font-medium text-slate-800"
                         placeholder="Borrowing Type"
                         value={item.borrowingType || ""}
                         showOptionsHint={false}
@@ -821,7 +821,7 @@ export default function BookCirculationPage() {
                               <TooltipTrigger asChild>
                                 <Button
                                   size="icon"
-                                  className="h-8 w-8 bg-violet-600 text-white hover:bg-violet-700"
+                                  className="h-7 w-7 bg-violet-600 text-white hover:bg-violet-700"
                                   variant="default"
                                   type="button"
                                   aria-label="Return"
@@ -838,7 +838,7 @@ export default function BookCirculationPage() {
                                     );
                                   }}
                                 >
-                                  <RotateCcw className="h-4 w-4" />
+                                  <RotateCcw className="h-3.5 w-3.5" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>Return</TooltipContent>
@@ -851,7 +851,7 @@ export default function BookCirculationPage() {
                                   <Button
                                     size="icon"
                                     variant="outline"
-                                    className="h-8 w-8 border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                                    className="h-7 w-7 border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100"
                                     type="button"
                                     aria-label="Re-issue"
                                     disabled={item.reissuesUsed >= item.renewalLimit}
@@ -865,7 +865,7 @@ export default function BookCirculationPage() {
                                       setReissueDate(due);
                                     }}
                                   >
-                                    <CalendarClock className="h-4 w-4" />
+                                    <CalendarClock className="h-3.5 w-3.5" />
                                   </Button>
                                 </span>
                               </TooltipTrigger>
@@ -956,7 +956,7 @@ export default function BookCirculationPage() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-8 w-8 text-red-600 hover:text-red-700"
+                          className="h-7 w-7 text-red-600 hover:text-red-700"
                           onClick={() =>
                             setEditableRows((prev) => prev.filter((row) => row.id !== item.id))
                           }
@@ -1284,7 +1284,8 @@ export default function BookCirculationPage() {
       </Dialog>
 
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="w-[94vw] max-w-none h-[94vh] max-h-none flex flex-col text-[14px]">
+        {/* [&>button]:hidden hides the built-in top-right close X. */}
+        <DialogContent className="w-[94vw] max-w-none h-[94vh] max-h-none flex flex-col text-[14px] [&>button]:hidden">
           {/* No visible dialog header — the rail + right section own the full
               height; the title stays for screen readers only. */}
           <DialogTitle className="sr-only">Manage Book Circulation</DialogTitle>
@@ -1301,7 +1302,7 @@ export default function BookCirculationPage() {
               <div className="flex flex-1 min-h-0 flex-col gap-3 xl:flex-row">
                 <div className="flex flex-col overflow-hidden rounded-md border bg-slate-50 xl:w-64 xl:flex-shrink-0 xl:self-stretch">
                   {/* xl+: the borrower photo is a full-width cover on the rail. */}
-                  <Avatar className="hidden h-64 w-full flex-shrink-0 rounded-none border-b xl:flex">
+                  <Avatar className="hidden h-40 w-full flex-shrink-0 rounded-none border-b xl:flex">
                     <AvatarImage
                       src={
                         previewUser.userType === "STUDENT" && previewUser.uid
@@ -1312,12 +1313,14 @@ export default function BookCirculationPage() {
                       className="h-full w-full rounded-none object-cover"
                     />
                     <AvatarFallback
-                      className={`rounded-none text-6xl font-semibold text-white ${getColorFromName(previewUser.name)}`}
+                      className={`rounded-none text-4xl font-semibold text-white ${getColorFromName(previewUser.name)}`}
                     >
                       {getInitials(previewUser.name)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex min-h-0 flex-1 flex-wrap items-start gap-4 p-3 xl:flex-nowrap xl:flex-col xl:items-stretch xl:overflow-y-auto">
+                  {/* No rail scrolling — the compact cover keeps everything
+                      visible at once. */}
+                  <div className="flex min-h-0 flex-1 flex-wrap items-start gap-4 p-3 xl:flex-nowrap xl:flex-col xl:items-stretch">
                     {/* Below xl the photo stays a compact banner avatar. */}
                     <Avatar className="h-24 w-24 flex-shrink-0 rounded-md border xl:hidden">
                       <AvatarImage
