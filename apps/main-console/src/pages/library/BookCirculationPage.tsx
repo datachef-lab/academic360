@@ -730,7 +730,9 @@ export default function BookCirculationPage() {
                         {item.title || "—"}
                       </p>
                       {item.author ? (
-                        <p className="truncate text-[11px] text-slate-500">— {item.author}</p>
+                        <p className="truncate text-[11px] italic text-slate-500">
+                          — {item.author}
+                        </p>
                       ) : null}
                       {item.itemCategoryName ? (
                         <div className="mt-0.5 flex flex-wrap items-center gap-1">
