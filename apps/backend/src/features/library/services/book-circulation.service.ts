@@ -141,6 +141,22 @@ export type BookCirculationUpsertEntry = {
   isForcedIssue?: boolean;
 };
 
+// The label/barcode printed on a copy reads prefix + access number + suffix
+// (e.g. "T112", "ISC45", "BK17"); the columns store them separately and legacy
+// rows use "0"/"" placeholders for an absent prefix/suffix. Search and display
+// must both use this composed identity or scanned alphanumeric codes never
+// match the bare numeric access_number.
+const composedAccessNumber = sql<string | null>`case
+  when ${copyDetailsModel.accessNumber} is null then null
+  else coalesce(nullif(btrim(${copyDetailsModel.prefix}), '0'), '')
+    || ${copyDetailsModel.accessNumber}
+    || coalesce(nullif(btrim(${copyDetailsModel.suffix}), '0'), '')
+end`;
+
+// Scans/typed codes may carry separators ("T-112", "t 112"); strip to the
+// alphanumeric core before matching against the composed identity.
+const toAccessSearchCore = (term: string) => term.replace(/[^A-Za-z0-9]/g, "");
+
 const toDayBounds = (isoDate: string) => {
   const start = new Date(`${isoDate}T00:00:00.000+05:30`);
   if (Number.isNaN(start.getTime())) return null;
@@ -231,6 +247,7 @@ export async function findBookCirculationPaginated(
         ilike(staffModel.attendanceCode, searchTerm),
       )!,
     );
+    const accessCore = toAccessSearchCore(search.trim());
     circulationUserConditions.push(
       or(
         ilike(userModel.name, searchTerm),
@@ -238,7 +255,7 @@ export async function findBookCirculationPaginated(
         ilike(staffModel.uid, searchTerm),
         ilike(staffModel.attendanceCode, searchTerm),
         ilike(bookModel.title, searchTerm),
-        ilike(copyDetailsModel.accessNumber, searchTerm),
+        ...(accessCore ? [ilike(composedAccessNumber, `%${accessCore}%`)] : []),
       )!,
     );
   }
@@ -443,7 +460,7 @@ export async function getBookCirculationPreviewByUserId(
       id: bookCirculationModel.id,
       copyDetailsId: bookCirculationModel.copyDetailsId,
       borrowingTypeId: bookCirculationModel.borrowingTypeId,
-      accessNumber: copyDetailsModel.accessNumber,
+      accessNumber: composedAccessNumber,
       itemCategoryName: sql<string | null>`COALESCE(
         (SELECT ic.name FROM library_item_categories ic WHERE ic.id = ${copyDetailsModel.itemCategoryId}),
         (SELECT ic.name FROM library_item_categories ic WHERE ic.id = ${bookModel.itemCategoryId})
@@ -593,7 +610,7 @@ export async function searchBookOptions(
   const baseQuery = db
     .select({
       copyDetailsId: copyDetailsModel.id,
-      accessNumber: copyDetailsModel.accessNumber,
+      accessNumber: composedAccessNumber,
       title: bookModel.title,
       author: bookModel.alternateTitle,
       publication: publisherModel.name,
@@ -606,10 +623,13 @@ export async function searchBookOptions(
 
   if (trimmed) {
     const term = `%${trimmed}%`;
+    const accessCore = toAccessSearchCore(trimmed);
     return baseQuery
       .where(
         or(
-          ilike(copyDetailsModel.accessNumber, term),
+          ...(accessCore
+            ? [ilike(composedAccessNumber, `%${accessCore}%`)]
+            : []),
           ilike(bookModel.title, term),
         )!,
       )
@@ -625,7 +645,7 @@ export async function getBookCirculationMeta(): Promise<BookCirculationMetaResul
     db
       .select({
         copyDetailsId: copyDetailsModel.id,
-        accessNumber: copyDetailsModel.accessNumber,
+        accessNumber: composedAccessNumber,
         title: bookModel.title,
         author: bookModel.alternateTitle,
         publication: publisherModel.name,
@@ -941,7 +961,7 @@ export async function upsertBookCirculationRowsForUser(
             returnTimestamp: bookCirculationModel.returnTimestamp,
             actualReturnTimestamp: bookCirculationModel.actualReturnTimestamp,
             issuedFromId: bookCirculationModel.issuedFromId,
-            accessNumber: copyDetailsModel.accessNumber,
+            accessNumber: composedAccessNumber,
           })
           .from(bookCirculationModel)
           .leftJoin(
@@ -972,7 +992,7 @@ export async function upsertBookCirculationRowsForUser(
           id: copyDetailsModel.id,
           branchId: copyDetailsModel.branchId,
           issueType: copyDetailsModel.issueType,
-          accessNumber: copyDetailsModel.accessNumber,
+          accessNumber: composedAccessNumber,
         })
         .from(copyDetailsModel)
         .where(inArray(copyDetailsModel.id, newCopyIds));
@@ -1276,6 +1296,7 @@ export async function exportBookCirculationExcel(
   const whereConditions: SQL[] = [];
   if (filters.search?.trim()) {
     const searchTerm = `%${filters.search.trim()}%`;
+    const accessCore = toAccessSearchCore(filters.search.trim());
     whereConditions.push(
       or(
         ilike(userModel.name, searchTerm),
@@ -1283,7 +1304,7 @@ export async function exportBookCirculationExcel(
         ilike(staffModel.uid, searchTerm),
         ilike(staffModel.attendanceCode, searchTerm),
         ilike(bookModel.title, searchTerm),
-        ilike(copyDetailsModel.accessNumber, searchTerm),
+        ...(accessCore ? [ilike(composedAccessNumber, `%${accessCore}%`)] : []),
       )!,
     );
   }
@@ -1304,7 +1325,7 @@ export async function exportBookCirculationExcel(
       staffUid: staffModel.uid,
       attendanceCode: staffModel.attendanceCode,
       bookTitle: bookModel.title,
-      accessNumber: copyDetailsModel.accessNumber,
+      accessNumber: composedAccessNumber,
       author: bookModel.alternateTitle,
       borrowingType: borrowingTypeModel.name,
       isReturned: bookCirculationModel.isReturned,
