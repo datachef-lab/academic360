@@ -9,6 +9,7 @@ import {
   gte,
   ilike,
   inArray,
+  isNull,
   lt,
   or,
   sql,
@@ -23,6 +24,7 @@ import { borrowingTypeModel } from "@repo/db/schemas/models/library/borrowing-ty
 import { publisherModel } from "@repo/db/schemas/models/library/publisher.model.js";
 import { statusModel } from "@repo/db/schemas/models/library/status.model.js";
 import { bookReissueModel } from "@repo/db/schemas/models/library/book-reissue.model.js";
+import { libraryEntryExitModel } from "@repo/db/schemas/models/library/library-entry-exit.model.js";
 import { userModel } from "@repo/db/schemas/models/user/user.model.js";
 import { studentModel } from "@repo/db/schemas/models/user/student.model.js";
 import { staffModel } from "@repo/db/schemas/models/user/staff.model.js";
@@ -78,6 +80,7 @@ export type BookCirculationPreviewRow = {
   copyDetailsId: number;
   borrowingTypeId: number | null;
   accessNumber: string | null;
+  oldAccessNumber: string | null;
   /** Copy's item category, falling back to the book's (same rule the policy resolver uses). */
   itemCategoryName: string | null;
   title: string | null;
@@ -107,12 +110,15 @@ export type BookCirculationPreviewResult = {
     Awaited<ReturnType<typeof getLibraryEntryExitPreviewByUserId>>
   >["user"];
   rows: BookCirculationPreviewRow[];
+  // Desk gate: circulation actions require a library check-in today.
+  hasLibraryEntryToday: boolean;
 };
 
 export type BookCirculationMetaResult = {
   bookOptions: Array<{
     copyDetailsId: number;
     accessNumber: string | null;
+    oldAccessNumber: string | null;
     title: string | null;
     author: string | null;
     publication: string | null;
@@ -161,6 +167,15 @@ end`;
 // alphanumeric core before matching against the composed identity.
 const toAccessSearchCore = (term: string) => term.replace(/[^A-Za-z0-9]/g, "");
 
+// Books carry authors via author_details -> authors (alternate_title is
+// populated for only ~30 books); aggregate the names for display.
+const bookAuthorNames = sql<string | null>`(
+  select string_agg(a.name, ', ' order by ad.id)
+  from author_details ad
+  join authors a on a.id = ad.author_id_fk
+  where ad.book_id_fk = ${bookModel.id}
+)`;
+
 const toDayBounds = (isoDate: string) => {
   const start = new Date(`${isoDate}T00:00:00.000+05:30`);
   if (Number.isNaN(start.getTime())) return null;
@@ -168,6 +183,36 @@ const toDayBounds = (isoDate: string) => {
   end.setDate(end.getDate() + 1);
   return { start, end };
 };
+
+// Circulation desk gate: only patrons who are INSIDE the library right now
+// (checked in today IST and not yet checked out) may issue/re-issue/return.
+async function hasLibraryEntryToday(userId: number): Promise<boolean> {
+  const istNow = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+  const bounds = toDayBounds(istNow.toISOString().slice(0, 10));
+  if (!bounds) return false;
+  const [row] = await db
+    .select({ id: libraryEntryExitModel.id })
+    .from(libraryEntryExitModel)
+    .where(
+      and(
+        eq(libraryEntryExitModel.userId, userId),
+        gte(libraryEntryExitModel.entryTimestamp, bounds.start),
+        lt(libraryEntryExitModel.entryTimestamp, bounds.end),
+        // "Present" = checked in and not yet checked out.
+        isNull(libraryEntryExitModel.exitTimestamp),
+      ),
+    )
+    .limit(1);
+  return !!row;
+}
+
+async function assertLibraryEntryToday(userId: number): Promise<void> {
+  if (await hasLibraryEntryToday(userId)) return;
+  throw new ApiError(
+    409,
+    "No library entry recorded for this patron today — they must check in at the entry gate before books can be issued, re-issued or returned.",
+  );
+}
 
 const buildCirculationFilterConditions = (
   filters: Pick<BookCirculationFilters, "status" | "issueDate" | "branchId">,
@@ -465,12 +510,13 @@ export async function getBookCirculationPreviewByUserId(
       copyDetailsId: bookCirculationModel.copyDetailsId,
       borrowingTypeId: bookCirculationModel.borrowingTypeId,
       accessNumber: composedAccessNumber,
+      oldAccessNumber: copyDetailsModel.oldAccessNumber,
       itemCategoryName: sql<string | null>`COALESCE(
         (SELECT ic.name FROM library_item_categories ic WHERE ic.id = ${copyDetailsModel.itemCategoryId}),
         (SELECT ic.name FROM library_item_categories ic WHERE ic.id = ${bookModel.itemCategoryId})
       )`,
       title: bookModel.title,
-      author: bookModel.alternateTitle,
+      author: bookAuthorNames,
       publication: publisherModel.name,
       frontCover: bookModel.frontCover,
       borrowingType: borrowingTypeModel.name,
@@ -542,6 +588,7 @@ export async function getBookCirculationPreviewByUserId(
     copyDetailsId: row.copyDetailsId,
     borrowingTypeId: row.borrowingTypeId,
     accessNumber: row.accessNumber,
+    oldAccessNumber: row.oldAccessNumber,
     itemCategoryName: row.itemCategoryName,
     title: row.title,
     author: row.author,
@@ -567,6 +614,7 @@ export async function getBookCirculationPreviewByUserId(
   return {
     user: entryExitPreview.user,
     rows,
+    hasLibraryEntryToday: await hasLibraryEntryToday(userId),
   };
 }
 
@@ -623,8 +671,9 @@ export async function searchBookOptions(
     .select({
       copyDetailsId: copyDetailsModel.id,
       accessNumber: composedAccessNumber,
+      oldAccessNumber: copyDetailsModel.oldAccessNumber,
       title: bookModel.title,
-      author: bookModel.alternateTitle,
+      author: bookAuthorNames,
       publication: publisherModel.name,
       frontCover: bookModel.frontCover,
       ...bookOptionAnnotations,
@@ -658,8 +707,9 @@ export async function getBookCirculationMeta(): Promise<BookCirculationMetaResul
       .select({
         copyDetailsId: copyDetailsModel.id,
         accessNumber: composedAccessNumber,
+        oldAccessNumber: copyDetailsModel.oldAccessNumber,
         title: bookModel.title,
-        author: bookModel.alternateTitle,
+        author: bookAuthorNames,
         publication: publisherModel.name,
         frontCover: bookModel.frontCover,
         ...bookOptionAnnotations,
@@ -705,6 +755,8 @@ export async function returnBookCirculationById(id: number): Promise<void> {
   // is later than the first one) and stamp a new `actualReturnTimestamp` —
   // both destructive to a completed handover.
   if (base.isReturned) return;
+
+  await assertLibraryEntryToday(base.userId);
 
   const actualReturn = new Date();
   const goLive = await getFineAccrualGoLiveDate();
@@ -764,6 +816,8 @@ export async function reissueBookCirculationById(id: number): Promise<void> {
     .where(eq(bookCirculationModel.id, id))
     .limit(1);
   if (!base) return;
+
+  await assertLibraryEntryToday(base.userId);
 
   const policy = await resolvePolicyForCirculation(
     base.userId,
@@ -834,6 +888,8 @@ export async function issueBookCirculationFromExistingById(
     .where(eq(bookCirculationModel.id, id))
     .limit(1);
   if (!base) return;
+
+  await assertLibraryEntryToday(base.userId);
 
   const policy = await resolvePolicyForCirculation(
     base.userId,
@@ -929,6 +985,8 @@ export async function upsertBookCirculationRowsForUser(
   rows: BookCirculationUpsertEntry[],
   actorUserId: number | null,
 ): Promise<void> {
+  await assertLibraryEntryToday(userId);
+
   const prepared = rows
     .map((row) => {
       const issueTimestamp = toValidDate(row.issueTimestamp);

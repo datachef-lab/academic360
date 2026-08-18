@@ -62,6 +62,7 @@ export type BookCirculationPreviewRow = {
   copyDetailsId: number;
   borrowingTypeId: number | null;
   accessNumber: string | null;
+  oldAccessNumber: string | null;
   /** Copy's item category (falls back to the book's). */
   itemCategoryName: string | null;
   title: string | null;
@@ -89,12 +90,15 @@ export type BookCirculationPreviewRow = {
 export type BookCirculationPreviewPayload = {
   user: BookCirculationPreviewUser;
   rows: BookCirculationPreviewRow[];
+  /** Desk gate: circulation actions require a library check-in today. */
+  hasLibraryEntryToday: boolean;
 };
 
 export type BookCirculationMetaPayload = {
   bookOptions: Array<{
     copyDetailsId: number;
     accessNumber: string | null;
+    oldAccessNumber: string | null;
     title: string | null;
     author: string | null;
     publication: string | null;

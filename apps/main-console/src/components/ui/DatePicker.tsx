@@ -11,6 +11,8 @@ export interface DatePickerProps {
   className?: string;
   displayFormat?: string;
   disabled?: boolean;
+  /** Matcher for un-pickable dates (react-day-picker), e.g. block past days. */
+  disabledDates?: (date: Date) => boolean;
 }
 
 export function DatePicker({
@@ -19,6 +21,7 @@ export function DatePicker({
   className,
   displayFormat = "PPP",
   disabled = false,
+  disabledDates,
 }: DatePickerProps) {
   return (
     <Popover>
@@ -37,7 +40,13 @@ export function DatePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        <Calendar mode="single" selected={value} onSelect={onSelect} initialFocus />
+        <Calendar
+          mode="single"
+          selected={value}
+          onSelect={onSelect}
+          disabled={disabledDates}
+          initialFocus
+        />
       </PopoverContent>
     </Popover>
   );
