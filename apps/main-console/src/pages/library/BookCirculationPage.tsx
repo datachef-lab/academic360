@@ -663,15 +663,16 @@ export default function BookCirculationPage() {
           <TableHeader className={STICKY_THEAD_CLASS}>
             <TableRow className="bg-slate-100">
               <TableHead className={headLeft}>#</TableHead>
-              <TableHead className={cn(headBase, "w-[36%]")}>Book</TableHead>
-              <TableHead className={cn(headBase, "w-[17%]")}>Borrowing Type</TableHead>
+              <TableHead className={cn(headBase, "w-[34%]")}>Book</TableHead>
+              <TableHead className={cn(headBase, "w-[16%]")}>Borrowing Type</TableHead>
               <TableHead className={cn(headBase, "w-[14%]")}>Issued At</TableHead>
               <TableHead className={cn(headBase, "w-[13%]")}>Return Date</TableHead>
               {showReturnedOn ? (
                 <TableHead className={cn(headBase, "w-[12%]")}>Returned On</TableHead>
               ) : null}
-              {/* Icon-only actions: the column stays narrow. */}
-              <TableHead className={cn(headRight, "w-[8%]")}>
+              {/* Icon-only actions: fixed px width so the two icons can never
+                  wrap onto a second row at any dialog width. */}
+              <TableHead className={cn(headRight, "w-24")}>
                 <span className="inline-flex items-center justify-center gap-1">
                   <Settings2 className="h-3.5 w-3.5" />
                   Actions
@@ -807,7 +808,7 @@ export default function BookCirculationPage() {
                     </TableCell>
                   ) : null}
                   <TableCell className={cellBase}>
-                    <div className="flex flex-wrap items-center justify-center gap-1.5">
+                    <div className="flex flex-nowrap items-center justify-center gap-1.5">
                       {variant === "history" && item.actualReturnTimestamp ? (
                         // Returned rows are done — no actions to offer.
                         <span className="text-xs text-slate-400">—</span>
@@ -1322,7 +1323,7 @@ export default function BookCirculationPage() {
                   below xl the rail collapses back into a top banner so the
                   table never runs out of width on smaller screens. */}
               <div className="flex flex-1 min-h-0 flex-col gap-3 xl:flex-row">
-                <div className="rounded-md border bg-slate-50 p-3 xl:w-72 xl:flex-shrink-0 xl:self-stretch xl:overflow-y-auto">
+                <div className="rounded-md border bg-slate-50 p-3 xl:w-64 xl:flex-shrink-0 xl:self-stretch xl:overflow-y-auto">
                   <div className="flex items-start gap-4 xl:flex-col xl:items-center">
                     <Avatar className="h-24 w-24 flex-shrink-0 rounded-md border xl:h-28 xl:w-28">
                       <AvatarImage
