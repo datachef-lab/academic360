@@ -1427,180 +1427,186 @@ export default function BookCirculationPage() {
                   </div>
                 </div>
 
-                <Tabs
-                  value={activeDialogTab}
-                  onValueChange={(value) => setActiveDialogTab(value as "issue" | "history")}
-                  className="flex flex-1 min-h-0 min-w-0 flex-col"
-                >
-                  <div className="flex items-end justify-between gap-3">
-                    <TabsList>
-                      <TabsTrigger value="issue">Issue</TabsTrigger>
-                      <TabsTrigger value="history">Reissue / Return</TabsTrigger>
-                    </TabsList>
-                    {activeDialogTab === "issue" ? (
-                      <div className="flex flex-1 items-center justify-end gap-2">
-                        <div className="flex-1 min-w-0 max-w-2xl">
-                          <Combobox
-                            className="h-9 w-full text-sm"
-                            placeholder="Search book by access no..."
-                            value={stagedBookKey}
-                            showOptionsHint={false}
-                            dataArr={pickerBookItems}
-                            contentClassName="w-[640px] max-w-[calc(100vw-2rem)]"
-                            onSearch={(term) => void handlePickerSearch(term)}
-                            isSearching={pickerLoading}
-                            selectedLabel={stagedBookLabel}
-                            selectedBadge={
-                              stagedBookOption?.onLoan
-                                ? {
-                                    label: "ON LOAN",
-                                    className: "border-red-200 bg-red-50 text-red-600",
-                                  }
-                                : null
-                            }
-                            onChange={(value) => {
-                              setStagedBookKey(value);
-                              const picked = pickerOptions.find(
-                                (o) => String(o.copyDetailsId) === value,
-                              );
-                              // Keep the full option — pickerOptions gets cleared
-                              // when the search input empties, so Add relies on
-                              // this captured copy instead.
-                              setStagedBookOption(picked ?? null);
-                              setStagedBookLabel(
-                                picked
-                                  ? `${picked.accessNumber || "-"} — ${picked.title || "-"}`
-                                  : "",
-                              );
-                              // Fetch the policy now so the copy-cap check can
-                              // block Add (with reason) before staging.
-                              setStagedPolicyInfo(null);
-                              const reqId = ++stagedPolicyReqRef.current;
-                              if (picked && !picked.onLoan && previewData?.user?.userId) {
-                                setStagedPolicyLoading(true);
-                                getBookCirculationPolicy(
-                                  previewData.user.userId,
-                                  picked.copyDetailsId,
-                                )
-                                  .then((res) => {
-                                    if (reqId !== stagedPolicyReqRef.current) return;
-                                    setStagedPolicyInfo(
-                                      res.payload
-                                        ? {
-                                            loanDays: res.payload.loanDays,
-                                            finePerDay: res.payload.finePerDay,
-                                            graceDays: res.payload.graceDays,
-                                            renewalLimit: res.payload.renewalLimit,
-                                            maxCopiesAtOnce: res.payload.maxCopiesAtOnce,
-                                          }
-                                        : null,
-                                    );
-                                  })
-                                  .catch(() => {
-                                    if (reqId !== stagedPolicyReqRef.current) return;
-                                    setStagedPolicyInfo(null);
-                                  })
-                                  .finally(() => {
-                                    if (reqId === stagedPolicyReqRef.current)
-                                      setStagedPolicyLoading(false);
-                                  });
-                              } else {
-                                setStagedPolicyLoading(false);
+                {/* Right section: tabs header, table content, footer — the
+                    footer lives HERE so the borrower rail spans full height. */}
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                  <Tabs
+                    value={activeDialogTab}
+                    onValueChange={(value) => setActiveDialogTab(value as "issue" | "history")}
+                    className="flex flex-1 min-h-0 min-w-0 flex-col"
+                  >
+                    <div className="flex items-end justify-between gap-3">
+                      <TabsList>
+                        <TabsTrigger value="issue">Issue</TabsTrigger>
+                        <TabsTrigger value="history">Reissue / Return</TabsTrigger>
+                      </TabsList>
+                      {activeDialogTab === "issue" ? (
+                        <div className="flex flex-1 items-center justify-end gap-2">
+                          <div className="flex-1 min-w-0 max-w-2xl">
+                            <Combobox
+                              className="h-9 w-full text-sm"
+                              placeholder="Search book by access no..."
+                              value={stagedBookKey}
+                              showOptionsHint={false}
+                              dataArr={pickerBookItems}
+                              contentClassName="w-[640px] max-w-[calc(100vw-2rem)]"
+                              onSearch={(term) => void handlePickerSearch(term)}
+                              isSearching={pickerLoading}
+                              selectedLabel={stagedBookLabel}
+                              selectedBadge={
+                                stagedBookOption?.onLoan
+                                  ? {
+                                      label: "ON LOAN",
+                                      className: "border-red-200 bg-red-50 text-red-600",
+                                    }
+                                  : null
                               }
-                            }}
-                          />
+                              onChange={(value) => {
+                                setStagedBookKey(value);
+                                const picked = pickerOptions.find(
+                                  (o) => String(o.copyDetailsId) === value,
+                                );
+                                // Keep the full option — pickerOptions gets cleared
+                                // when the search input empties, so Add relies on
+                                // this captured copy instead.
+                                setStagedBookOption(picked ?? null);
+                                setStagedBookLabel(
+                                  picked
+                                    ? `${picked.accessNumber || "-"} — ${picked.title || "-"}`
+                                    : "",
+                                );
+                                // Fetch the policy now so the copy-cap check can
+                                // block Add (with reason) before staging.
+                                setStagedPolicyInfo(null);
+                                const reqId = ++stagedPolicyReqRef.current;
+                                if (picked && !picked.onLoan && previewData?.user?.userId) {
+                                  setStagedPolicyLoading(true);
+                                  getBookCirculationPolicy(
+                                    previewData.user.userId,
+                                    picked.copyDetailsId,
+                                  )
+                                    .then((res) => {
+                                      if (reqId !== stagedPolicyReqRef.current) return;
+                                      setStagedPolicyInfo(
+                                        res.payload
+                                          ? {
+                                              loanDays: res.payload.loanDays,
+                                              finePerDay: res.payload.finePerDay,
+                                              graceDays: res.payload.graceDays,
+                                              renewalLimit: res.payload.renewalLimit,
+                                              maxCopiesAtOnce: res.payload.maxCopiesAtOnce,
+                                            }
+                                          : null,
+                                      );
+                                    })
+                                    .catch(() => {
+                                      if (reqId !== stagedPolicyReqRef.current) return;
+                                      setStagedPolicyInfo(null);
+                                    })
+                                    .finally(() => {
+                                      if (reqId === stagedPolicyReqRef.current)
+                                        setStagedPolicyLoading(false);
+                                    });
+                                } else {
+                                  setStagedPolicyLoading(false);
+                                }
+                              }}
+                            />
+                          </div>
+                          {stagedBookOption?.onLoan ? (
+                            // Unavailable copy: Add is replaced by an info trigger
+                            // explaining WHY it cannot be issued.
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+                              onClick={() => setOnLoanInfoOpen(true)}
+                            >
+                              <Info className="mr-1 h-4 w-4" />
+                              Not available
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="default"
+                              className="bg-emerald-600 text-white hover:bg-emerald-700"
+                              size="sm"
+                              disabled={
+                                !stagedBookKey ||
+                                addingStagedBook ||
+                                stagedPolicyLoading ||
+                                !!addBlockedReason
+                              }
+                              title={addBlockedReason ?? undefined}
+                              onClick={() => void addStagedBook()}
+                            >
+                              {addingStagedBook || stagedPolicyLoading ? (
+                                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                              ) : (
+                                <Plus className="mr-1 h-4 w-4" />
+                              )}
+                              Add
+                            </Button>
+                          )}
                         </div>
-                        {stagedBookOption?.onLoan ? (
-                          // Unavailable copy: Add is replaced by an info trigger
-                          // explaining WHY it cannot be issued.
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
-                            onClick={() => setOnLoanInfoOpen(true)}
-                          >
-                            <Info className="mr-1 h-4 w-4" />
-                            Not available
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="default"
-                            className="bg-emerald-600 text-white hover:bg-emerald-700"
-                            size="sm"
-                            disabled={
-                              !stagedBookKey ||
-                              addingStagedBook ||
-                              stagedPolicyLoading ||
-                              !!addBlockedReason
-                            }
-                            title={addBlockedReason ?? undefined}
-                            onClick={() => void addStagedBook()}
-                          >
-                            {addingStagedBook || stagedPolicyLoading ? (
-                              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                            ) : (
-                              <Plus className="mr-1 h-4 w-4" />
-                            )}
-                            Add
-                          </Button>
-                        )}
-                      </div>
-                    ) : null}
-                  </div>
-                  {/* Reason the Add button is blocked (cap reached etc.) — the
+                      ) : null}
+                    </div>
+                    {/* Reason the Add button is blocked (cap reached etc.) — the
                     on-loan case gets the info dialog instead. */}
-                  {activeDialogTab === "issue" && addBlockedReason && !stagedBookOption?.onLoan ? (
-                    <p className="mt-1 text-right text-[11px] font-medium text-red-600">
-                      {addBlockedReason}
-                    </p>
-                  ) : null}
-                  <TabsContent
-                    value="issue"
-                    className="mt-2 flex flex-1 min-h-0 flex-col gap-2 data-[state=inactive]:hidden"
-                    forceMount
-                  >
-                    {renderRowsTable(
-                      editableRows.filter((row) => row.isNew),
-                      "No books staged. Pick a book above and click Add.",
-                      "issue",
-                    )}
-                  </TabsContent>
-                  <TabsContent
-                    value="history"
-                    className="mt-2 flex flex-1 min-h-0 flex-col data-[state=inactive]:hidden"
-                    forceMount
-                  >
-                    {renderRowsTable(
-                      editableRows.filter((row) => !row.isNew),
-                      "No issued or returned books.",
-                      "history",
-                    )}
-                  </TabsContent>
-                </Tabs>
-              </div>
+                    {activeDialogTab === "issue" &&
+                    addBlockedReason &&
+                    !stagedBookOption?.onLoan ? (
+                      <p className="mt-1 text-right text-[11px] font-medium text-red-600">
+                        {addBlockedReason}
+                      </p>
+                    ) : null}
+                    <TabsContent
+                      value="issue"
+                      className="mt-2 flex flex-1 min-h-0 flex-col gap-2 data-[state=inactive]:hidden"
+                      forceMount
+                    >
+                      {renderRowsTable(
+                        editableRows.filter((row) => row.isNew),
+                        "No books staged. Pick a book above and click Add.",
+                        "issue",
+                      )}
+                    </TabsContent>
+                    <TabsContent
+                      value="history"
+                      className="mt-2 flex flex-1 min-h-0 flex-col data-[state=inactive]:hidden"
+                      forceMount
+                    >
+                      {renderRowsTable(
+                        editableRows.filter((row) => !row.isNew),
+                        "No issued or returned books.",
+                        "history",
+                      )}
+                    </TabsContent>
+                  </Tabs>
 
-              <div className="sticky bottom-0 z-20 mt-auto flex items-center justify-end gap-2 border-t bg-white pt-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setDetailsOpen(false);
-                    setPreviewData(null);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  className="bg-blue-600 text-white hover:bg-blue-700"
-                  disabled={savingRows || hasInvalidStagedRows || !hasSavable}
-                  onClick={() => void saveRows()}
-                >
-                  {savingRows ? (
-                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="mr-1 h-4 w-4" />
-                  )}
-                  Save
-                </Button>
+                  <div className="mt-2 flex items-center justify-end gap-2 border-t bg-white pt-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setDetailsOpen(false);
+                        setPreviewData(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="bg-blue-600 text-white hover:bg-blue-700"
+                      disabled={savingRows || hasInvalidStagedRows || !hasSavable}
+                      onClick={() => void saveRows()}
+                    >
+                      {savingRows ? (
+                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="mr-1 h-4 w-4" />
+                      )}
+                      Save
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
