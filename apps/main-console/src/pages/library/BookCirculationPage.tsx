@@ -143,6 +143,15 @@ const formatDateOnly = (value: string | null) => {
   return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
 };
 
+const formatTimeOnly = (value: string | null) => {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d
+    .toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true })
+    .replace(/\b(am|pm)\b/g, (v) => v.toUpperCase());
+};
+
 const ROMAN_NUMERAL_RE = /^(?=[MDCLXVI])M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/;
 
 const toSentenceCase = (value: string | null) => {
@@ -434,12 +443,16 @@ export default function BookCirculationPage() {
     } finally {
       setAddingStagedBook(false);
     }
+    // Desk default: issues are HOME ISSUE unless staff changes it.
+    const defaultBorrowing =
+      borrowingTypeOptions.find((option) => option.name.trim().toUpperCase() === "HOME ISSUE") ??
+      null;
     setEditableRows((prev) => [
       ...prev,
       {
         id: Date.now() * -1,
         copyDetailsId: picked.copyDetailsId,
-        borrowingTypeId: null,
+        borrowingTypeId: defaultBorrowing?.id ?? null,
         accessNumber: picked.accessNumber,
         oldAccessNumber: picked.oldAccessNumber ?? null,
         itemCategoryName: picked.itemCategoryName ?? null,
@@ -447,7 +460,7 @@ export default function BookCirculationPage() {
         author: picked.author,
         publication: picked.publication,
         frontCover: picked.frontCover,
-        borrowingType: null,
+        borrowingType: defaultBorrowing?.name ?? null,
         status: "ISSUED",
         bookOptionKey: stagedBookKey,
         issuedTimestamp: new Date().toISOString(),
@@ -705,7 +718,7 @@ export default function BookCirculationPage() {
                     <Badge className="border border-indigo-300 bg-indigo-100 px-1.5 py-0 text-[10px] font-semibold text-indigo-800 hover:bg-indigo-100">
                       {item.accessNumber || "—"}
                     </Badge>
-                    {item.oldAccessNumber && item.oldAccessNumber !== item.accessNumber ? (
+                    {item.oldAccessNumber ? (
                       <p className="mt-0.5 text-[10px] text-slate-400 line-through">
                         {item.oldAccessNumber}
                       </p>
@@ -717,7 +730,7 @@ export default function BookCirculationPage() {
                         {item.title || "—"}
                       </p>
                       {item.author ? (
-                        <p className="truncate text-[11px] text-slate-500">{item.author}</p>
+                        <p className="truncate text-[11px] text-slate-500">- {item.author}</p>
                       ) : null}
                       {item.itemCategoryName ? (
                         <div className="mt-0.5 flex flex-wrap items-center gap-1">
@@ -747,7 +760,13 @@ export default function BookCirculationPage() {
                     </div>
                   </TableCell>
                   <TableCell className={cn(cellBase, "text-left")}>
-                    <p className="truncate text-xs text-slate-700">{item.publication || "—"}</p>
+                    {item.publication ? (
+                      <Badge className="whitespace-normal break-words border border-fuchsia-300 bg-fuchsia-100 px-1.5 py-0 text-left text-[10px] font-semibold text-fuchsia-800 hover:bg-fuchsia-100">
+                        {item.publication}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-slate-400">—</span>
+                    )}
                   </TableCell>
                   <TableCell className={cellBase}>
                     {item.actualReturnTimestamp ? (
@@ -815,11 +834,16 @@ export default function BookCirculationPage() {
                   </TableCell>
                   {showReturnedOn ? (
                     <TableCell className={cellBase}>
-                      <span className="text-xs">
-                        {item.actualReturnTimestamp
-                          ? formatDateTime(item.actualReturnTimestamp)
-                          : "—"}
-                      </span>
+                      {item.actualReturnTimestamp ? (
+                        <>
+                          <p className="text-xs">{formatDateOnly(item.actualReturnTimestamp)}</p>
+                          <p className="text-[10px] text-slate-500">
+                            {formatTimeOnly(item.actualReturnTimestamp)}
+                          </p>
+                        </>
+                      ) : (
+                        <span className="text-xs">—</span>
+                      )}
                     </TableCell>
                   ) : null}
                   <TableCell className={cellBase}>
@@ -1317,7 +1341,7 @@ export default function BookCirculationPage() {
               <div className="flex flex-1 min-h-0 flex-col gap-3 xl:flex-row">
                 <div className="flex flex-col overflow-hidden rounded-md border bg-slate-50 xl:w-64 xl:flex-shrink-0 xl:self-stretch">
                   {/* xl+: the borrower photo is a full-width cover on the rail. */}
-                  <Avatar className="hidden h-40 w-full flex-shrink-0 rounded-none border-b xl:flex">
+                  <Avatar className="hidden h-28 w-full flex-shrink-0 rounded-none border-b xl:flex">
                     <AvatarImage
                       src={
                         previewUser.userType === "STUDENT" && previewUser.uid
@@ -1328,7 +1352,7 @@ export default function BookCirculationPage() {
                       className="h-full w-full rounded-none object-cover"
                     />
                     <AvatarFallback
-                      className={`rounded-none text-4xl font-semibold text-white ${getColorFromName(previewUser.name)}`}
+                      className={`rounded-none text-3xl font-semibold text-white ${getColorFromName(previewUser.name)}`}
                     >
                       {getInitials(previewUser.name)}
                     </AvatarFallback>
