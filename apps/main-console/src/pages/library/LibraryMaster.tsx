@@ -30,7 +30,8 @@ import {
   Users,
   Workflow,
 } from "lucide-react";
-import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
+import { useRestrictTempUsers, getLibraryStaffAllowedPaths } from "@/hooks/use-restrict-temp-users";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import { LibraryBranchSelector } from "@/features/library/LibraryBranchSelector";
 
 const quickLinks = [
@@ -70,14 +71,14 @@ const quickLinks = [
     icon: Newspaper,
   },
   {
-    title: "Reports",
-    url: "/dashboard/library/reports",
-    icon: FileBarChart,
-  },
-  {
     title: "Digital Twin",
     url: "/dashboard/library/digital-twin",
     icon: MapPin,
+  },
+  {
+    title: "Reports",
+    url: "/dashboard/library/reports",
+    icon: FileBarChart,
   },
 ];
 
@@ -217,15 +218,26 @@ const masterLinks = [
 export default function LibraryMaster() {
   useRestrictTempUsers();
   const location = useLocation();
+  const { user } = useAuth();
   const currentPath = location.pathname;
 
+  // Library-staff (sub-page restricted) accounts only see the pages they are
+  // allowed to open; the Masters section is hidden entirely for them.
+  const libraryStaffAllowedPaths = getLibraryStaffAllowedPaths(user?.email);
+  const visibleQuickLinks = libraryStaffAllowedPaths
+    ? quickLinks.filter((link) => libraryStaffAllowedPaths.includes(link.url))
+    : quickLinks;
+  const visibleMasterLinks = libraryStaffAllowedPaths ? [] : masterLinks;
+
+  // No justify-between: with the Masters section hidden (restricted library
+  // staff) it would push the quick links to the bottom of the panel.
   const rightBarContent = (
-    <div className="flex h-full flex-col justify-between gap-4 py-3">
+    <div className="flex h-full flex-col gap-4 py-3">
       <div>
         <LibraryBranchSelector />
       </div>
       <ul>
-        {quickLinks.map((link) => (
+        {visibleQuickLinks.map((link) => (
           <NavItem
             key={link.url}
             href={link.url}
@@ -241,21 +253,23 @@ export default function LibraryMaster() {
         ))}
       </ul>
 
-      <div>
-        <h3 className="mx-4 mb-1 border-b text-lg font-bold">Masters</h3>
-        <ul>
-          {masterLinks.map((link) => (
-            <NavItem
-              key={link.url}
-              href={link.url}
-              icon={<link.icon className="h-6 w-5" />}
-              isActive={currentPath.startsWith(link.url)}
-            >
-              {link.title}
-            </NavItem>
-          ))}
-        </ul>
-      </div>
+      {visibleMasterLinks.length > 0 && (
+        <div>
+          <h3 className="mx-4 mb-1 border-b text-lg font-bold">Masters</h3>
+          <ul>
+            {visibleMasterLinks.map((link) => (
+              <NavItem
+                key={link.url}
+                href={link.url}
+                icon={<link.icon className="h-6 w-5" />}
+                isActive={currentPath.startsWith(link.url)}
+              >
+                {link.title}
+              </NavItem>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 

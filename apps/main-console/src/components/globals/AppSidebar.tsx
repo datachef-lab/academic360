@@ -53,9 +53,11 @@ import {
   TEMP_USER_EMAILS,
   isFeeMarkingOnlyUser,
   isLibraryOnlyUser,
+  isLibraryStaffRestrictedUser,
   isIdCardGuestUser,
   ID_CARD_TOOL_PATH,
   LIBRARY_MODULE_PATH_PREFIX,
+  LIBRARY_ENTRY_EXIT_PATH,
 } from "@/hooks/use-restrict-temp-users";
 
 // Remove hardcoded academic years - now using Redux state
@@ -215,7 +217,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Always render the sidebar container promptly; show skeleton while auth/user hydrate
   const showSkeleton = !accessToken || !user;
 
-  const libraryRestricted = isLibraryOnlyUser(user?.email);
+  // Library-staff (sub-page restricted) accounts collapse to the Library module
+  // in the top nav exactly like a library-only user; the finer sub-page scoping
+  // is enforced inside the library module (see `useRestrictTempUsers`).
+  const libraryStaffRestricted = isLibraryStaffRestrictedUser(user?.email);
+  const libraryRestricted = isLibraryOnlyUser(user?.email) || libraryStaffRestricted;
   const feeMarkingRestricted = isFeeMarkingOnlyUser(user?.email);
   const tempRestricted = !!user?.email && TEMP_USER_EMAILS.includes(user.email);
   const moduleOnlyRestricted = libraryRestricted || feeMarkingRestricted;
@@ -439,7 +445,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       const href =
                         feeMarkingRestricted && item.title === "Fees Module"
                           ? FEE_PAYMENT_MARKING_PATH
-                          : item.url;
+                          : libraryStaffRestricted &&
+                              (item.url === LIBRARY_MODULE_PATH_PREFIX ||
+                                item.url.startsWith(`${LIBRARY_MODULE_PATH_PREFIX}/`))
+                            ? LIBRARY_ENTRY_EXIT_PATH
+                            : item.url;
                       return (
                         <NavItem
                           key={item.title}
@@ -504,6 +514,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               {user?.email &&
                 !TEMP_USER_EMAILS.includes(user.email) &&
                 !isLibraryOnlyUser(user.email) &&
+                !isLibraryStaffRestrictedUser(user.email) &&
                 !isFeeMarkingOnlyUser(user.email) && (
                   <div className="mt-4">
                     <h3 className="mb-2 px-3 pt-3 pb-2 text-xs font-medium text-purple-200 uppercase tracking-wider border-b border-white/10">

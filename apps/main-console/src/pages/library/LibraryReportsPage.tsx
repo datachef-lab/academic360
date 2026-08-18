@@ -109,7 +109,7 @@ type ReportEntry = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Report catalog — 12 rows after the merges:
+// Report catalog — 13 rows after the merges:
 //   - Book circulation (was: overdue + separate returned + issued)
 //   - Fines (was: outstanding + collected as two)
 //   - Popular / high-demand books (was: popular + high-demand as two)
@@ -162,6 +162,15 @@ const REPORTS: ReportEntry[] = [
     description:
       "Holdings grouped four ways — by item category, by copy status, by language and by publisher — one sheet each.",
     icon: <BookOpen className="h-5 w-5 text-emerald-600" />,
+  },
+  {
+    id: "available-copies",
+    jobKey: "library-available-copies",
+    domain: "INVENTORY",
+    name: "Available copies (not on loan)",
+    description:
+      "Every copy currently on the shelf — no open issue or reissue against it — with book, branch, item category, status and price.",
+    icon: <ClipboardList className="h-5 w-5 text-emerald-600" />,
   },
   {
     id: "entry-exit",
@@ -765,17 +774,6 @@ export default function LibraryReportsPage() {
       <div className="mb-4 sm:mb-6 space-y-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Library Reports</h1>
-          <p className="text-sm sm:text-base text-slate-600 mt-2">
-            Download library reports as Excel. Open Export filters to pin branch, date range,
-            academic year, program course, class, shift, user type and more for every download.
-          </p>
-          <p className="text-[11px] text-slate-500 mt-1">
-            <strong>Which filters apply:</strong> batch, user and circulation filters (program
-            course, class, shift, user type, community, etc.) apply to Book circulation, Fines,
-            Popular / high-demand, Entry / Exit and Publications reports. Item category applies to
-            Stock summary and Holdings. Zone applies to Entry / Exit only. Academic year is required
-            for the Compliance (NAAC / NIRF / AISHE) downloads.
-          </p>
         </div>
 
         <div className="flex flex-col lg:flex-row lg:flex-wrap gap-3 lg:items-end">
