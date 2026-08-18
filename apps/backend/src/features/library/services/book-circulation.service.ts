@@ -23,6 +23,7 @@ import { borrowingTypeModel } from "@repo/db/schemas/models/library/borrowing-ty
 import { publisherModel } from "@repo/db/schemas/models/library/publisher.model.js";
 import { statusModel } from "@repo/db/schemas/models/library/status.model.js";
 import { bookReissueModel } from "@repo/db/schemas/models/library/book-reissue.model.js";
+import { libraryEntryExitModel } from "@repo/db/schemas/models/library/library-entry-exit.model.js";
 import { userModel } from "@repo/db/schemas/models/user/user.model.js";
 import { studentModel } from "@repo/db/schemas/models/user/student.model.js";
 import { staffModel } from "@repo/db/schemas/models/user/staff.model.js";
@@ -108,6 +109,8 @@ export type BookCirculationPreviewResult = {
     Awaited<ReturnType<typeof getLibraryEntryExitPreviewByUserId>>
   >["user"];
   rows: BookCirculationPreviewRow[];
+  // Desk gate: circulation actions require a library check-in today.
+  hasLibraryEntryToday: boolean;
 };
 
 export type BookCirculationMetaResult = {
@@ -159,6 +162,34 @@ const toDayBounds = (isoDate: string) => {
   end.setDate(end.getDate() + 1);
   return { start, end };
 };
+
+// Circulation desk gate: only patrons who checked in at the library today
+// (IST) may issue, re-issue or return books.
+async function hasLibraryEntryToday(userId: number): Promise<boolean> {
+  const istNow = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+  const bounds = toDayBounds(istNow.toISOString().slice(0, 10));
+  if (!bounds) return false;
+  const [row] = await db
+    .select({ id: libraryEntryExitModel.id })
+    .from(libraryEntryExitModel)
+    .where(
+      and(
+        eq(libraryEntryExitModel.userId, userId),
+        gte(libraryEntryExitModel.entryTimestamp, bounds.start),
+        lt(libraryEntryExitModel.entryTimestamp, bounds.end),
+      ),
+    )
+    .limit(1);
+  return !!row;
+}
+
+async function assertLibraryEntryToday(userId: number): Promise<void> {
+  if (await hasLibraryEntryToday(userId)) return;
+  throw new ApiError(
+    409,
+    "No library entry recorded for this patron today — they must check in at the entry gate before books can be issued, re-issued or returned.",
+  );
+}
 
 const buildCirculationFilterConditions = (
   filters: Pick<BookCirculationFilters, "status" | "issueDate" | "branchId">,
@@ -559,6 +590,7 @@ export async function getBookCirculationPreviewByUserId(
   return {
     user: entryExitPreview.user,
     rows,
+    hasLibraryEntryToday: await hasLibraryEntryToday(userId),
   };
 }
 
@@ -689,6 +721,8 @@ export async function returnBookCirculationById(id: number): Promise<void> {
   // both destructive to a completed handover.
   if (base.isReturned) return;
 
+  await assertLibraryEntryToday(base.userId);
+
   const actualReturn = new Date();
   const goLive = await getFineAccrualGoLiveDate();
 
@@ -747,6 +781,8 @@ export async function reissueBookCirculationById(id: number): Promise<void> {
     .where(eq(bookCirculationModel.id, id))
     .limit(1);
   if (!base) return;
+
+  await assertLibraryEntryToday(base.userId);
 
   const policy = await resolvePolicyForCirculation(
     base.userId,
@@ -817,6 +853,8 @@ export async function issueBookCirculationFromExistingById(
     .where(eq(bookCirculationModel.id, id))
     .limit(1);
   if (!base) return;
+
+  await assertLibraryEntryToday(base.userId);
 
   const policy = await resolvePolicyForCirculation(
     base.userId,
@@ -912,6 +950,8 @@ export async function upsertBookCirculationRowsForUser(
   rows: BookCirculationUpsertEntry[],
   actorUserId: number | null,
 ): Promise<void> {
+  await assertLibraryEntryToday(userId);
+
   const prepared = rows
     .map((row) => {
       const issueTimestamp = toValidDate(row.issueTimestamp);

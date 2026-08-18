@@ -177,6 +177,8 @@ export default function BookCirculationPage() {
   const [rows, setRows] = useState<BookCirculationRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  // Client-side filter for the Reissue / Return tab rows.
+  const [historyFilter, setHistoryFilter] = useState("");
   const [page, setPage] = useState(1);
   const [limit] = useState(15);
   const [total, setTotal] = useState(0);
@@ -373,7 +375,8 @@ export default function BookCirculationPage() {
           isNew: false,
         })),
       );
-      setActiveDialogTab("issue");
+      // No entry today -> Issue tab is disabled; land on Reissue / Return.
+      setActiveDialogTab(response.payload.hasLibraryEntryToday === false ? "history" : "issue");
       setStagedBookKey("");
       setStagedBookLabel("");
       setStagedBookOption(null);
@@ -396,6 +399,10 @@ export default function BookCirculationPage() {
   };
 
   const addStagedBook = async () => {
+    if (!patronPresent) {
+      toast.error("No library entry recorded today — patron must check in first.");
+      return;
+    }
     if (!stagedBookKey || !previewData?.user?.userId) return;
     const picked =
       stagedBookOption ??
@@ -512,6 +519,26 @@ export default function BookCirculationPage() {
       }).length,
     };
   }, [editableRows]);
+
+  // Desk gate mirror of the server rule: circulation actions need a library
+  // check-in today (backend enforces regardless).
+  const patronPresent = previewData?.hasLibraryEntryToday !== false;
+
+  // Reissue / Return tab rows, narrowed by the tab's filter box.
+  const historyNeedle = historyFilter.trim().toLowerCase();
+  const historyRows = editableRows
+    .filter((row) => !row.isNew)
+    .filter((row) => {
+      if (!historyNeedle) return true;
+      return [
+        row.accessNumber,
+        row.oldAccessNumber,
+        row.title,
+        row.author,
+        row.publication,
+        row.borrowingType,
+      ].some((value) => (value || "").toLowerCase().includes(historyNeedle));
+    });
 
   // Why the Add button is blocked for the CURRENT selection (null = addable).
   // On-loan copies are searchable by design but can never be staged; the copy
@@ -710,7 +737,7 @@ export default function BookCirculationPage() {
               rowsToShow.map((item, index) => (
                 <TableRow
                   key={item.id}
-                  className={`[&>td]:border-b [&>td]:border-slate-200 last:[&>td]:border-b last:[&>td]:border-slate-300 ${item.actualReturnTimestamp ? "bg-green-100" : ""}`}
+                  className={`[&>td]:border-b [&>td]:border-slate-200 last:[&>td]:border-b last:[&>td]:border-slate-300`}
                 >
                   {/* Serial counts down: newest row (top) shows the total. */}
                   <TableCell className={cellBase}>{rowsToShow.length - index}.</TableCell>
@@ -718,7 +745,7 @@ export default function BookCirculationPage() {
                     <Badge className="border border-indigo-300 bg-indigo-100 px-1.5 py-0 text-[10px] font-semibold text-indigo-800 hover:bg-indigo-100">
                       {item.accessNumber || "—"}
                     </Badge>
-                    {item.oldAccessNumber ? (
+                    {item.oldAccessNumber && item.oldAccessNumber !== item.accessNumber ? (
                       <p className="mt-0.5 text-[10px] text-slate-400 line-through">
                         {item.oldAccessNumber}
                       </p>
@@ -763,7 +790,7 @@ export default function BookCirculationPage() {
                   </TableCell>
                   <TableCell className={cn(cellBase, "text-left")}>
                     {item.publication ? (
-                      <Badge className="whitespace-normal break-words border border-fuchsia-300 bg-fuchsia-100 px-1.5 py-0 text-left text-[10px] font-semibold text-fuchsia-800 hover:bg-fuchsia-100">
+                      <Badge className="whitespace-normal break-words rounded-md border border-fuchsia-300 bg-fuchsia-100 px-1.5 py-0.5 text-left text-[10px] font-semibold leading-4 text-fuchsia-800 hover:bg-fuchsia-100">
                         {item.publication}
                       </Badge>
                     ) : (
@@ -778,7 +805,7 @@ export default function BookCirculationPage() {
                       </span>
                     ) : (
                       <Combobox
-                        className="h-8 w-full bg-white text-xs font-medium text-slate-800"
+                        className="h-auto w-full justify-center border-0 bg-transparent px-0 py-0 text-xs font-medium text-slate-800 shadow-none hover:bg-transparent"
                         placeholder="Borrowing Type"
                         value={item.borrowingType || ""}
                         showOptionsHint={false}
@@ -806,8 +833,10 @@ export default function BookCirculationPage() {
                     )}
                   </TableCell>
                   <TableCell className={cellBase}>
-                    {/* Time is stored but not displayed. */}
-                    <span className="text-xs">{formatDateOnly(item.issuedTimestamp)}</span>
+                    <p className="text-xs">{formatDateOnly(item.issuedTimestamp)}</p>
+                    <p className="text-[10px] text-slate-500">
+                      {formatTimeOnly(item.issuedTimestamp)}
+                    </p>
                   </TableCell>
                   <TableCell className={cellBase}>
                     {item.isNew ? (
@@ -827,8 +856,14 @@ export default function BookCirculationPage() {
                             ),
                           )
                         }
-                        className="h-8 text-xs"
+                        className="h-auto w-auto min-w-0 justify-center border-0 bg-transparent px-0 py-0 text-xs shadow-none hover:bg-transparent"
                         displayFormat="dd/MM/yyyy"
+                        // Due dates cannot be in the past.
+                        disabledDates={(date) => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          return date < today;
+                        }}
                       />
                     ) : (
                       <span className="text-xs">{formatDateOnly(item.returnTimestamp)}</span>
@@ -866,6 +901,7 @@ export default function BookCirculationPage() {
                                   variant="default"
                                   type="button"
                                   aria-label="Return"
+                                  disabled={!patronPresent}
                                   onClick={() => {
                                     setEditableRows((prev) =>
                                       prev.map((row) =>
@@ -895,7 +931,9 @@ export default function BookCirculationPage() {
                                     className="h-7 w-7 border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100"
                                     type="button"
                                     aria-label="Re-issue"
-                                    disabled={item.reissuesUsed >= item.renewalLimit}
+                                    disabled={
+                                      !patronPresent || item.reissuesUsed >= item.renewalLimit
+                                    }
                                     onClick={() => {
                                       setReissueRowId(item.id);
                                       // Policy-driven default: the new due date is
@@ -1324,7 +1362,13 @@ export default function BookCirculationPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+      <Dialog
+        open={detailsOpen}
+        onOpenChange={(open) => {
+          setDetailsOpen(open);
+          if (!open) setHistoryFilter("");
+        }}
+      >
         {/* [&>button]:hidden hides the built-in top-right close X. */}
         <DialogContent className="w-[94vw] max-w-none h-[94vh] max-h-none flex flex-col text-[13px] [&>button]:hidden">
           {/* No visible dialog header — the rail + right section own the full
@@ -1463,6 +1507,12 @@ export default function BookCirculationPage() {
                 {/* Right section: tabs header, table content, footer — the
                     footer lives HERE so the borrower rail spans full height. */}
                 <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                  {!patronPresent ? (
+                    <div className="mb-2 rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700">
+                      No library entry recorded today — the patron must check in at the entry gate
+                      before books can be issued, re-issued or returned.
+                    </div>
+                  ) : null}
                   <Tabs
                     value={activeDialogTab}
                     onValueChange={(value) => setActiveDialogTab(value as "issue" | "history")}
@@ -1470,10 +1520,13 @@ export default function BookCirculationPage() {
                   >
                     <div className="flex items-end justify-between gap-3">
                       <TabsList>
-                        <TabsTrigger value="issue">Issue</TabsTrigger>
+                        <TabsTrigger value="issue" disabled={!patronPresent}>
+                          Issue
+                        </TabsTrigger>
                         <TabsTrigger value="history">Reissue / Return</TabsTrigger>
                       </TabsList>
-                      {activeDialogTab === "issue" ? (
+                      {/* Hidden entirely when the patron has no entry today. */}
+                      {activeDialogTab === "issue" && patronPresent ? (
                         <div className="flex flex-1 items-center justify-end gap-2">
                           <div className="flex-1 min-w-0 max-w-2xl">
                             <Combobox
@@ -1564,6 +1617,7 @@ export default function BookCirculationPage() {
                               className="bg-emerald-600 text-white hover:bg-emerald-700"
                               size="sm"
                               disabled={
+                                !patronPresent ||
                                 !stagedBookKey ||
                                 addingStagedBook ||
                                 stagedPolicyLoading ||
@@ -1580,6 +1634,16 @@ export default function BookCirculationPage() {
                               Add
                             </Button>
                           )}
+                        </div>
+                      ) : activeDialogTab === "history" ? (
+                        <div className="relative w-72">
+                          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                          <Input
+                            value={historyFilter}
+                            onChange={(e) => setHistoryFilter(e.target.value)}
+                            placeholder="Filter by access no./book/author/publisher..."
+                            className="h-9 pl-8 text-xs"
+                          />
                         </div>
                       ) : null}
                     </div>
@@ -1609,8 +1673,10 @@ export default function BookCirculationPage() {
                       forceMount
                     >
                       {renderRowsTable(
-                        editableRows.filter((row) => !row.isNew),
-                        "No issued or returned books.",
+                        historyRows,
+                        historyFilter.trim()
+                          ? "No rows match the filter."
+                          : "No issued or returned books.",
                         "history",
                       )}
                     </TabsContent>
@@ -1628,7 +1694,7 @@ export default function BookCirculationPage() {
                     </Button>
                     <Button
                       className="bg-blue-600 text-white hover:bg-blue-700"
-                      disabled={savingRows || hasInvalidStagedRows || !hasSavable}
+                      disabled={savingRows || hasInvalidStagedRows || !hasSavable || !patronPresent}
                       onClick={() => void saveRows()}
                     >
                       {savingRows ? (

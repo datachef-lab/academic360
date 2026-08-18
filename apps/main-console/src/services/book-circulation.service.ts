@@ -90,6 +90,8 @@ export type BookCirculationPreviewRow = {
 export type BookCirculationPreviewPayload = {
   user: BookCirculationPreviewUser;
   rows: BookCirculationPreviewRow[];
+  /** Desk gate: circulation actions require a library check-in today. */
+  hasLibraryEntryToday: boolean;
 };
 
 export type BookCirculationMetaPayload = {
