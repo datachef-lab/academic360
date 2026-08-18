@@ -8,6 +8,7 @@ import { DatePicker } from "@/components/ui/DatePicker";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { studentAvatarUrl } from "@/utils/studentAvatarUrl";
 import {
   Select,
@@ -481,6 +482,23 @@ export default function BookCirculationPage() {
   const openLoanCount = editableRows.filter((r) => !r.isNew && !r.actualReturnTimestamp).length;
   const stagedCount = editableRows.filter((r) => r.isNew).length;
 
+  // Borrower stat tiles in the dialog rail (saved rows only, staged excluded).
+  const borrowerStats = useMemo(() => {
+    const saved = editableRows.filter((r) => !r.isNew);
+    const now = Date.now();
+    const open = saved.filter((r) => !r.actualReturnTimestamp);
+    return {
+      total: saved.length,
+      issued: open.length,
+      reissued: open.filter((r) => r.reissuesUsed > 0).length,
+      returned: saved.length - open.length,
+      overdue: open.filter((r) => {
+        const due = new Date(r.returnTimestamp).getTime();
+        return !Number.isNaN(due) && due < now;
+      }).length,
+    };
+  }, [editableRows]);
+
   // Why the Add button is blocked for the CURRENT selection (null = addable).
   // On-loan copies are searchable by design but can never be staged; the copy
   // cap blocks before staging (policy fetched at selection time).
@@ -645,14 +663,15 @@ export default function BookCirculationPage() {
           <TableHeader className={STICKY_THEAD_CLASS}>
             <TableRow className="bg-slate-100">
               <TableHead className={headLeft}>#</TableHead>
-              <TableHead className={cn(headBase, "w-[32%]")}>Book</TableHead>
-              <TableHead className={cn(headBase, "w-[16%]")}>Borrowing Type</TableHead>
-              <TableHead className={cn(headBase, "w-[13%]")}>Issued At</TableHead>
+              <TableHead className={cn(headBase, "w-[36%]")}>Book</TableHead>
+              <TableHead className={cn(headBase, "w-[17%]")}>Borrowing Type</TableHead>
+              <TableHead className={cn(headBase, "w-[14%]")}>Issued At</TableHead>
               <TableHead className={cn(headBase, "w-[13%]")}>Return Date</TableHead>
               {showReturnedOn ? (
-                <TableHead className={cn(headBase, "w-[11%]")}>Returned On</TableHead>
+                <TableHead className={cn(headBase, "w-[12%]")}>Returned On</TableHead>
               ) : null}
-              <TableHead className={cn(headRight, "w-[15%]")}>
+              {/* Icon-only actions: the column stays narrow. */}
+              <TableHead className={cn(headRight, "w-[8%]")}>
                 <span className="inline-flex items-center justify-center gap-1">
                   <Settings2 className="h-3.5 w-3.5" />
                   Actions
@@ -683,11 +702,11 @@ export default function BookCirculationPage() {
                         {item.title || "—"}
                       </p>
                       <div className="mt-0.5 flex flex-wrap items-center gap-1">
-                        <Badge className="border border-violet-200 bg-violet-100 px-1.5 py-0 text-[10px] font-semibold text-violet-700 hover:bg-violet-100">
+                        <Badge className="border border-indigo-300 bg-indigo-100 px-1.5 py-0 text-[10px] font-semibold text-indigo-800 hover:bg-indigo-100">
                           {item.accessNumber || "—"}
                         </Badge>
                         {item.itemCategoryName ? (
-                          <Badge className="border border-emerald-200 bg-emerald-100 px-1.5 py-0 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100">
+                          <Badge className="border border-amber-300 bg-amber-100 px-1.5 py-0 text-[10px] font-semibold text-amber-800 hover:bg-amber-100">
                             {item.itemCategoryName}
                           </Badge>
                         ) : null}
@@ -716,32 +735,39 @@ export default function BookCirculationPage() {
                     </div>
                   </TableCell>
                   <TableCell className={cellBase}>
-                    <Combobox
-                      className="h-9 w-full bg-white text-sm font-medium text-slate-800"
-                      placeholder="Borrowing Type"
-                      value={item.borrowingType || ""}
-                      showOptionsHint={false}
-                      contentClassName="w-[280px] max-w-[calc(100vw-2rem)]"
-                      dataArr={borrowingTypeOptions.map((option) => ({
-                        value: option.name,
-                        label: prettyLabel(option.name),
-                      }))}
-                      onChange={(value) =>
-                        setEditableRows((prev) =>
-                          prev.map((row) =>
-                            row.id === item.id
-                              ? {
-                                  ...row,
-                                  borrowingType: value,
-                                  borrowingTypeId:
-                                    borrowingTypeOptions.find((opt) => opt.name === value)?.id ??
-                                    null,
-                                }
-                              : row,
-                          ),
-                        )
-                      }
-                    />
+                    {item.actualReturnTimestamp ? (
+                      // Returned rows are settled — borrowing type is read-only.
+                      <span className="text-xs font-medium text-slate-700">
+                        {item.borrowingType ? prettyLabel(item.borrowingType) : "—"}
+                      </span>
+                    ) : (
+                      <Combobox
+                        className="h-9 w-full bg-white text-sm font-medium text-slate-800"
+                        placeholder="Borrowing Type"
+                        value={item.borrowingType || ""}
+                        showOptionsHint={false}
+                        contentClassName="w-[280px] max-w-[calc(100vw-2rem)]"
+                        dataArr={borrowingTypeOptions.map((option) => ({
+                          value: option.name,
+                          label: prettyLabel(option.name),
+                        }))}
+                        onChange={(value) =>
+                          setEditableRows((prev) =>
+                            prev.map((row) =>
+                              row.id === item.id
+                                ? {
+                                    ...row,
+                                    borrowingType: value,
+                                    borrowingTypeId:
+                                      borrowingTypeOptions.find((opt) => opt.name === value)?.id ??
+                                      null,
+                                  }
+                                : row,
+                            ),
+                          )
+                        }
+                      />
+                    )}
                   </TableCell>
                   <TableCell className={cellBase}>
                     <span className="text-xs">{formatDateTime(item.issuedTimestamp)}</span>
@@ -787,51 +813,68 @@ export default function BookCirculationPage() {
                         <span className="text-xs text-slate-400">—</span>
                       ) : variant === "history" ? (
                         <>
-                          <Button
-                            size="sm"
-                            className="h-8 bg-violet-600 px-2 text-xs text-white hover:bg-violet-700"
-                            variant="default"
-                            type="button"
-                            onClick={() => {
-                              setEditableRows((prev) =>
-                                prev.map((row) =>
-                                  row.id === item.id
-                                    ? {
-                                        ...row,
-                                        actualReturnTimestamp: new Date().toISOString(),
-                                      }
-                                    : row,
-                                ),
-                              );
-                            }}
-                          >
-                            <RotateCcw className="mr-1 h-3.5 w-3.5" />
-                            Return
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-8 border-blue-300 bg-blue-50 px-2 text-xs text-blue-700 hover:bg-blue-100"
-                            type="button"
-                            disabled={item.reissuesUsed >= item.renewalLimit}
-                            title={
-                              item.reissuesUsed >= item.renewalLimit
-                                ? `Renewal limit reached (${item.reissuesUsed}/${item.renewalLimit})`
-                                : `Renewals used: ${item.reissuesUsed}/${item.renewalLimit}`
-                            }
-                            onClick={() => {
-                              setReissueRowId(item.id);
-                              // Policy-driven default: the new due date is
-                              // loanDays from today (same as the RE-ISSUE
-                              // action semantics); staff can still override.
-                              const due = new Date();
-                              due.setDate(due.getDate() + Math.max(1, item.loanDays));
-                              setReissueDate(due);
-                            }}
-                          >
-                            <CalendarClock className="mr-1 h-3.5 w-3.5" />
-                            Re-issue
-                          </Button>
+                          {/* Icon-only actions keep the column narrow; the
+                              tooltip carries the label + context. */}
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  className="h-8 w-8 bg-violet-600 text-white hover:bg-violet-700"
+                                  variant="default"
+                                  type="button"
+                                  aria-label="Return"
+                                  onClick={() => {
+                                    setEditableRows((prev) =>
+                                      prev.map((row) =>
+                                        row.id === item.id
+                                          ? {
+                                              ...row,
+                                              actualReturnTimestamp: new Date().toISOString(),
+                                            }
+                                          : row,
+                                      ),
+                                    );
+                                  }}
+                                >
+                                  <RotateCcw className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Return</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              {/* span wrapper: disabled buttons swallow pointer
+                                  events, the limit-reached reason must still show. */}
+                              <TooltipTrigger asChild>
+                                <span className="inline-flex">
+                                  <Button
+                                    size="icon"
+                                    variant="outline"
+                                    className="h-8 w-8 border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                                    type="button"
+                                    aria-label="Re-issue"
+                                    disabled={item.reissuesUsed >= item.renewalLimit}
+                                    onClick={() => {
+                                      setReissueRowId(item.id);
+                                      // Policy-driven default: the new due date is
+                                      // loanDays from today (same as the RE-ISSUE
+                                      // action semantics); staff can still override.
+                                      const due = new Date();
+                                      due.setDate(due.getDate() + Math.max(1, item.loanDays));
+                                      setReissueDate(due);
+                                    }}
+                                  >
+                                    <CalendarClock className="h-4 w-4" />
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {item.reissuesUsed >= item.renewalLimit
+                                  ? `Renewal limit reached (${item.reissuesUsed}/${item.renewalLimit})`
+                                  : `Re-issue · renewals used ${item.reissuesUsed}/${item.renewalLimit}`}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                           {/* Fine actions hidden for now (2026-08-17, per Harsh) — restore by
                               uncommenting; the Cash/Waive dialogs + services below stay wired.
                           <Button
@@ -1319,33 +1362,66 @@ export default function BookCirculationPage() {
                     </div>
                     <div className="grid flex-1 grid-cols-1 gap-x-6 gap-y-1 text-[14px] md:grid-cols-2 lg:grid-cols-3 xl:w-full xl:flex-none xl:grid-cols-1 xl:gap-y-2">
                       <div className="flex gap-2">
-                        <span className="min-w-[120px] text-slate-500 xl:min-w-[88px]">Name:</span>
-                        <span className="font-medium">{previewUser.name || "-"}</span>
+                        <span className="w-[96px] flex-shrink-0 text-slate-500">Name:</span>
+                        <span className="min-w-0 font-medium">{previewUser.name || "-"}</span>
                       </div>
                       <div className="flex gap-2">
-                        <span className="min-w-[120px] text-slate-500 xl:min-w-[88px]">UID:</span>
-                        <span className="font-medium">{previewUser.uid || "-"}</span>
+                        <span className="w-[96px] flex-shrink-0 text-slate-500">UID:</span>
+                        <span className="min-w-0 font-medium">{previewUser.uid || "-"}</span>
                       </div>
-                      <div className="flex gap-2">
-                        <span className="min-w-[120px] text-slate-500 xl:min-w-[88px]">
-                          Program Course:
+                      {/* Academic fields only make sense for students. */}
+                      {previewUser.userType === "STUDENT" ? (
+                        <>
+                          <div className="flex gap-2">
+                            <span className="w-[96px] flex-shrink-0 text-slate-500">Course:</span>
+                            <span className="min-w-0 font-medium">{previewBatchProgram}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <span className="w-[96px] flex-shrink-0 text-slate-500">Semester:</span>
+                            <span className="min-w-0 font-medium">
+                              {toSentenceCase(previewUser.classOrSemester)}
+                            </span>
+                          </div>
+                          <div className="flex gap-2">
+                            <span className="w-[96px] flex-shrink-0 text-slate-500">Section:</span>
+                            <span className="min-w-0 font-medium">
+                              {previewUser.section || "-"}
+                            </span>
+                          </div>
+                        </>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {/* Circulation stats for this borrower (saved rows only). */}
+                  <div className="mt-3 grid grid-cols-4 gap-2 xl:grid-cols-2">
+                    <div className="rounded-md border bg-white p-2 text-center">
+                      <p className="text-lg font-semibold leading-tight text-slate-800">
+                        {borrowerStats.total}
+                      </p>
+                      <p className="text-[11px] text-slate-500">Total books</p>
+                    </div>
+                    <div className="rounded-md border border-blue-200 bg-blue-50 p-2 text-center">
+                      <p className="text-lg font-semibold leading-tight text-blue-700">
+                        {borrowerStats.issued}
+                        <span className="text-xs font-medium text-blue-500">
+                          {" "}
+                          / {borrowerStats.reissued}
                         </span>
-                        <span className="font-medium">{previewBatchProgram}</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="min-w-[120px] text-slate-500 xl:min-w-[88px]">
-                          Semester:
-                        </span>
-                        <span className="font-medium">
-                          {toSentenceCase(previewUser.classOrSemester)}
-                        </span>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="min-w-[120px] text-slate-500 xl:min-w-[88px]">
-                          Section:
-                        </span>
-                        <span className="font-medium">{previewUser.section || "-"}</span>
-                      </div>
+                      </p>
+                      <p className="text-[11px] text-blue-600">Issued / Re-issued</p>
+                    </div>
+                    <div className="rounded-md border border-green-200 bg-green-50 p-2 text-center">
+                      <p className="text-lg font-semibold leading-tight text-green-700">
+                        {borrowerStats.returned}
+                      </p>
+                      <p className="text-[11px] text-green-600">Returned</p>
+                    </div>
+                    <div className="rounded-md border border-red-200 bg-red-50 p-2 text-center">
+                      <p className="text-lg font-semibold leading-tight text-red-700">
+                        {borrowerStats.overdue}
+                      </p>
+                      <p className="text-[11px] text-red-600">Overdue</p>
                     </div>
                   </div>
                 </div>
