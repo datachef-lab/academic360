@@ -61,6 +61,7 @@ import {
   ClipboardList,
   Clock,
   Coins,
+  Copy,
   DoorOpen,
   Download,
   Filter,
@@ -162,6 +163,15 @@ const REPORTS: ReportEntry[] = [
     description:
       "Holdings grouped four ways — by item category, by copy status, by language and by publisher — one sheet each.",
     icon: <BookOpen className="h-5 w-5 text-emerald-600" />,
+  },
+  {
+    id: "copy-details",
+    jobKey: "library-copy-details",
+    domain: "INVENTORY",
+    name: "Copy details",
+    description:
+      "Every copy with accession, status and shelving details. Copies whose status isn't issuable are highlighted light red.",
+    icon: <Copy className="h-5 w-5 text-emerald-600" />,
   },
   {
     id: "entry-exit",
