@@ -8,6 +8,8 @@ import { DatePicker } from "@/components/ui/DatePicker";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { studentAvatarUrl } from "@/utils/studentAvatarUrl";
 import {
   Select,
   SelectContent,
@@ -124,7 +126,6 @@ const formatDateTime = (value: string | null) => {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    second: "2-digit",
     hour12: true,
   });
   return formatted.replace(/\b(am|pm)\b/g, (v) => v.toUpperCase());
@@ -140,6 +141,15 @@ const formatDateOnly = (value: string | null) => {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "—";
   return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+};
+
+const formatTimeOnly = (value: string | null) => {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d
+    .toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true })
+    .replace(/\b(am|pm)\b/g, (v) => v.toUpperCase());
 };
 
 const ROMAN_NUMERAL_RE = /^(?=[MDCLXVI])M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/;
@@ -167,6 +177,8 @@ export default function BookCirculationPage() {
   const [rows, setRows] = useState<BookCirculationRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  // Client-side filter for the Reissue / Return tab rows.
+  const [historyFilter, setHistoryFilter] = useState("");
   const [page, setPage] = useState(1);
   const [limit] = useState(15);
   const [total, setTotal] = useState(0);
@@ -265,8 +277,9 @@ export default function BookCirculationPage() {
       if (requestId === pickerRequestIdRef.current) setPickerLoading(false);
     }
   }, []);
-  const getStudentAvatarUrl = (uid: string) =>
-    `${import.meta.env.VITE_STUDENT_IMAGE_BASE_URL ?? "https://besc.academic360.app/id-card-generate/api/images?crop=true&uid="}${uid}`;
+  // Unified backend resolver (S3 → besc → hrclIRP → previous-uid chain) —
+  // the old direct id-card-generate URL 404s now.
+  const getStudentAvatarUrl = (uid: string) => studentAvatarUrl(uid) ?? "";
   const getEntryRowAvatarUrl = (row: BookCirculationRow) => {
     if (row.userType === "STUDENT" && row.studentUid) {
       return getStudentAvatarUrl(row.studentUid);
@@ -373,7 +386,9 @@ export default function BookCirculationPage() {
           isNew: false,
         })),
       );
-      setActiveDialogTab("issue");
+      // Reissue / Return is the default tab; Issue stays disabled unless the
+      // patron is inside the library right now.
+      setActiveDialogTab("history");
       setStagedBookKey("");
       setStagedBookLabel("");
       setStagedBookOption(null);
@@ -396,6 +411,10 @@ export default function BookCirculationPage() {
   };
 
   const addStagedBook = async () => {
+    if (!patronPresent) {
+      toast.error("No library entry recorded today — patron must check in first.");
+      return;
+    }
     if (!stagedBookKey || !previewData?.user?.userId) return;
     const picked =
       stagedBookOption ??
@@ -443,19 +462,24 @@ export default function BookCirculationPage() {
     } finally {
       setAddingStagedBook(false);
     }
+    // Desk default: issues are HOME ISSUE unless staff changes it.
+    const defaultBorrowing =
+      borrowingTypeOptions.find((option) => option.name.trim().toUpperCase() === "HOME ISSUE") ??
+      null;
     setEditableRows((prev) => [
       ...prev,
       {
         id: Date.now() * -1,
         copyDetailsId: picked.copyDetailsId,
-        borrowingTypeId: null,
+        borrowingTypeId: defaultBorrowing?.id ?? null,
         accessNumber: picked.accessNumber,
+        oldAccessNumber: picked.oldAccessNumber ?? null,
         itemCategoryName: picked.itemCategoryName ?? null,
         title: picked.title,
         author: picked.author,
         publication: picked.publication,
         frontCover: picked.frontCover,
-        borrowingType: null,
+        borrowingType: defaultBorrowing?.name ?? null,
         status: "ISSUED",
         bookOptionKey: stagedBookKey,
         issuedTimestamp: new Date().toISOString(),
@@ -490,6 +514,43 @@ export default function BookCirculationPage() {
   // rejects it; staff can then confirm a forced issue).
   const openLoanCount = editableRows.filter((r) => !r.isNew && !r.actualReturnTimestamp).length;
   const stagedCount = editableRows.filter((r) => r.isNew).length;
+
+  // Borrower stat tiles in the dialog rail (saved rows only, staged excluded).
+  const borrowerStats = useMemo(() => {
+    const saved = editableRows.filter((r) => !r.isNew);
+    const now = Date.now();
+    const open = saved.filter((r) => !r.actualReturnTimestamp);
+    return {
+      total: saved.length,
+      issued: open.length,
+      reissued: open.filter((r) => r.reissuesUsed > 0).length,
+      returned: saved.length - open.length,
+      overdue: open.filter((r) => {
+        const due = new Date(r.returnTimestamp).getTime();
+        return !Number.isNaN(due) && due < now;
+      }).length,
+    };
+  }, [editableRows]);
+
+  // Desk gate mirror of the server rule: circulation actions need a library
+  // check-in today (backend enforces regardless).
+  const patronPresent = previewData?.hasLibraryEntryToday !== false;
+
+  // Reissue / Return tab rows, narrowed by the tab's filter box.
+  const historyNeedle = historyFilter.trim().toLowerCase();
+  const historyRows = editableRows
+    .filter((row) => !row.isNew)
+    .filter((row) => {
+      if (!historyNeedle) return true;
+      return [
+        row.accessNumber,
+        row.oldAccessNumber,
+        row.title,
+        row.author,
+        row.publication,
+        row.borrowingType,
+      ].some((value) => (value || "").toLowerCase().includes(historyNeedle));
+    });
 
   // Why the Add button is blocked for the CURRENT selection (null = addable).
   // On-loan copies are searchable by design but can never be staged; the copy
@@ -633,7 +694,7 @@ export default function BookCirculationPage() {
     variant: "issue" | "history",
   ) => {
     const showReturnedOn = variant === "history";
-    const colCount = 6 + (showReturnedOn ? 1 : 0);
+    const colCount = 8 + (showReturnedOn ? 1 : 0);
     const headBase = cn(
       STICKY_TH_BASE,
       "sticky top-0 z-30 bg-slate-100 text-center border-r border-slate-300",
@@ -646,7 +707,7 @@ export default function BookCirculationPage() {
       STICKY_TH_RIGHT,
       "sticky top-0 z-30 bg-slate-100 text-center border-l border-slate-300",
     );
-    const cellBase = "border-r border-slate-300 text-center";
+    const cellBase = "border-r border-slate-300 px-2 py-2 text-center";
     return (
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden rounded-md border">
         {/* overflow-visible: the outer div above is the scroll container, so the
@@ -657,14 +718,18 @@ export default function BookCirculationPage() {
           <TableHeader className={STICKY_THEAD_CLASS}>
             <TableRow className="bg-slate-100">
               <TableHead className={headLeft}>#</TableHead>
-              <TableHead className={cn(headBase, "w-[32%]")}>Book</TableHead>
-              <TableHead className={cn(headBase, "w-[16%]")}>Borrowing Type</TableHead>
-              <TableHead className={cn(headBase, "w-[13%]")}>Issued At</TableHead>
-              <TableHead className={cn(headBase, "w-[13%]")}>Return Date</TableHead>
+              <TableHead className={cn(headBase, "w-[9%]")}>Access No.</TableHead>
+              <TableHead className={cn(headBase, "w-[24%]")}>Book</TableHead>
+              <TableHead className={cn(headBase, "w-[12%]")}>Publisher</TableHead>
+              <TableHead className={cn(headBase, "w-[13%]")}>Borrowing Type</TableHead>
+              <TableHead className={cn(headBase, "w-[11%]")}>Issued At</TableHead>
+              <TableHead className={cn(headBase, "w-[10%]")}>Return Date</TableHead>
               {showReturnedOn ? (
-                <TableHead className={cn(headBase, "w-[11%]")}>Returned On</TableHead>
+                <TableHead className={cn(headBase, "w-[10%]")}>Returned On</TableHead>
               ) : null}
-              <TableHead className={cn(headRight, "w-[15%]")}>
+              {/* Icon-only actions: fixed px width so the two icons can never
+                  wrap onto a second row at any dialog width. */}
+              <TableHead className={cn(headRight, "w-24")}>
                 <span className="inline-flex items-center justify-center gap-1">
                   <Settings2 className="h-3.5 w-3.5" />
                   Actions
@@ -686,26 +751,36 @@ export default function BookCirculationPage() {
               rowsToShow.map((item, index) => (
                 <TableRow
                   key={item.id}
-                  className={`[&>td]:border-b [&>td]:border-slate-200 last:[&>td]:border-b last:[&>td]:border-slate-300 ${item.actualReturnTimestamp ? "bg-green-100" : ""}`}
+                  className={`[&>td]:border-b [&>td]:border-slate-200 last:[&>td]:border-b last:[&>td]:border-slate-300`}
                 >
-                  <TableCell className={cellBase}>{index + 1}</TableCell>
+                  {/* Serial counts down: newest row (top) shows the total. */}
+                  <TableCell className={cellBase}>{rowsToShow.length - index}.</TableCell>
+                  <TableCell className={cellBase}>
+                    <Badge className="border border-indigo-300 bg-indigo-100 px-1.5 py-0 text-[10px] font-semibold text-indigo-800 hover:bg-indigo-100">
+                      {item.accessNumber || "—"}
+                    </Badge>
+                    {item.oldAccessNumber && item.oldAccessNumber !== item.accessNumber ? (
+                      <p className="mt-0.5 text-[10px] text-slate-400 line-through">
+                        {item.oldAccessNumber}
+                      </p>
+                    ) : null}
+                  </TableCell>
                   <TableCell className={cn(cellBase, "text-left")}>
                     <div className="min-w-0">
                       <p className="truncate text-xs font-semibold text-slate-800">
                         {item.title || "—"}
                       </p>
-                      <div className="mt-0.5 flex flex-wrap items-center gap-1">
-                        <Badge className="border border-violet-200 bg-violet-100 px-1.5 py-0 text-[10px] font-semibold text-violet-700 hover:bg-violet-100">
-                          {item.accessNumber || "—"}
-                        </Badge>
-                        {item.itemCategoryName ? (
-                          <Badge className="border border-emerald-200 bg-emerald-100 px-1.5 py-0 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100">
+                      {item.author ? (
+                        <p className="truncate text-[11px] italic text-slate-500">
+                          — {item.author}
+                        </p>
+                      ) : null}
+                      {item.itemCategoryName ? (
+                        <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                          <Badge className="border border-amber-300 bg-amber-100 px-1.5 py-0 text-[10px] font-semibold text-amber-800 hover:bg-amber-100">
                             {item.itemCategoryName}
                           </Badge>
-                        ) : null}
-                      </div>
-                      {item.author ? (
-                        <p className="truncate text-[11px] text-slate-500">{item.author}</p>
+                        </div>
                       ) : null}
                       {item.isNew && item.policy ? (
                         <>
@@ -727,36 +802,55 @@ export default function BookCirculationPage() {
                       ) : null}
                     </div>
                   </TableCell>
-                  <TableCell className={cellBase}>
-                    <Combobox
-                      className="h-9 w-full bg-white text-sm font-medium text-slate-800"
-                      placeholder="Borrowing Type"
-                      value={item.borrowingType || ""}
-                      showOptionsHint={false}
-                      contentClassName="w-[280px] max-w-[calc(100vw-2rem)]"
-                      dataArr={borrowingTypeOptions.map((option) => ({
-                        value: option.name,
-                        label: prettyLabel(option.name),
-                      }))}
-                      onChange={(value) =>
-                        setEditableRows((prev) =>
-                          prev.map((row) =>
-                            row.id === item.id
-                              ? {
-                                  ...row,
-                                  borrowingType: value,
-                                  borrowingTypeId:
-                                    borrowingTypeOptions.find((opt) => opt.name === value)?.id ??
-                                    null,
-                                }
-                              : row,
-                          ),
-                        )
-                      }
-                    />
+                  <TableCell className={cn(cellBase, "text-left")}>
+                    {item.publication ? (
+                      <Badge className="whitespace-normal break-words rounded-md border border-fuchsia-300 bg-fuchsia-100 px-1.5 py-0.5 text-left text-[10px] font-semibold leading-4 text-fuchsia-800 hover:bg-fuchsia-100">
+                        {item.publication}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-slate-400">—</span>
+                    )}
                   </TableCell>
                   <TableCell className={cellBase}>
-                    <span className="text-xs">{formatDateTime(item.issuedTimestamp)}</span>
+                    {item.actualReturnTimestamp ? (
+                      // Returned rows are settled — borrowing type is read-only.
+                      <span className="text-xs font-medium text-slate-700">
+                        {item.borrowingType ? prettyLabel(item.borrowingType) : "—"}
+                      </span>
+                    ) : (
+                      <Combobox
+                        className="h-auto w-full justify-center border-0 bg-transparent px-0 py-0 text-xs font-medium text-slate-800 shadow-none hover:bg-transparent"
+                        placeholder="Borrowing Type"
+                        value={item.borrowingType || ""}
+                        showOptionsHint={false}
+                        contentClassName="w-[280px] max-w-[calc(100vw-2rem)]"
+                        dataArr={borrowingTypeOptions.map((option) => ({
+                          value: option.name,
+                          label: prettyLabel(option.name),
+                        }))}
+                        onChange={(value) =>
+                          setEditableRows((prev) =>
+                            prev.map((row) =>
+                              row.id === item.id
+                                ? {
+                                    ...row,
+                                    borrowingType: value,
+                                    borrowingTypeId:
+                                      borrowingTypeOptions.find((opt) => opt.name === value)?.id ??
+                                      null,
+                                  }
+                                : row,
+                            ),
+                          )
+                        }
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell className={cellBase}>
+                    <p className="text-xs">{formatDateOnly(item.issuedTimestamp)}</p>
+                    <p className="text-[10px] text-slate-500">
+                      {formatTimeOnly(item.issuedTimestamp)}
+                    </p>
                   </TableCell>
                   <TableCell className={cellBase}>
                     {item.isNew ? (
@@ -776,8 +870,14 @@ export default function BookCirculationPage() {
                             ),
                           )
                         }
-                        className="h-8 text-xs"
+                        className="h-auto w-auto min-w-0 justify-center border-0 bg-transparent px-0 py-0 text-xs shadow-none hover:bg-transparent"
                         displayFormat="dd/MM/yyyy"
+                        // Due dates cannot be in the past.
+                        disabledDates={(date) => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          return date < today;
+                        }}
                       />
                     ) : (
                       <span className="text-xs">{formatDateOnly(item.returnTimestamp)}</span>
@@ -785,65 +885,90 @@ export default function BookCirculationPage() {
                   </TableCell>
                   {showReturnedOn ? (
                     <TableCell className={cellBase}>
-                      <span className="text-xs">
-                        {item.actualReturnTimestamp
-                          ? formatDateTime(item.actualReturnTimestamp)
-                          : "—"}
-                      </span>
+                      {item.actualReturnTimestamp ? (
+                        <>
+                          <p className="text-xs">{formatDateOnly(item.actualReturnTimestamp)}</p>
+                          <p className="text-[10px] text-slate-500">
+                            {formatTimeOnly(item.actualReturnTimestamp)}
+                          </p>
+                        </>
+                      ) : (
+                        <span className="text-xs">—</span>
+                      )}
                     </TableCell>
                   ) : null}
                   <TableCell className={cellBase}>
-                    <div className="flex flex-wrap items-center justify-center gap-1.5">
+                    <div className="flex flex-nowrap items-center justify-center gap-1.5">
                       {variant === "history" && item.actualReturnTimestamp ? (
                         // Returned rows are done — no actions to offer.
                         <span className="text-xs text-slate-400">—</span>
                       ) : variant === "history" ? (
                         <>
-                          <Button
-                            size="sm"
-                            className="h-8 bg-violet-600 px-2 text-xs text-white hover:bg-violet-700"
-                            variant="default"
-                            type="button"
-                            onClick={() => {
-                              setEditableRows((prev) =>
-                                prev.map((row) =>
-                                  row.id === item.id
-                                    ? {
-                                        ...row,
-                                        actualReturnTimestamp: new Date().toISOString(),
-                                      }
-                                    : row,
-                                ),
-                              );
-                            }}
-                          >
-                            <RotateCcw className="mr-1 h-3.5 w-3.5" />
-                            Return
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-8 border-blue-300 bg-blue-50 px-2 text-xs text-blue-700 hover:bg-blue-100"
-                            type="button"
-                            disabled={item.reissuesUsed >= item.renewalLimit}
-                            title={
-                              item.reissuesUsed >= item.renewalLimit
-                                ? `Renewal limit reached (${item.reissuesUsed}/${item.renewalLimit})`
-                                : `Renewals used: ${item.reissuesUsed}/${item.renewalLimit}`
-                            }
-                            onClick={() => {
-                              setReissueRowId(item.id);
-                              // Policy-driven default: the new due date is
-                              // loanDays from today (same as the RE-ISSUE
-                              // action semantics); staff can still override.
-                              const due = new Date();
-                              due.setDate(due.getDate() + Math.max(1, item.loanDays));
-                              setReissueDate(due);
-                            }}
-                          >
-                            <CalendarClock className="mr-1 h-3.5 w-3.5" />
-                            Re-issue
-                          </Button>
+                          {/* Icon-only actions keep the column narrow; the
+                              tooltip carries the label + context. */}
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  className="h-7 w-7 bg-violet-600 text-white hover:bg-violet-700"
+                                  variant="default"
+                                  type="button"
+                                  aria-label="Return"
+                                  disabled={!patronPresent}
+                                  onClick={() => {
+                                    setEditableRows((prev) =>
+                                      prev.map((row) =>
+                                        row.id === item.id
+                                          ? {
+                                              ...row,
+                                              actualReturnTimestamp: new Date().toISOString(),
+                                            }
+                                          : row,
+                                      ),
+                                    );
+                                  }}
+                                >
+                                  <RotateCcw className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Return</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              {/* span wrapper: disabled buttons swallow pointer
+                                  events, the limit-reached reason must still show. */}
+                              <TooltipTrigger asChild>
+                                <span className="inline-flex">
+                                  <Button
+                                    size="icon"
+                                    variant="outline"
+                                    className="h-7 w-7 border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                                    type="button"
+                                    aria-label="Re-issue"
+                                    disabled={
+                                      !patronPresent || item.reissuesUsed >= item.renewalLimit
+                                    }
+                                    onClick={() => {
+                                      setReissueRowId(item.id);
+                                      // Policy-driven default: the new due date is
+                                      // loanDays from today (same as the RE-ISSUE
+                                      // action semantics); staff can still override.
+                                      const due = new Date();
+                                      due.setDate(due.getDate() + Math.max(1, item.loanDays));
+                                      setReissueDate(due);
+                                    }}
+                                  >
+                                    <CalendarClock className="h-3.5 w-3.5" />
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {item.reissuesUsed >= item.renewalLimit
+                                  ? `Renewal limit reached (${item.reissuesUsed}/${item.renewalLimit})`
+                                  : `Re-issue · renewals used ${item.reissuesUsed}/${item.renewalLimit}`}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                           {/* Fine actions hidden for now (2026-08-17, per Harsh) — restore by
                               uncommenting; the Cash/Waive dialogs + services below stay wired.
                           <Button
@@ -924,7 +1049,7 @@ export default function BookCirculationPage() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-8 w-8 text-red-600 hover:text-red-700"
+                          className="h-7 w-7 text-red-600 hover:text-red-700"
                           onClick={() =>
                             setEditableRows((prev) => prev.filter((row) => row.id !== item.id))
                           }
@@ -1251,44 +1376,32 @@ export default function BookCirculationPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="w-[94vw] max-w-none h-[94vh] max-h-none flex flex-col text-[14px]">
-          <DialogHeader className="pr-4">
-            <div className="flex items-center justify-between gap-3">
-              <DialogTitle className="text-sm">Manage Book Circulation</DialogTitle>
-              {previewUser && (
-                <div className="flex items-center gap-2">
-                  <Badge
-                    className={`${
-                      (previewUser.userType && userTypeClassMap[previewUser.userType]) ||
-                      "bg-slate-100 text-slate-700"
-                    } border border-slate-300`}
-                  >
-                    {toSentenceCase(previewUser.userType || "USER")}
-                  </Badge>
-                  <Badge
-                    className={
-                      previewUser.isActive === false
-                        ? "bg-red-100 text-red-700 border border-red-300"
-                        : "bg-green-100 text-green-700 border border-green-300"
-                    }
-                  >
-                    {previewUser.isActive === false ? "Inactive" : "Active"}
-                  </Badge>
-                </div>
-              )}
-            </div>
-          </DialogHeader>
+      <Dialog
+        open={detailsOpen}
+        onOpenChange={(open) => {
+          setDetailsOpen(open);
+          if (!open) setHistoryFilter("");
+        }}
+      >
+        {/* [&>button]:hidden hides the built-in top-right close X. */}
+        <DialogContent className="w-[94vw] max-w-none h-[94vh] max-h-none flex flex-col text-[13px] [&>button]:hidden">
+          {/* No visible dialog header — the rail + right section own the full
+              height; the title stays for screen readers only. */}
+          <DialogTitle className="sr-only">Manage Book Circulation</DialogTitle>
           {previewLoading || !previewUser || !previewData ? (
             <div className="flex h-56 items-center justify-center gap-2 text-sm text-slate-500">
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading details...
             </div>
           ) : (
-            <div className="space-y-3 flex-1 min-h-0 flex flex-col overflow-hidden">
-              <div className="rounded-md border bg-slate-50 p-3">
-                <div className="flex items-start gap-4">
-                  <Avatar className="h-24 w-24 flex-shrink-0 rounded-md border">
+            <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
+              {/* xl+: borrower rail on the left, tabs + table on the right;
+                  below xl the rail collapses back into a top banner so the
+                  table never runs out of width on smaller screens. */}
+              <div className="flex flex-1 min-h-0 flex-col gap-3 xl:flex-row">
+                <div className="flex flex-col overflow-hidden rounded-md border bg-slate-50 xl:w-64 xl:flex-shrink-0 xl:self-stretch">
+                  {/* xl+: the borrower photo is a full-width cover on the rail. */}
+                  <Avatar className="hidden h-40 w-full flex-shrink-0 rounded-none border-b bg-slate-200/60 xl:flex">
                     <AvatarImage
                       src={
                         previewUser.userType === "STUDENT" && previewUser.uid
@@ -1296,214 +1409,317 @@ export default function BookCirculationPage() {
                           : previewUser.image || undefined
                       }
                       alt={previewUser.name}
-                      className="rounded-md object-cover"
+                      className="h-full w-full rounded-none object-contain"
                     />
                     <AvatarFallback
-                      className={`rounded-md text-2xl font-semibold text-white ${getColorFromName(previewUser.name)}`}
+                      className={`rounded-none text-3xl font-semibold text-white ${getColorFromName(previewUser.name)}`}
                     >
                       {getInitials(previewUser.name)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="grid flex-1 grid-cols-1 gap-x-6 gap-y-1 text-[14px] md:grid-cols-2 lg:grid-cols-3">
-                    <div className="flex gap-2">
-                      <span className="min-w-[120px] text-slate-500">Name:</span>
-                      <span className="font-medium">{previewUser.name || "-"}</span>
+                  {/* No rail scrolling — the compact cover keeps everything
+                      visible at once. */}
+                  <div className="flex min-h-0 flex-1 flex-wrap items-start gap-4 p-3 xl:flex-nowrap xl:flex-col xl:items-stretch">
+                    {/* Below xl the photo stays a compact banner avatar. */}
+                    <Avatar className="h-24 w-24 flex-shrink-0 rounded-md border xl:hidden">
+                      <AvatarImage
+                        src={
+                          previewUser.userType === "STUDENT" && previewUser.uid
+                            ? getStudentAvatarUrl(previewUser.uid)
+                            : previewUser.image || undefined
+                        }
+                        alt={previewUser.name}
+                        className="rounded-md object-cover"
+                      />
+                      <AvatarFallback
+                        className={`rounded-md text-2xl font-semibold text-white ${getColorFromName(previewUser.name)}`}
+                      >
+                        {getInitials(previewUser.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="grid flex-1 grid-cols-1 gap-x-6 gap-y-1 text-[13px] md:grid-cols-2 lg:grid-cols-3 xl:w-full xl:flex-none xl:grid-cols-1 xl:gap-y-2">
+                      <div className="flex gap-1.5">
+                        <span className="flex w-[80px] flex-shrink-0 justify-between text-slate-500">
+                          Name<span>:</span>
+                        </span>
+                        <span className="min-w-0 font-medium">
+                          {previewUser.name || "-"}
+                          {/* Red asterisk marks an active account (badges removed). */}
+                          {previewUser.isActive !== false ? (
+                            <span className="ml-0.5 align-super text-red-600" title="Active">
+                              *
+                            </span>
+                          ) : null}
+                        </span>
+                      </div>
+                      <div className="flex gap-1.5">
+                        <span className="flex w-[80px] flex-shrink-0 justify-between text-slate-500">
+                          UID<span>:</span>
+                        </span>
+                        <span className="min-w-0 font-medium">{previewUser.uid || "-"}</span>
+                      </div>
+                      {/* Academic fields only make sense for students. */}
+                      {previewUser.userType === "STUDENT" ? (
+                        <>
+                          <div className="flex gap-1.5">
+                            <span className="flex w-[80px] flex-shrink-0 justify-between text-slate-500">
+                              Course<span>:</span>
+                            </span>
+                            <span className="min-w-0 font-medium">{previewBatchProgram}</span>
+                          </div>
+                          <div className="flex gap-1.5">
+                            <span className="flex w-[80px] flex-shrink-0 justify-between text-slate-500">
+                              Semester<span>:</span>
+                            </span>
+                            <span className="min-w-0 font-medium">
+                              {toSentenceCase(previewUser.classOrSemester)}
+                            </span>
+                          </div>
+                          <div className="flex gap-1.5">
+                            <span className="flex w-[80px] flex-shrink-0 justify-between text-slate-500">
+                              Section<span>:</span>
+                            </span>
+                            <span className="min-w-0 font-medium">
+                              {previewUser.section || "-"}
+                            </span>
+                          </div>
+                        </>
+                      ) : null}
                     </div>
-                    <div className="flex gap-2">
-                      <span className="min-w-[120px] text-slate-500">UID:</span>
-                      <span className="font-medium">{previewUser.uid || "-"}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="min-w-[120px] text-slate-500">Programme Course:</span>
-                      <span className="font-medium">{previewBatchProgram}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="min-w-[120px] text-slate-500">Semester:</span>
-                      <span className="font-medium">
-                        {toSentenceCase(previewUser.classOrSemester)}
-                      </span>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="min-w-[120px] text-slate-500">Section:</span>
-                      <span className="font-medium">{previewUser.section || "-"}</span>
+
+                    {/* Circulation stats — label above count. Full row below
+                        the banner (<xl); 2×2 in the rail column (xl+). */}
+                    <div className="grid w-full auto-rows-fr grid-cols-4 gap-2 xl:grid-cols-2">
+                      <div className="rounded-md border border-indigo-200 bg-indigo-50 p-2 flex flex-col justify-between">
+                        <p className="text-[11px] font-medium text-indigo-600">Total books</p>
+                        <p className="mt-0.5 text-lg font-semibold leading-tight text-indigo-700">
+                          {borrowerStats.total}
+                        </p>
+                      </div>
+                      <div className="rounded-md border border-blue-200 bg-blue-50 p-2 flex flex-col justify-between">
+                        <p className="text-[11px] font-medium text-blue-600">Issued</p>
+                        <p className="mt-0.5 text-lg font-semibold leading-tight text-blue-700">
+                          {borrowerStats.issued}
+                        </p>
+                      </div>
+                      <div className="rounded-md border border-green-200 bg-green-50 p-2 flex flex-col justify-between">
+                        <p className="text-[11px] font-medium text-green-600">Returned</p>
+                        <p className="mt-0.5 text-lg font-semibold leading-tight text-green-700">
+                          {borrowerStats.returned}
+                        </p>
+                      </div>
+                      <div className="rounded-md border border-red-200 bg-red-50 p-2 flex flex-col justify-between">
+                        <p className="text-[11px] font-medium text-red-600">Overdue</p>
+                        <p className="mt-0.5 text-lg font-semibold leading-tight text-red-700">
+                          {borrowerStats.overdue}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <Tabs
-                value={activeDialogTab}
-                onValueChange={(value) => setActiveDialogTab(value as "issue" | "history")}
-                className="flex flex-1 min-h-0 flex-col"
-              >
-                <div className="flex items-end justify-between gap-3">
-                  <TabsList>
-                    <TabsTrigger value="issue">Issue</TabsTrigger>
-                    <TabsTrigger value="history">Reissue / Return</TabsTrigger>
-                  </TabsList>
-                  {activeDialogTab === "issue" ? (
-                    <div className="flex flex-1 items-center justify-end gap-2">
-                      <div className="flex-1 min-w-0 max-w-2xl">
-                        <Combobox
-                          className="h-9 w-full text-sm"
-                          placeholder="Search book by access no..."
-                          value={stagedBookKey}
-                          showOptionsHint={false}
-                          dataArr={pickerBookItems}
-                          contentClassName="w-[640px] max-w-[calc(100vw-2rem)]"
-                          onSearch={(term) => void handlePickerSearch(term)}
-                          isSearching={pickerLoading}
-                          selectedLabel={stagedBookLabel}
-                          selectedBadge={
-                            stagedBookOption?.onLoan
-                              ? {
-                                  label: "ON LOAN",
-                                  className: "border-indigo-200 bg-indigo-100 text-indigo-700",
-                                }
-                              : null
-                          }
-                          onChange={(value) => {
-                            setStagedBookKey(value);
-                            const picked = pickerOptions.find(
-                              (o) => String(o.copyDetailsId) === value,
-                            );
-                            // Keep the full option — pickerOptions gets cleared
-                            // when the search input empties, so Add relies on
-                            // this captured copy instead.
-                            setStagedBookOption(picked ?? null);
-                            setStagedBookLabel(
-                              picked
-                                ? `${picked.accessNumber || "-"} — ${picked.title || "-"}`
-                                : "",
-                            );
-                            // Fetch the policy now so the copy-cap check can
-                            // block Add (with reason) before staging.
-                            setStagedPolicyInfo(null);
-                            const reqId = ++stagedPolicyReqRef.current;
-                            if (picked && !picked.onLoan && previewData?.user?.userId) {
-                              setStagedPolicyLoading(true);
-                              getBookCirculationPolicy(
-                                previewData.user.userId,
-                                picked.copyDetailsId,
-                              )
-                                .then((res) => {
-                                  if (reqId !== stagedPolicyReqRef.current) return;
-                                  setStagedPolicyInfo(
-                                    res.payload
-                                      ? {
-                                          loanDays: res.payload.loanDays,
-                                          finePerDay: res.payload.finePerDay,
-                                          graceDays: res.payload.graceDays,
-                                          renewalLimit: res.payload.renewalLimit,
-                                          maxCopiesAtOnce: res.payload.maxCopiesAtOnce,
-                                        }
-                                      : null,
-                                  );
-                                })
-                                .catch(() => {
-                                  if (reqId !== stagedPolicyReqRef.current) return;
-                                  setStagedPolicyInfo(null);
-                                })
-                                .finally(() => {
-                                  if (reqId === stagedPolicyReqRef.current)
-                                    setStagedPolicyLoading(false);
-                                });
-                            } else {
-                              setStagedPolicyLoading(false);
-                            }
-                          }}
-                        />
-                      </div>
-                      {stagedBookOption?.onLoan ? (
-                        // Unavailable copy: Add is replaced by an info trigger
-                        // explaining WHY it cannot be issued.
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
-                          onClick={() => setOnLoanInfoOpen(true)}
-                        >
-                          <Info className="mr-1 h-4 w-4" />
-                          Not available
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="default"
-                          className="bg-emerald-600 text-white hover:bg-emerald-700"
-                          size="sm"
-                          disabled={
-                            !stagedBookKey ||
-                            addingStagedBook ||
-                            stagedPolicyLoading ||
-                            !!addBlockedReason
-                          }
-                          title={addBlockedReason ?? undefined}
-                          onClick={() => void addStagedBook()}
-                        >
-                          {addingStagedBook || stagedPolicyLoading ? (
-                            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                          ) : (
-                            <Plus className="mr-1 h-4 w-4" />
-                          )}
-                          Add
-                        </Button>
-                      )}
+                {/* Right section: tabs header, table content, footer — the
+                    footer lives HERE so the borrower rail spans full height. */}
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                  {!patronPresent ? (
+                    <div className="mb-2 rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700">
+                      No library entry recorded today — the patron must check in at the entry gate
+                      before books can be issued, re-issued or returned.
                     </div>
                   ) : null}
-                </div>
-                {/* Reason the Add button is blocked (cap reached etc.) — the
+                  <Tabs
+                    value={activeDialogTab}
+                    onValueChange={(value) => setActiveDialogTab(value as "issue" | "history")}
+                    className="flex flex-1 min-h-0 min-w-0 flex-col"
+                  >
+                    <div className="flex items-end justify-between gap-3">
+                      <TabsList>
+                        <TabsTrigger value="issue" disabled={!patronPresent}>
+                          Issue
+                        </TabsTrigger>
+                        <TabsTrigger value="history">Reissue / Return</TabsTrigger>
+                      </TabsList>
+                      {/* Hidden entirely when the patron has no entry today. */}
+                      {activeDialogTab === "issue" && patronPresent ? (
+                        <div className="flex flex-1 items-center justify-end gap-2">
+                          <div className="flex-1 min-w-0 max-w-2xl">
+                            <Combobox
+                              className="h-9 w-full text-sm"
+                              placeholder="Search book by access no..."
+                              value={stagedBookKey}
+                              showOptionsHint={false}
+                              dataArr={pickerBookItems}
+                              contentClassName="w-[640px] max-w-[calc(100vw-2rem)]"
+                              onSearch={(term) => void handlePickerSearch(term)}
+                              isSearching={pickerLoading}
+                              selectedLabel={stagedBookLabel}
+                              selectedBadge={
+                                stagedBookOption?.onLoan
+                                  ? {
+                                      label: "ON LOAN",
+                                      className: "border-indigo-200 bg-indigo-100 text-indigo-700",
+                                    }
+                                  : null
+                              }
+                              onChange={(value) => {
+                                setStagedBookKey(value);
+                                const picked = pickerOptions.find(
+                                  (o) => String(o.copyDetailsId) === value,
+                                );
+                                // Keep the full option — pickerOptions gets cleared
+                                // when the search input empties, so Add relies on
+                                // this captured copy instead.
+                                setStagedBookOption(picked ?? null);
+                                setStagedBookLabel(
+                                  picked
+                                    ? `${picked.accessNumber || "-"} — ${picked.title || "-"}`
+                                    : "",
+                                );
+                                // Fetch the policy now so the copy-cap check can
+                                // block Add (with reason) before staging.
+                                setStagedPolicyInfo(null);
+                                const reqId = ++stagedPolicyReqRef.current;
+                                if (picked && !picked.onLoan && previewData?.user?.userId) {
+                                  setStagedPolicyLoading(true);
+                                  getBookCirculationPolicy(
+                                    previewData.user.userId,
+                                    picked.copyDetailsId,
+                                  )
+                                    .then((res) => {
+                                      if (reqId !== stagedPolicyReqRef.current) return;
+                                      setStagedPolicyInfo(
+                                        res.payload
+                                          ? {
+                                              loanDays: res.payload.loanDays,
+                                              finePerDay: res.payload.finePerDay,
+                                              graceDays: res.payload.graceDays,
+                                              renewalLimit: res.payload.renewalLimit,
+                                              maxCopiesAtOnce: res.payload.maxCopiesAtOnce,
+                                            }
+                                          : null,
+                                      );
+                                    })
+                                    .catch(() => {
+                                      if (reqId !== stagedPolicyReqRef.current) return;
+                                      setStagedPolicyInfo(null);
+                                    })
+                                    .finally(() => {
+                                      if (reqId === stagedPolicyReqRef.current)
+                                        setStagedPolicyLoading(false);
+                                    });
+                                } else {
+                                  setStagedPolicyLoading(false);
+                                }
+                              }}
+                            />
+                          </div>
+                          {stagedBookOption?.onLoan ? (
+                            // Unavailable copy: Add is replaced by an info trigger
+                            // explaining WHY it cannot be issued.
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+                              onClick={() => setOnLoanInfoOpen(true)}
+                            >
+                              <Info className="mr-1 h-4 w-4" />
+                              Not available
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="default"
+                              className="bg-emerald-600 text-white hover:bg-emerald-700"
+                              size="sm"
+                              disabled={
+                                !patronPresent ||
+                                !stagedBookKey ||
+                                addingStagedBook ||
+                                stagedPolicyLoading ||
+                                !!addBlockedReason
+                              }
+                              title={addBlockedReason ?? undefined}
+                              onClick={() => void addStagedBook()}
+                            >
+                              {addingStagedBook || stagedPolicyLoading ? (
+                                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                              ) : (
+                                <Plus className="mr-1 h-4 w-4" />
+                              )}
+                              Add
+                            </Button>
+                          )}
+                        </div>
+                      ) : activeDialogTab === "history" ? (
+                        <div className="relative w-72">
+                          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                          <Input
+                            value={historyFilter}
+                            onChange={(e) => setHistoryFilter(e.target.value)}
+                            placeholder="Filter by access no./book/author/publisher..."
+                            className="h-9 pl-8 text-xs"
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                    {/* Reason the Add button is blocked (cap reached etc.) — the
                     on-loan case gets the info dialog instead. */}
-                {activeDialogTab === "issue" && addBlockedReason && !stagedBookOption?.onLoan ? (
-                  <p className="mt-1 text-right text-[11px] font-medium text-red-600">
-                    {addBlockedReason}
-                  </p>
-                ) : null}
-                <TabsContent
-                  value="issue"
-                  className="mt-2 flex flex-1 min-h-0 flex-col gap-2 data-[state=inactive]:hidden"
-                  forceMount
-                >
-                  {renderRowsTable(
-                    editableRows.filter((row) => row.isNew),
-                    "No books staged. Pick a book above and click Add.",
-                    "issue",
-                  )}
-                </TabsContent>
-                <TabsContent
-                  value="history"
-                  className="mt-2 flex flex-1 min-h-0 flex-col data-[state=inactive]:hidden"
-                  forceMount
-                >
-                  {renderRowsTable(
-                    editableRows.filter((row) => !row.isNew),
-                    "No issued or returned books.",
-                    "history",
-                  )}
-                </TabsContent>
-              </Tabs>
+                    {activeDialogTab === "issue" &&
+                    addBlockedReason &&
+                    !stagedBookOption?.onLoan ? (
+                      <p className="mt-1 text-right text-[11px] font-medium text-red-600">
+                        {addBlockedReason}
+                      </p>
+                    ) : null}
+                    <TabsContent
+                      value="issue"
+                      className="mt-2 flex flex-1 min-h-0 flex-col gap-2 data-[state=inactive]:hidden"
+                      forceMount
+                    >
+                      {renderRowsTable(
+                        editableRows.filter((row) => row.isNew),
+                        "No books staged. Pick a book above and click Add.",
+                        "issue",
+                      )}
+                    </TabsContent>
+                    <TabsContent
+                      value="history"
+                      className="mt-2 flex flex-1 min-h-0 flex-col data-[state=inactive]:hidden"
+                      forceMount
+                    >
+                      {renderRowsTable(
+                        historyRows,
+                        historyFilter.trim()
+                          ? "No rows match the filter."
+                          : "No issued or returned books.",
+                        "history",
+                      )}
+                    </TabsContent>
+                  </Tabs>
 
-              <div className="sticky bottom-0 z-20 mt-auto flex items-center justify-end gap-2 border-t bg-white pt-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setDetailsOpen(false);
-                    setPreviewData(null);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  className="bg-blue-600 text-white hover:bg-blue-700"
-                  disabled={savingRows || hasInvalidStagedRows || !hasSavable}
-                  onClick={() => void saveRows()}
-                >
-                  {savingRows ? (
-                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="mr-1 h-4 w-4" />
-                  )}
-                  Save
-                </Button>
+                  <div className="mt-2 flex items-center justify-end gap-2 bg-white pt-1">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setDetailsOpen(false);
+                        setPreviewData(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="bg-blue-600 text-white hover:bg-blue-700"
+                      disabled={savingRows || hasInvalidStagedRows || !hasSavable || !patronPresent}
+                      onClick={() => void saveRows()}
+                    >
+                      {savingRows ? (
+                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="mr-1 h-4 w-4" />
+                      )}
+                      Save
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
