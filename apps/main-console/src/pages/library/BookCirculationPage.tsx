@@ -375,8 +375,9 @@ export default function BookCirculationPage() {
           isNew: false,
         })),
       );
-      // No entry today -> Issue tab is disabled; land on Reissue / Return.
-      setActiveDialogTab(response.payload.hasLibraryEntryToday === false ? "history" : "issue");
+      // Reissue / Return is the default tab; Issue stays disabled unless the
+      // patron is inside the library right now.
+      setActiveDialogTab("history");
       setStagedBookKey("");
       setStagedBookLabel("");
       setStagedBookOption(null);
