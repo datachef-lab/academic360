@@ -17,7 +17,7 @@ import type { ReportProgress } from "@/features/reports/report-job.service.js";
 
 const NOT_ISSUABLE_FILL_ARGB = "FFFFC7CE";
 
-const EXPORT_ROW_CAP = 20_000;
+const EXPORT_ROW_CAP = 10_000;
 
 const YIELD_EVERY = 500;
 const yieldToEventLoop = () =>
