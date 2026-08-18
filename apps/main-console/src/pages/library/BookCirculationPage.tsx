@@ -696,7 +696,8 @@ export default function BookCirculationPage() {
                   key={item.id}
                   className={`[&>td]:border-b [&>td]:border-slate-200 last:[&>td]:border-b last:[&>td]:border-slate-300 ${item.actualReturnTimestamp ? "bg-green-100" : ""}`}
                 >
-                  <TableCell className={cellBase}>{index + 1}</TableCell>
+                  {/* Serial counts down: newest row (top) shows the total. */}
+                  <TableCell className={cellBase}>{rowsToShow.length - index}</TableCell>
                   <TableCell className={cn(cellBase, "text-left")}>
                     <div className="min-w-0">
                       <p className="truncate text-xs font-semibold text-slate-800">
@@ -771,7 +772,8 @@ export default function BookCirculationPage() {
                     )}
                   </TableCell>
                   <TableCell className={cellBase}>
-                    <span className="text-xs">{formatDateTime(item.issuedTimestamp)}</span>
+                    {/* Time is stored but not displayed. */}
+                    <span className="text-xs">{formatDateOnly(item.issuedTimestamp)}</span>
                   </TableCell>
                   <TableCell className={cellBase}>
                     {item.isNew ? (
@@ -1285,7 +1287,7 @@ export default function BookCirculationPage() {
 
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
         {/* [&>button]:hidden hides the built-in top-right close X. */}
-        <DialogContent className="w-[94vw] max-w-none h-[94vh] max-h-none flex flex-col text-[14px] [&>button]:hidden">
+        <DialogContent className="w-[94vw] max-w-none h-[94vh] max-h-none flex flex-col text-[13px] [&>button]:hidden">
           {/* No visible dialog header — the rail + right section own the full
               height; the title stays for screen readers only. */}
           <DialogTitle className="sr-only">Manage Book Circulation</DialogTitle>
@@ -1338,29 +1340,18 @@ export default function BookCirculationPage() {
                         {getInitials(previewUser.name)}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        className={`${
-                          (previewUser.userType && userTypeClassMap[previewUser.userType]) ||
-                          "bg-slate-100 text-slate-700"
-                        } border border-slate-300`}
-                      >
-                        {toSentenceCase(previewUser.userType || "USER")}
-                      </Badge>
-                      <Badge
-                        className={
-                          previewUser.isActive === false
-                            ? "bg-red-100 text-red-700 border border-red-300"
-                            : "bg-green-100 text-green-700 border border-green-300"
-                        }
-                      >
-                        {previewUser.isActive === false ? "Inactive" : "Active"}
-                      </Badge>
-                    </div>
-                    <div className="grid flex-1 grid-cols-1 gap-x-6 gap-y-1 text-[14px] md:grid-cols-2 lg:grid-cols-3 xl:w-full xl:flex-none xl:grid-cols-1 xl:gap-y-2">
+                    <div className="grid flex-1 grid-cols-1 gap-x-6 gap-y-1 text-[13px] md:grid-cols-2 lg:grid-cols-3 xl:w-full xl:flex-none xl:grid-cols-1 xl:gap-y-2">
                       <div className="flex gap-2">
                         <span className="w-[96px] flex-shrink-0 text-slate-500">Name:</span>
-                        <span className="min-w-0 font-medium">{previewUser.name || "-"}</span>
+                        <span className="min-w-0 font-medium">
+                          {previewUser.name || "-"}
+                          {/* Red asterisk marks an active account (badges removed). */}
+                          {previewUser.isActive !== false ? (
+                            <span className="ml-0.5 align-super text-red-600" title="Active">
+                              *
+                            </span>
+                          ) : null}
+                        </span>
                       </div>
                       <div className="flex gap-2">
                         <span className="w-[96px] flex-shrink-0 text-slate-500">UID:</span>
@@ -1391,16 +1382,16 @@ export default function BookCirculationPage() {
 
                     {/* Circulation stats — label above count. Full row below
                         the banner (<xl); 2×2 in the rail column (xl+). */}
-                    <div className="grid w-full grid-cols-4 gap-2 xl:grid-cols-2">
-                      <div className="rounded-md border bg-white p-2">
+                    <div className="grid w-full auto-rows-fr grid-cols-4 gap-2 xl:grid-cols-2">
+                      <div className="rounded-md border bg-white p-2 flex flex-col justify-between">
                         <p className="text-[11px] font-medium text-slate-500">Total books</p>
-                        <p className="mt-0.5 text-xl font-semibold leading-tight text-slate-800">
+                        <p className="mt-0.5 text-lg font-semibold leading-tight text-slate-800">
                           {borrowerStats.total}
                         </p>
                       </div>
-                      <div className="rounded-md border border-blue-200 bg-blue-50 p-2">
+                      <div className="rounded-md border border-blue-200 bg-blue-50 p-2 flex flex-col justify-between">
                         <p className="text-[11px] font-medium text-blue-600">Issued / Re-issued</p>
-                        <p className="mt-0.5 text-xl font-semibold leading-tight text-blue-700">
+                        <p className="mt-0.5 text-lg font-semibold leading-tight text-blue-700">
                           {borrowerStats.issued}
                           <span className="text-sm font-medium text-blue-500">
                             {" "}
@@ -1408,15 +1399,15 @@ export default function BookCirculationPage() {
                           </span>
                         </p>
                       </div>
-                      <div className="rounded-md border border-green-200 bg-green-50 p-2">
+                      <div className="rounded-md border border-green-200 bg-green-50 p-2 flex flex-col justify-between">
                         <p className="text-[11px] font-medium text-green-600">Returned</p>
-                        <p className="mt-0.5 text-xl font-semibold leading-tight text-green-700">
+                        <p className="mt-0.5 text-lg font-semibold leading-tight text-green-700">
                           {borrowerStats.returned}
                         </p>
                       </div>
-                      <div className="rounded-md border border-red-200 bg-red-50 p-2">
+                      <div className="rounded-md border border-red-200 bg-red-50 p-2 flex flex-col justify-between">
                         <p className="text-[11px] font-medium text-red-600">Overdue</p>
-                        <p className="mt-0.5 text-xl font-semibold leading-tight text-red-700">
+                        <p className="mt-0.5 text-lg font-semibold leading-tight text-red-700">
                           {borrowerStats.overdue}
                         </p>
                       </div>
