@@ -437,6 +437,52 @@ function getNotificationMasterNameByStream(
   }
 }
 
+// Option-source metas carry labels that no longer byte-match the notification
+// master field names: SUBJECT_GROUP "Minor (Semester III to VI)" vs field
+// "Minor 1 (Semester I & II)", PRIOR_SELECTION "Minor 3 (Semester V)" vs field
+// "Minor 3 (Semester III)". Fall back to matching on the subject family plus
+// ordinal where both sides carry one; a label with no ordinal (the group pick)
+// may fill an ordinal field and vice versa. Each label is consumed on first
+// use so one group pick fills exactly one field.
+const NOTIFICATION_FIELD_FAMILIES = ["MINOR", "IDC", "AEC", "CVAC"];
+
+function notificationFamilyIndex(
+  normalizedKey: string,
+): { family: string; index: string | null } | null {
+  const family = NOTIFICATION_FIELD_FAMILIES.find((f) =>
+    normalizedKey.startsWith(f),
+  );
+  if (!family) return null;
+  const next = normalizedKey.charAt(family.length);
+  return { family, index: /[0-9]/.test(next) ? next : null };
+}
+
+function resolveByFamilyIndex(
+  normalizedFieldKey: string,
+  labelToValue: Record<string, string>,
+  consumedLabelKeys: Set<string>,
+): string {
+  const field = notificationFamilyIndex(normalizedFieldKey);
+  if (!field) return "";
+  for (const labelKey of Object.keys(labelToValue)) {
+    if (labelKey === normalizedFieldKey) continue; // exact match handled upstream
+    if (consumedLabelKeys.has(labelKey)) continue;
+    const value = labelToValue[labelKey];
+    if (!value) continue;
+    const label = notificationFamilyIndex(labelKey);
+    if (!label || label.family !== field.family) continue;
+    if (
+      label.index !== null &&
+      field.index !== null &&
+      label.index !== field.index
+    )
+      continue;
+    consumedLabelKeys.add(labelKey);
+    return value;
+  }
+  return "";
+}
+
 async function modelToDto(
   row: StudentSubjectSelectionT,
 ): Promise<StudentSubjectSelectionDto> {
@@ -1730,7 +1776,9 @@ export async function createStudentSubjectSelectionsWithValidation(
 
       const rowsForGrid = dtos.map((d) => ({
         metaLabel: (d.subjectSelectionMeta as any)?.label || "",
-        subjectName: d.subject?.name || "",
+        // SUBJECT_GROUP picks store the choice under `subjectGroupingMain`
+        // and leave `subject` null.
+        subjectName: d.subject?.name ?? d.subjectGroupingMain?.name ?? "",
       }));
 
       // Get academic year name from the first DTO's subjectSelectionMeta
@@ -1904,6 +1952,7 @@ export async function createStudentSubjectSelectionsWithValidation(
             })),
           });
 
+          const consumedLabelKeys = new Set<string>();
           const resolveValueForField = (rawName: string) => {
             const key = normalize(rawName);
             let value = labelToValue[key];
@@ -1923,7 +1972,7 @@ export async function createStudentSubjectSelectionsWithValidation(
               console.log(
                 `[backend] Combined semester mapping: ${key} -> ${variantA}/${variantB} -> "${value}"`,
               );
-              return value;
+              if (value) return value;
             }
             // Alternative tokenization: sometimes master label may be "III&IV" without 'SEMESTER'
             if (/IIIIV/.test(key) && !/SEMESTER/.test(key)) {
@@ -1933,6 +1982,14 @@ export async function createStudentSubjectSelectionsWithValidation(
               console.log(
                 `[backend] Alternative semester mapping: ${key} -> ${variantA}/${variantB} -> "${value}"`,
               );
+              if (value) return value;
+            }
+
+            // Option-source metas (SUBJECT_GROUP / PRIOR_SELECTION): match by
+            // subject family + ordinal, consuming each label once.
+            value = resolveByFamilyIndex(key, labelToValue, consumedLabelKeys);
+            if (value) {
+              console.log(`[backend] Family/index match: ${key} -> "${value}"`);
               return value;
             }
 
@@ -2067,7 +2124,12 @@ export async function createStudentSubjectSelectionsWithValidation(
 
       // TEMPORARY FIX: Limit values based on template compatibility
       if (whatsappMasterName === "Subject Selection Confirmation - BA") {
-        whatsappBodyValues = whatsappBodyValues.slice(0, 7);
+        // BA template has 7 params (Name, M1, M2, IDC1-3, AEC): drop Minor 3
+        // (fills via Sem-V prior picks now) so AEC is not pushed out by the cap.
+        whatsappBodyValues = contentRows
+          .filter((row) => row.whatsappFieldId !== 8) // Exclude Minor 3 (field ID 8)
+          .map((row) => row.content)
+          .slice(0, 7);
         console.log(
           "[backend] BA template: Limited bodyValues to 7 items:",
           whatsappBodyValues,
@@ -2114,19 +2176,32 @@ export async function createStudentSubjectSelectionsWithValidation(
         contentRows,
       });
 
-      await enqueueNotification({
-        userId: student.userId as number,
-        variant: "WHATSAPP",
-        type: "INFO",
-        message: "Subject Selection Confirmation",
-        notificationMasterId: whatsappMasterId,
-        notificationEvent: {
-          notificationMaster: { id: whatsappMasterId } as any,
-          bodyValues: whatsappBodyValues,
-          meta: { devOnly: true },
-        } as any,
-        content: contentRows,
-      });
+      // Interakt rejects a template whose body-value count mismatches; the
+      // BCOM template needs exactly 2 (Name, Minor). Skip rather than fail.
+      if (
+        whatsappMasterName === "Subject Selection Confirmation - BCOM" &&
+        whatsappBodyValues.length < 2
+      ) {
+        console.log(
+          "[backend] BCOM whatsapp: expected 2 bodyValues, got",
+          whatsappBodyValues.length,
+          "- skipping enqueue",
+        );
+      } else {
+        await enqueueNotification({
+          userId: student.userId as number,
+          variant: "WHATSAPP",
+          type: "INFO",
+          message: "Subject Selection Confirmation",
+          notificationMasterId: whatsappMasterId,
+          notificationEvent: {
+            notificationMaster: { id: whatsappMasterId } as any,
+            bodyValues: whatsappBodyValues,
+            meta: { devOnly: true },
+          } as any,
+          content: contentRows,
+        });
+      }
 
       console.log("[backend] enqueue subject-selection (create) <- done");
     }
@@ -3370,7 +3445,10 @@ export async function updateStudentSubjectSelectionsEfficiently(
             const dto = await modelToDto(selection as StudentSubjectSelectionT);
             return {
               metaLabel: (dto.subjectSelectionMeta as any)?.label || "",
-              subjectName: dto.subject?.name || "",
+              // SUBJECT_GROUP picks store the choice under `subjectGroupingMain`
+              // and leave `subject` null.
+              subjectName:
+                dto.subject?.name ?? dto.subjectGroupingMain?.name ?? "",
             };
           }),
         );
@@ -3469,6 +3547,7 @@ export async function updateStudentSubjectSelectionsEfficiently(
               JSON.stringify(labelToValue, null, 2),
             );
 
+            const consumedLabelKeys = new Set<string>();
             const resolveValueForField = (rawName: string) => {
               const key = normalize(rawName);
               let value = labelToValue[key];
@@ -3491,7 +3570,7 @@ export async function updateStudentSubjectSelectionsEfficiently(
                 console.log(
                   `[backend] Combined semester mapping (no-change): ${key} -> ${variantA}/${variantB} -> "${value}"`,
                 );
-                return value;
+                if (value) return value;
               }
               // Alternative tokenization: sometimes master label may be "III&IV" without 'SEMESTER'
               if (/IIIIV/.test(key) && !/SEMESTER/.test(key)) {
@@ -3500,6 +3579,20 @@ export async function updateStudentSubjectSelectionsEfficiently(
                 value = labelToValue[variantA] || labelToValue[variantB] || "";
                 console.log(
                   `[backend] Alternative semester mapping (no-change): ${key} -> ${variantA}/${variantB} -> "${value}"`,
+                );
+                if (value) return value;
+              }
+
+              // Option-source metas (SUBJECT_GROUP / PRIOR_SELECTION): match by
+              // subject family + ordinal, consuming each label once.
+              value = resolveByFamilyIndex(
+                key,
+                labelToValue,
+                consumedLabelKeys,
+              );
+              if (value) {
+                console.log(
+                  `[backend] Family/index match (no-change): ${key} -> "${value}"`,
                 );
                 return value;
               }
@@ -3885,7 +3978,9 @@ export async function updateStudentSubjectSelectionsEfficiently(
       );
       const rowsForGrid = dtos.map((d) => ({
         metaLabel: (d.subjectSelectionMeta as any)?.label || "",
-        subjectName: d.subject?.name || "",
+        // SUBJECT_GROUP picks store the choice under `subjectGroupingMain`
+        // and leave `subject` null.
+        subjectName: d.subject?.name ?? d.subjectGroupingMain?.name ?? "",
       }));
       const academicYearName = String(
         (dtos[0]?.subjectSelectionMeta as any)?.academicYear?.name || "",
@@ -3985,6 +4080,7 @@ export async function updateStudentSubjectSelectionsEfficiently(
             })),
           });
 
+          const consumedLabelKeys = new Set<string>();
           const resolveValueForField = (rawName: string) => {
             const key = normalize(rawName);
             let value = labelToValue[key];
@@ -3995,16 +4091,18 @@ export async function updateStudentSubjectSelectionsEfficiently(
               const variantA = key.replace("SEMESTERIIIIV", "SEMESTERIII");
               const variantB = key.replace("SEMESTERIIIIV", "SEMESTERIV");
               value = labelToValue[variantA] || labelToValue[variantB] || "";
-              return value;
+              if (value) return value;
             }
             // Alternative tokenization: sometimes master label may be "III&IV" without 'SEMESTER'
             if (/IIIIV/.test(key) && !/SEMESTER/.test(key)) {
               const variantA = key.replace("IIIIV", "III");
               const variantB = key.replace("IIIIV", "IV");
               value = labelToValue[variantA] || labelToValue[variantB] || "";
-              return value;
+              if (value) return value;
             }
-            return "";
+            // Option-source metas (SUBJECT_GROUP / PRIOR_SELECTION): match by
+            // subject family + ordinal, consuming each label once.
+            return resolveByFamilyIndex(key, labelToValue, consumedLabelKeys);
           };
 
           // Only include fields that have actual values (not empty or fallback values)
