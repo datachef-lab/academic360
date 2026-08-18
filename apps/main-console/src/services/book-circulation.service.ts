@@ -62,6 +62,8 @@ export type BookCirculationPreviewRow = {
   copyDetailsId: number;
   borrowingTypeId: number | null;
   accessNumber: string | null;
+  /** Copy's item category (falls back to the book's). */
+  itemCategoryName: string | null;
   title: string | null;
   author: string | null;
   publication: string | null;
@@ -97,6 +99,12 @@ export type BookCirculationMetaPayload = {
     author: string | null;
     publication: string | null;
     frontCover: string | null;
+    /** On-loan copies stay searchable but cannot be added; UI shows who holds it. */
+    onLoan: boolean;
+    borrowerName: string | null;
+    borrowerDueDate: string | null;
+    /** Copy's item category (falls back to the book's). */
+    itemCategoryName: string | null;
   }>;
   borrowingTypeOptions: Array<{ id: number; name: string }>;
 };

@@ -11,6 +11,7 @@ import {
   inArray,
   lt,
   or,
+  sql,
   SQL,
 } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.js";
@@ -77,6 +78,8 @@ export type BookCirculationPreviewRow = {
   copyDetailsId: number;
   borrowingTypeId: number | null;
   accessNumber: string | null;
+  /** Copy's item category, falling back to the book's (same rule the policy resolver uses). */
+  itemCategoryName: string | null;
   title: string | null;
   author: string | null;
   publication: string | null;
@@ -114,6 +117,12 @@ export type BookCirculationMetaResult = {
     author: string | null;
     publication: string | null;
     frontCover: string | null;
+    // On-loan copies STAY searchable (per desk workflow) but the picker blocks
+    // adding them and shows who has the copy and when it is due back.
+    onLoan: boolean;
+    borrowerName: string | null;
+    borrowerDueDate: Date | null;
+    itemCategoryName: string | null;
   }>;
   borrowingTypeOptions: Array<{ id: number; name: string }>;
   statusOptions: Array<{ id: number; name: string }>;
@@ -206,7 +215,12 @@ export async function findBookCirculationPaginated(
 ): Promise<BookCirculationListResult> {
   const { page, limit, search, userType } = filters;
   const offset = (page - 1) * limit;
+  // `userConditions` must stay user-table-only: it is reused by the
+  // "searched user with no circulation rows" fallback query below, which has
+  // no copy/book joins. The circulation query gets the wider match that also
+  // covers book title + access number (the search box promises both).
   const userConditions: SQL[] = [];
+  const circulationUserConditions: SQL[] = [];
   if (search?.trim()) {
     const searchTerm = `%${search.trim()}%`;
     userConditions.push(
@@ -217,13 +231,27 @@ export async function findBookCirculationPaginated(
         ilike(staffModel.attendanceCode, searchTerm),
       )!,
     );
+    circulationUserConditions.push(
+      or(
+        ilike(userModel.name, searchTerm),
+        ilike(studentModel.uid, searchTerm),
+        ilike(staffModel.uid, searchTerm),
+        ilike(staffModel.attendanceCode, searchTerm),
+        ilike(bookModel.title, searchTerm),
+        ilike(copyDetailsModel.accessNumber, searchTerm),
+      )!,
+    );
   }
   if (userType) {
     userConditions.push(eq(userModel.type, userType));
+    circulationUserConditions.push(eq(userModel.type, userType));
   }
   const circulationConditions = buildCirculationFilterConditions(filters);
-  const whereCirculations = [...userConditions, ...circulationConditions].length
-    ? and(...[...userConditions, ...circulationConditions])
+  const whereCirculations = [
+    ...circulationUserConditions,
+    ...circulationConditions,
+  ].length
+    ? and(...[...circulationUserConditions, ...circulationConditions])
     : undefined;
   const circulationRows = await db
     .select({
@@ -251,6 +279,7 @@ export async function findBookCirculationPaginated(
       copyDetailsModel,
       eq(bookCirculationModel.copyDetailsId, copyDetailsModel.id),
     )
+    .leftJoin(bookModel, eq(copyDetailsModel.bookId, bookModel.id))
     .where(whereCirculations)
     .orderBy(desc(bookCirculationModel.id));
 
@@ -415,6 +444,10 @@ export async function getBookCirculationPreviewByUserId(
       copyDetailsId: bookCirculationModel.copyDetailsId,
       borrowingTypeId: bookCirculationModel.borrowingTypeId,
       accessNumber: copyDetailsModel.accessNumber,
+      itemCategoryName: sql<string | null>`COALESCE(
+        (SELECT ic.name FROM library_item_categories ic WHERE ic.id = ${copyDetailsModel.itemCategoryId}),
+        (SELECT ic.name FROM library_item_categories ic WHERE ic.id = ${bookModel.itemCategoryId})
+      )`,
       title: bookModel.title,
       author: bookModel.alternateTitle,
       publication: publisherModel.name,
@@ -488,6 +521,7 @@ export async function getBookCirculationPreviewByUserId(
     copyDetailsId: row.copyDetailsId,
     borrowingTypeId: row.borrowingTypeId,
     accessNumber: row.accessNumber,
+    itemCategoryName: row.itemCategoryName,
     title: row.title,
     author: row.author,
     publication: row.publication,
@@ -517,6 +551,39 @@ export async function getBookCirculationPreviewByUserId(
 
 export type BookOptionResult = BookCirculationMetaResult["bookOptions"][number];
 
+/**
+ * Availability annotation for the issue picker. A copy is "on loan" when a
+ * book_circulation row for it is still open (actualReturnTimestamp IS NULL —
+ * covers both fresh issues and reissues). On-loan copies are NOT filtered out:
+ * the desk wants to find them and see who holds them; the frontend blocks the
+ * Add action and shows the reason instead.
+ */
+const bookOptionAnnotations = {
+  onLoan: sql<boolean>`EXISTS (
+    SELECT 1 FROM book_circulation bc
+    WHERE bc.copy_details_id_fk = ${copyDetailsModel.id}
+      AND bc.actual_return_timestamp IS NULL
+  )`,
+  borrowerName: sql<string | null>`(
+    SELECT u.name FROM book_circulation bc
+    JOIN users u ON u.id = bc.user_id_fk
+    WHERE bc.copy_details_id_fk = ${copyDetailsModel.id}
+      AND bc.actual_return_timestamp IS NULL
+    ORDER BY bc.id DESC LIMIT 1
+  )`,
+  borrowerDueDate: sql<Date | null>`(
+    SELECT bc.return_timestamp FROM book_circulation bc
+    WHERE bc.copy_details_id_fk = ${copyDetailsModel.id}
+      AND bc.actual_return_timestamp IS NULL
+    ORDER BY bc.id DESC LIMIT 1
+  )`,
+  // Copy's own category first, else the book's — mirrors the policy resolver.
+  itemCategoryName: sql<string | null>`COALESCE(
+    (SELECT ic.name FROM library_item_categories ic WHERE ic.id = ${copyDetailsModel.itemCategoryId}),
+    (SELECT ic.name FROM library_item_categories ic WHERE ic.id = ${bookModel.itemCategoryId})
+  )`,
+};
+
 export async function searchBookOptions(
   search: string,
   limit: number,
@@ -531,6 +598,7 @@ export async function searchBookOptions(
       author: bookModel.alternateTitle,
       publication: publisherModel.name,
       frontCover: bookModel.frontCover,
+      ...bookOptionAnnotations,
     })
     .from(copyDetailsModel)
     .leftJoin(bookModel, eq(copyDetailsModel.bookId, bookModel.id))
@@ -562,6 +630,7 @@ export async function getBookCirculationMeta(): Promise<BookCirculationMetaResul
         author: bookModel.alternateTitle,
         publication: publisherModel.name,
         frontCover: bookModel.frontCover,
+        ...bookOptionAnnotations,
       })
       .from(copyDetailsModel)
       .leftJoin(bookModel, eq(copyDetailsModel.bookId, bookModel.id))
