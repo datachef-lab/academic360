@@ -1343,7 +1343,7 @@ export default function BookCirculationPage() {
               <div className="flex flex-1 min-h-0 flex-col gap-3 xl:flex-row">
                 <div className="flex flex-col overflow-hidden rounded-md border bg-slate-50 xl:w-64 xl:flex-shrink-0 xl:self-stretch">
                   {/* xl+: the borrower photo is a full-width cover on the rail. */}
-                  <Avatar className="hidden h-36 w-full flex-shrink-0 rounded-none border-b xl:flex">
+                  <Avatar className="hidden h-40 w-full flex-shrink-0 rounded-none border-b bg-slate-200/60 xl:flex">
                     <AvatarImage
                       src={
                         previewUser.userType === "STUDENT" && previewUser.uid
@@ -1351,7 +1351,7 @@ export default function BookCirculationPage() {
                           : previewUser.image || undefined
                       }
                       alt={previewUser.name}
-                      className="h-full w-full rounded-none object-cover object-top"
+                      className="h-full w-full rounded-none object-contain"
                     />
                     <AvatarFallback
                       className={`rounded-none text-3xl font-semibold text-white ${getColorFromName(previewUser.name)}`}
