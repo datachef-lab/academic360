@@ -18,7 +18,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 export type ComboboxItemBadge = { label: string; className?: string };
 
 type ComboboxProps = {
-  dataArr: { value: string; label: string; imageUrl?: string; badge?: ComboboxItemBadge }[];
+  dataArr: {
+    value: string;
+    label: string;
+    imageUrl?: string;
+    badge?: ComboboxItemBadge;
+    /** Blocks selecting the option (still visible, styled via rowClassName). */
+    disabled?: boolean;
+    /** Extra classes for the row background/text, e.g. a status tint. */
+    rowClassName?: string;
+  }[];
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -161,8 +170,14 @@ export function Combobox({
                 <CommandItem
                   key={item.value}
                   value={item.label}
-                  className="whitespace-normal break-words"
+                  disabled={item.disabled}
+                  className={cn(
+                    "whitespace-normal break-words",
+                    item.disabled && "cursor-not-allowed data-[disabled=true]:opacity-100",
+                    item.rowClassName,
+                  )}
                   onSelect={() => {
+                    if (item.disabled) return;
                     onChange(item.value);
                     setOpen(false);
                     setSearch("");
@@ -170,7 +185,7 @@ export function Combobox({
                 >
                   <CheckIcon
                     className={cn(
-                      "mr-2 h-4 w-4",
+                      "mr-2 h-4 w-4 shrink-0",
                       value === item.value ? "opacity-100" : "opacity-0",
                     )}
                   />
@@ -183,9 +198,15 @@ export function Combobox({
                       className="mr-2 h-7 w-6 shrink-0 rounded border object-cover"
                     />
                   )}
-                  <span>{item.label}</span>
+                  <span className="min-w-0 flex-1">{item.label}</span>
                   {item.badge ? (
-                    <span className={cn("ml-2", badgePillClass, item.badge.className)}>
+                    <span
+                      className={cn(
+                        "ml-2 shrink-0 self-center",
+                        badgePillClass,
+                        item.badge.className,
+                      )}
+                    >
                       {item.badge.label}
                     </span>
                   ) : null}

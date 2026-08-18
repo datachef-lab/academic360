@@ -225,9 +225,20 @@ export default function BookCirculationPage() {
       pickerOptions.map((option) => ({
         value: String(option.copyDetailsId),
         label: `${option.accessNumber || "-"} — ${option.title || "-"}`,
-        badge: option.onLoan
-          ? { label: "ON LOAN", className: "border-red-200 bg-red-50 text-red-600" }
-          : undefined,
+        disabled: !option.isIssuable || option.onLoan,
+        rowClassName: !option.isIssuable
+          ? "text-red-600"
+          : option.onLoan
+            ? "text-indigo-700"
+            : undefined,
+        badge: !option.isIssuable
+          ? {
+              label: option.statusName ? option.statusName.toUpperCase() : "NOT ISSUABLE",
+              className: "border-red-200 bg-red-50 text-red-600",
+            }
+          : option.onLoan
+            ? { label: "ON LOAN", className: "border-indigo-200 bg-indigo-100 text-indigo-700" }
+            : undefined,
       })),
     [pickerOptions],
   );
@@ -489,15 +500,17 @@ export default function BookCirculationPage() {
     openLoanCount + stagedCount + 1 > stagedPolicyInfo.maxCopiesAtOnce;
   const addBlockedReason = !stagedBookOption
     ? null
-    : stagedBookOption.onLoan
-      ? `On loan to ${stagedBookOption.borrowerName || "another patron"}${
-          stagedBookOption.borrowerDueDate
-            ? ` (due ${formatDateOnly(stagedBookOption.borrowerDueDate)})`
-            : ""
-        } — must be returned before it can be issued again.`
-      : capExceeded
-        ? `Copy cap reached — patron holds ${openLoanCount} open + ${stagedCount} staged; policy allows ${stagedPolicyInfo!.maxCopiesAtOnce} at once.`
-        : null;
+    : !stagedBookOption.isIssuable
+      ? `Status "${stagedBookOption.statusName || "N/A"}" is not issuable.`
+      : stagedBookOption.onLoan
+        ? `On loan to ${stagedBookOption.borrowerName || "another patron"}${
+            stagedBookOption.borrowerDueDate
+              ? ` (due ${formatDateOnly(stagedBookOption.borrowerDueDate)})`
+              : ""
+          } — must be returned before it can be issued again.`
+        : capExceeded
+          ? `Copy cap reached — patron holds ${openLoanCount} open + ${stagedCount} staged; policy allows ${stagedPolicyInfo!.maxCopiesAtOnce} at once.`
+          : null;
 
   const formatDateChip = (isoDate: string) => {
     const parsed = new Date(`${isoDate}T00:00:00`);
@@ -1345,7 +1358,7 @@ export default function BookCirculationPage() {
                             stagedBookOption?.onLoan
                               ? {
                                   label: "ON LOAN",
-                                  className: "border-red-200 bg-red-50 text-red-600",
+                                  className: "border-indigo-200 bg-indigo-100 text-indigo-700",
                                 }
                               : null
                           }
