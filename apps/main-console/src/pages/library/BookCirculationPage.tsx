@@ -1285,33 +1285,9 @@ export default function BookCirculationPage() {
 
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
         <DialogContent className="w-[94vw] max-w-none h-[94vh] max-h-none flex flex-col text-[14px]">
-          <DialogHeader className="pr-4">
-            <div className="flex items-center justify-between gap-3">
-              <DialogTitle className="text-sm">Manage Book Circulation</DialogTitle>
-              {previewUser && (
-                // On xl+ the badges live inside the borrower rail instead.
-                <div className="flex items-center gap-2 xl:hidden">
-                  <Badge
-                    className={`${
-                      (previewUser.userType && userTypeClassMap[previewUser.userType]) ||
-                      "bg-slate-100 text-slate-700"
-                    } border border-slate-300`}
-                  >
-                    {toSentenceCase(previewUser.userType || "USER")}
-                  </Badge>
-                  <Badge
-                    className={
-                      previewUser.isActive === false
-                        ? "bg-red-100 text-red-700 border border-red-300"
-                        : "bg-green-100 text-green-700 border border-green-300"
-                    }
-                  >
-                    {previewUser.isActive === false ? "Inactive" : "Active"}
-                  </Badge>
-                </div>
-              )}
-            </div>
-          </DialogHeader>
+          {/* No visible dialog header — the rail + right section own the full
+              height; the title stays for screen readers only. */}
+          <DialogTitle className="sr-only">Manage Book Circulation</DialogTitle>
           {previewLoading || !previewUser || !previewData ? (
             <div className="flex h-56 items-center justify-center gap-2 text-sm text-slate-500">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -1323,9 +1299,27 @@ export default function BookCirculationPage() {
                   below xl the rail collapses back into a top banner so the
                   table never runs out of width on smaller screens. */}
               <div className="flex flex-1 min-h-0 flex-col gap-3 xl:flex-row">
-                <div className="rounded-md border bg-slate-50 p-3 xl:w-64 xl:flex-shrink-0 xl:self-stretch xl:overflow-y-auto">
-                  <div className="flex items-start gap-4 xl:flex-col xl:items-center">
-                    <Avatar className="h-24 w-24 flex-shrink-0 rounded-md border xl:h-28 xl:w-28">
+                <div className="flex flex-col overflow-hidden rounded-md border bg-slate-50 xl:w-64 xl:flex-shrink-0 xl:self-stretch">
+                  {/* xl+: the borrower photo is a full-width cover on the rail. */}
+                  <Avatar className="hidden h-64 w-full flex-shrink-0 rounded-none border-b xl:flex">
+                    <AvatarImage
+                      src={
+                        previewUser.userType === "STUDENT" && previewUser.uid
+                          ? getStudentAvatarUrl(previewUser.uid)
+                          : previewUser.image || undefined
+                      }
+                      alt={previewUser.name}
+                      className="h-full w-full rounded-none object-cover"
+                    />
+                    <AvatarFallback
+                      className={`rounded-none text-6xl font-semibold text-white ${getColorFromName(previewUser.name)}`}
+                    >
+                      {getInitials(previewUser.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex min-h-0 flex-1 flex-wrap items-start gap-4 p-3 xl:flex-nowrap xl:flex-col xl:items-stretch xl:overflow-y-auto">
+                    {/* Below xl the photo stays a compact banner avatar. */}
+                    <Avatar className="h-24 w-24 flex-shrink-0 rounded-md border xl:hidden">
                       <AvatarImage
                         src={
                           previewUser.userType === "STUDENT" && previewUser.uid
@@ -1341,8 +1335,7 @@ export default function BookCirculationPage() {
                         {getInitials(previewUser.name)}
                       </AvatarFallback>
                     </Avatar>
-                    {/* Badges shown in the dialog header below xl. */}
-                    <div className="hidden items-center gap-2 xl:flex">
+                    <div className="flex items-center gap-2">
                       <Badge
                         className={`${
                           (previewUser.userType && userTypeClassMap[previewUser.userType]) ||
@@ -1392,37 +1385,38 @@ export default function BookCirculationPage() {
                         </>
                       ) : null}
                     </div>
-                  </div>
 
-                  {/* Circulation stats for this borrower (saved rows only). */}
-                  <div className="mt-3 grid grid-cols-4 gap-2 xl:grid-cols-2">
-                    <div className="rounded-md border bg-white p-2 text-center">
-                      <p className="text-lg font-semibold leading-tight text-slate-800">
-                        {borrowerStats.total}
-                      </p>
-                      <p className="text-[11px] text-slate-500">Total books</p>
-                    </div>
-                    <div className="rounded-md border border-blue-200 bg-blue-50 p-2 text-center">
-                      <p className="text-lg font-semibold leading-tight text-blue-700">
-                        {borrowerStats.issued}
-                        <span className="text-xs font-medium text-blue-500">
-                          {" "}
-                          / {borrowerStats.reissued}
-                        </span>
-                      </p>
-                      <p className="text-[11px] text-blue-600">Issued / Re-issued</p>
-                    </div>
-                    <div className="rounded-md border border-green-200 bg-green-50 p-2 text-center">
-                      <p className="text-lg font-semibold leading-tight text-green-700">
-                        {borrowerStats.returned}
-                      </p>
-                      <p className="text-[11px] text-green-600">Returned</p>
-                    </div>
-                    <div className="rounded-md border border-red-200 bg-red-50 p-2 text-center">
-                      <p className="text-lg font-semibold leading-tight text-red-700">
-                        {borrowerStats.overdue}
-                      </p>
-                      <p className="text-[11px] text-red-600">Overdue</p>
+                    {/* Circulation stats — label above count. Full row below
+                        the banner (<xl); 2×2 in the rail column (xl+). */}
+                    <div className="grid w-full grid-cols-4 gap-2 xl:grid-cols-2">
+                      <div className="rounded-md border bg-white p-2">
+                        <p className="text-[11px] font-medium text-slate-500">Total books</p>
+                        <p className="mt-0.5 text-xl font-semibold leading-tight text-slate-800">
+                          {borrowerStats.total}
+                        </p>
+                      </div>
+                      <div className="rounded-md border border-blue-200 bg-blue-50 p-2">
+                        <p className="text-[11px] font-medium text-blue-600">Issued / Re-issued</p>
+                        <p className="mt-0.5 text-xl font-semibold leading-tight text-blue-700">
+                          {borrowerStats.issued}
+                          <span className="text-sm font-medium text-blue-500">
+                            {" "}
+                            / {borrowerStats.reissued}
+                          </span>
+                        </p>
+                      </div>
+                      <div className="rounded-md border border-green-200 bg-green-50 p-2">
+                        <p className="text-[11px] font-medium text-green-600">Returned</p>
+                        <p className="mt-0.5 text-xl font-semibold leading-tight text-green-700">
+                          {borrowerStats.returned}
+                        </p>
+                      </div>
+                      <div className="rounded-md border border-red-200 bg-red-50 p-2">
+                        <p className="text-[11px] font-medium text-red-600">Overdue</p>
+                        <p className="mt-0.5 text-xl font-semibold leading-tight text-red-700">
+                          {borrowerStats.overdue}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
