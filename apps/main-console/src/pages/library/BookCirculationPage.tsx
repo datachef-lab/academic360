@@ -713,7 +713,7 @@ export default function BookCirculationPage() {
                   className={`[&>td]:border-b [&>td]:border-slate-200 last:[&>td]:border-b last:[&>td]:border-slate-300 ${item.actualReturnTimestamp ? "bg-green-100" : ""}`}
                 >
                   {/* Serial counts down: newest row (top) shows the total. */}
-                  <TableCell className={cellBase}>{rowsToShow.length - index}</TableCell>
+                  <TableCell className={cellBase}>{rowsToShow.length - index}.</TableCell>
                   <TableCell className={cellBase}>
                     <Badge className="border border-indigo-300 bg-indigo-100 px-1.5 py-0 text-[10px] font-semibold text-indigo-800 hover:bg-indigo-100">
                       {item.accessNumber || "—"}
@@ -730,7 +730,7 @@ export default function BookCirculationPage() {
                         {item.title || "—"}
                       </p>
                       {item.author ? (
-                        <p className="truncate text-[11px] text-slate-500">- {item.author}</p>
+                        <p className="truncate text-[11px] text-slate-500">— {item.author}</p>
                       ) : null}
                       {item.itemCategoryName ? (
                         <div className="mt-0.5 flex flex-wrap items-center gap-1">
