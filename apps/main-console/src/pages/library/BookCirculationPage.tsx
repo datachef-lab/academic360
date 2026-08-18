@@ -8,6 +8,7 @@ import { DatePicker } from "@/components/ui/DatePicker";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { studentAvatarUrl } from "@/utils/studentAvatarUrl";
 import {
   Select,
   SelectContent,
@@ -124,7 +125,6 @@ const formatDateTime = (value: string | null) => {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    second: "2-digit",
     hour12: true,
   });
   return formatted.replace(/\b(am|pm)\b/g, (v) => v.toUpperCase());
@@ -254,8 +254,9 @@ export default function BookCirculationPage() {
       if (requestId === pickerRequestIdRef.current) setPickerLoading(false);
     }
   }, []);
-  const getStudentAvatarUrl = (uid: string) =>
-    `${import.meta.env.VITE_STUDENT_IMAGE_BASE_URL ?? "https://besc.academic360.app/id-card-generate/api/images?crop=true&uid="}${uid}`;
+  // Unified backend resolver (S3 → besc → hrclIRP → previous-uid chain) —
+  // the old direct id-card-generate URL 404s now.
+  const getStudentAvatarUrl = (uid: string) => studentAvatarUrl(uid) ?? "";
   const getEntryRowAvatarUrl = (row: BookCirculationRow) => {
     if (row.userType === "STUDENT" && row.studentUid) {
       return getStudentAvatarUrl(row.studentUid);
@@ -1244,7 +1245,8 @@ export default function BookCirculationPage() {
             <div className="flex items-center justify-between gap-3">
               <DialogTitle className="text-sm">Manage Book Circulation</DialogTitle>
               {previewUser && (
-                <div className="flex items-center gap-2">
+                // On xl+ the badges live inside the borrower rail instead.
+                <div className="flex items-center gap-2 xl:hidden">
                   <Badge
                     className={`${
                       (previewUser.userType && userTypeClassMap[previewUser.userType]) ||
@@ -1272,202 +1274,233 @@ export default function BookCirculationPage() {
               Loading details...
             </div>
           ) : (
-            <div className="space-y-3 flex-1 min-h-0 flex flex-col overflow-hidden">
-              <div className="rounded-md border bg-slate-50 p-3">
-                <div className="flex items-start gap-4">
-                  <Avatar className="h-24 w-24 flex-shrink-0 rounded-md border">
-                    <AvatarImage
-                      src={
-                        previewUser.userType === "STUDENT" && previewUser.uid
-                          ? getStudentAvatarUrl(previewUser.uid)
-                          : previewUser.image || undefined
-                      }
-                      alt={previewUser.name}
-                      className="rounded-md object-cover"
-                    />
-                    <AvatarFallback
-                      className={`rounded-md text-2xl font-semibold text-white ${getColorFromName(previewUser.name)}`}
-                    >
-                      {getInitials(previewUser.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="grid flex-1 grid-cols-1 gap-x-6 gap-y-1 text-[14px] md:grid-cols-2 lg:grid-cols-3">
-                    <div className="flex gap-2">
-                      <span className="min-w-[120px] text-slate-500">Name:</span>
-                      <span className="font-medium">{previewUser.name || "-"}</span>
+            <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
+              {/* xl+: borrower rail on the left, tabs + table on the right;
+                  below xl the rail collapses back into a top banner so the
+                  table never runs out of width on smaller screens. */}
+              <div className="flex flex-1 min-h-0 flex-col gap-3 xl:flex-row">
+                <div className="rounded-md border bg-slate-50 p-3 xl:w-72 xl:flex-shrink-0 xl:self-stretch xl:overflow-y-auto">
+                  <div className="flex items-start gap-4 xl:flex-col xl:items-center">
+                    <Avatar className="h-24 w-24 flex-shrink-0 rounded-md border xl:h-28 xl:w-28">
+                      <AvatarImage
+                        src={
+                          previewUser.userType === "STUDENT" && previewUser.uid
+                            ? getStudentAvatarUrl(previewUser.uid)
+                            : previewUser.image || undefined
+                        }
+                        alt={previewUser.name}
+                        className="rounded-md object-cover"
+                      />
+                      <AvatarFallback
+                        className={`rounded-md text-2xl font-semibold text-white ${getColorFromName(previewUser.name)}`}
+                      >
+                        {getInitials(previewUser.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    {/* Badges shown in the dialog header below xl. */}
+                    <div className="hidden items-center gap-2 xl:flex">
+                      <Badge
+                        className={`${
+                          (previewUser.userType && userTypeClassMap[previewUser.userType]) ||
+                          "bg-slate-100 text-slate-700"
+                        } border border-slate-300`}
+                      >
+                        {toSentenceCase(previewUser.userType || "USER")}
+                      </Badge>
+                      <Badge
+                        className={
+                          previewUser.isActive === false
+                            ? "bg-red-100 text-red-700 border border-red-300"
+                            : "bg-green-100 text-green-700 border border-green-300"
+                        }
+                      >
+                        {previewUser.isActive === false ? "Inactive" : "Active"}
+                      </Badge>
                     </div>
-                    <div className="flex gap-2">
-                      <span className="min-w-[120px] text-slate-500">UID:</span>
-                      <span className="font-medium">{previewUser.uid || "-"}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="min-w-[120px] text-slate-500">Program Course:</span>
-                      <span className="font-medium">{previewBatchProgram}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="min-w-[120px] text-slate-500">Semester:</span>
-                      <span className="font-medium">
-                        {toSentenceCase(previewUser.classOrSemester)}
-                      </span>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="min-w-[120px] text-slate-500">Section:</span>
-                      <span className="font-medium">{previewUser.section || "-"}</span>
+                    <div className="grid flex-1 grid-cols-1 gap-x-6 gap-y-1 text-[14px] md:grid-cols-2 lg:grid-cols-3 xl:w-full xl:flex-none xl:grid-cols-1 xl:gap-y-2">
+                      <div className="flex gap-2">
+                        <span className="min-w-[120px] text-slate-500 xl:min-w-[88px]">Name:</span>
+                        <span className="font-medium">{previewUser.name || "-"}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <span className="min-w-[120px] text-slate-500 xl:min-w-[88px]">UID:</span>
+                        <span className="font-medium">{previewUser.uid || "-"}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <span className="min-w-[120px] text-slate-500 xl:min-w-[88px]">
+                          Program Course:
+                        </span>
+                        <span className="font-medium">{previewBatchProgram}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <span className="min-w-[120px] text-slate-500 xl:min-w-[88px]">
+                          Semester:
+                        </span>
+                        <span className="font-medium">
+                          {toSentenceCase(previewUser.classOrSemester)}
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <span className="min-w-[120px] text-slate-500 xl:min-w-[88px]">
+                          Section:
+                        </span>
+                        <span className="font-medium">{previewUser.section || "-"}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <Tabs
-                value={activeDialogTab}
-                onValueChange={(value) => setActiveDialogTab(value as "issue" | "history")}
-                className="flex flex-1 min-h-0 flex-col"
-              >
-                <div className="flex items-end justify-between gap-3">
-                  <TabsList>
-                    <TabsTrigger value="issue">Issue</TabsTrigger>
-                    <TabsTrigger value="history">Reissue / Return</TabsTrigger>
-                  </TabsList>
-                  {activeDialogTab === "issue" ? (
-                    <div className="flex flex-1 items-center justify-end gap-2">
-                      <div className="flex-1 min-w-0 max-w-2xl">
-                        <Combobox
-                          className="h-9 w-full text-sm"
-                          placeholder="Search book by access no..."
-                          value={stagedBookKey}
-                          showOptionsHint={false}
-                          dataArr={pickerBookItems}
-                          contentClassName="w-[640px] max-w-[calc(100vw-2rem)]"
-                          onSearch={(term) => void handlePickerSearch(term)}
-                          isSearching={pickerLoading}
-                          selectedLabel={stagedBookLabel}
-                          selectedBadge={
-                            stagedBookOption?.onLoan
-                              ? {
-                                  label: "ON LOAN",
-                                  className: "border-red-200 bg-red-50 text-red-600",
-                                }
-                              : null
-                          }
-                          onChange={(value) => {
-                            setStagedBookKey(value);
-                            const picked = pickerOptions.find(
-                              (o) => String(o.copyDetailsId) === value,
-                            );
-                            // Keep the full option — pickerOptions gets cleared
-                            // when the search input empties, so Add relies on
-                            // this captured copy instead.
-                            setStagedBookOption(picked ?? null);
-                            setStagedBookLabel(
-                              picked
-                                ? `${picked.accessNumber || "-"} — ${picked.title || "-"}`
-                                : "",
-                            );
-                            // Fetch the policy now so the copy-cap check can
-                            // block Add (with reason) before staging.
-                            setStagedPolicyInfo(null);
-                            const reqId = ++stagedPolicyReqRef.current;
-                            if (picked && !picked.onLoan && previewData?.user?.userId) {
-                              setStagedPolicyLoading(true);
-                              getBookCirculationPolicy(
-                                previewData.user.userId,
-                                picked.copyDetailsId,
-                              )
-                                .then((res) => {
-                                  if (reqId !== stagedPolicyReqRef.current) return;
-                                  setStagedPolicyInfo(
-                                    res.payload
-                                      ? {
-                                          loanDays: res.payload.loanDays,
-                                          finePerDay: res.payload.finePerDay,
-                                          graceDays: res.payload.graceDays,
-                                          renewalLimit: res.payload.renewalLimit,
-                                          maxCopiesAtOnce: res.payload.maxCopiesAtOnce,
-                                        }
-                                      : null,
-                                  );
-                                })
-                                .catch(() => {
-                                  if (reqId !== stagedPolicyReqRef.current) return;
-                                  setStagedPolicyInfo(null);
-                                })
-                                .finally(() => {
-                                  if (reqId === stagedPolicyReqRef.current)
-                                    setStagedPolicyLoading(false);
-                                });
-                            } else {
-                              setStagedPolicyLoading(false);
+                <Tabs
+                  value={activeDialogTab}
+                  onValueChange={(value) => setActiveDialogTab(value as "issue" | "history")}
+                  className="flex flex-1 min-h-0 min-w-0 flex-col"
+                >
+                  <div className="flex items-end justify-between gap-3">
+                    <TabsList>
+                      <TabsTrigger value="issue">Issue</TabsTrigger>
+                      <TabsTrigger value="history">Reissue / Return</TabsTrigger>
+                    </TabsList>
+                    {activeDialogTab === "issue" ? (
+                      <div className="flex flex-1 items-center justify-end gap-2">
+                        <div className="flex-1 min-w-0 max-w-2xl">
+                          <Combobox
+                            className="h-9 w-full text-sm"
+                            placeholder="Search book by access no..."
+                            value={stagedBookKey}
+                            showOptionsHint={false}
+                            dataArr={pickerBookItems}
+                            contentClassName="w-[640px] max-w-[calc(100vw-2rem)]"
+                            onSearch={(term) => void handlePickerSearch(term)}
+                            isSearching={pickerLoading}
+                            selectedLabel={stagedBookLabel}
+                            selectedBadge={
+                              stagedBookOption?.onLoan
+                                ? {
+                                    label: "ON LOAN",
+                                    className: "border-red-200 bg-red-50 text-red-600",
+                                  }
+                                : null
                             }
-                          }}
-                        />
+                            onChange={(value) => {
+                              setStagedBookKey(value);
+                              const picked = pickerOptions.find(
+                                (o) => String(o.copyDetailsId) === value,
+                              );
+                              // Keep the full option — pickerOptions gets cleared
+                              // when the search input empties, so Add relies on
+                              // this captured copy instead.
+                              setStagedBookOption(picked ?? null);
+                              setStagedBookLabel(
+                                picked
+                                  ? `${picked.accessNumber || "-"} — ${picked.title || "-"}`
+                                  : "",
+                              );
+                              // Fetch the policy now so the copy-cap check can
+                              // block Add (with reason) before staging.
+                              setStagedPolicyInfo(null);
+                              const reqId = ++stagedPolicyReqRef.current;
+                              if (picked && !picked.onLoan && previewData?.user?.userId) {
+                                setStagedPolicyLoading(true);
+                                getBookCirculationPolicy(
+                                  previewData.user.userId,
+                                  picked.copyDetailsId,
+                                )
+                                  .then((res) => {
+                                    if (reqId !== stagedPolicyReqRef.current) return;
+                                    setStagedPolicyInfo(
+                                      res.payload
+                                        ? {
+                                            loanDays: res.payload.loanDays,
+                                            finePerDay: res.payload.finePerDay,
+                                            graceDays: res.payload.graceDays,
+                                            renewalLimit: res.payload.renewalLimit,
+                                            maxCopiesAtOnce: res.payload.maxCopiesAtOnce,
+                                          }
+                                        : null,
+                                    );
+                                  })
+                                  .catch(() => {
+                                    if (reqId !== stagedPolicyReqRef.current) return;
+                                    setStagedPolicyInfo(null);
+                                  })
+                                  .finally(() => {
+                                    if (reqId === stagedPolicyReqRef.current)
+                                      setStagedPolicyLoading(false);
+                                  });
+                              } else {
+                                setStagedPolicyLoading(false);
+                              }
+                            }}
+                          />
+                        </div>
+                        {stagedBookOption?.onLoan ? (
+                          // Unavailable copy: Add is replaced by an info trigger
+                          // explaining WHY it cannot be issued.
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+                            onClick={() => setOnLoanInfoOpen(true)}
+                          >
+                            <Info className="mr-1 h-4 w-4" />
+                            Not available
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="default"
+                            className="bg-emerald-600 text-white hover:bg-emerald-700"
+                            size="sm"
+                            disabled={
+                              !stagedBookKey ||
+                              addingStagedBook ||
+                              stagedPolicyLoading ||
+                              !!addBlockedReason
+                            }
+                            title={addBlockedReason ?? undefined}
+                            onClick={() => void addStagedBook()}
+                          >
+                            {addingStagedBook || stagedPolicyLoading ? (
+                              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Plus className="mr-1 h-4 w-4" />
+                            )}
+                            Add
+                          </Button>
+                        )}
                       </div>
-                      {stagedBookOption?.onLoan ? (
-                        // Unavailable copy: Add is replaced by an info trigger
-                        // explaining WHY it cannot be issued.
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
-                          onClick={() => setOnLoanInfoOpen(true)}
-                        >
-                          <Info className="mr-1 h-4 w-4" />
-                          Not available
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="default"
-                          className="bg-emerald-600 text-white hover:bg-emerald-700"
-                          size="sm"
-                          disabled={
-                            !stagedBookKey ||
-                            addingStagedBook ||
-                            stagedPolicyLoading ||
-                            !!addBlockedReason
-                          }
-                          title={addBlockedReason ?? undefined}
-                          onClick={() => void addStagedBook()}
-                        >
-                          {addingStagedBook || stagedPolicyLoading ? (
-                            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                          ) : (
-                            <Plus className="mr-1 h-4 w-4" />
-                          )}
-                          Add
-                        </Button>
-                      )}
-                    </div>
-                  ) : null}
-                </div>
-                {/* Reason the Add button is blocked (cap reached etc.) — the
+                    ) : null}
+                  </div>
+                  {/* Reason the Add button is blocked (cap reached etc.) — the
                     on-loan case gets the info dialog instead. */}
-                {activeDialogTab === "issue" && addBlockedReason && !stagedBookOption?.onLoan ? (
-                  <p className="mt-1 text-right text-[11px] font-medium text-red-600">
-                    {addBlockedReason}
-                  </p>
-                ) : null}
-                <TabsContent
-                  value="issue"
-                  className="mt-2 flex flex-1 min-h-0 flex-col gap-2 data-[state=inactive]:hidden"
-                  forceMount
-                >
-                  {renderRowsTable(
-                    editableRows.filter((row) => row.isNew),
-                    "No books staged. Pick a book above and click Add.",
-                    "issue",
-                  )}
-                </TabsContent>
-                <TabsContent
-                  value="history"
-                  className="mt-2 flex flex-1 min-h-0 flex-col data-[state=inactive]:hidden"
-                  forceMount
-                >
-                  {renderRowsTable(
-                    editableRows.filter((row) => !row.isNew),
-                    "No issued or returned books.",
-                    "history",
-                  )}
-                </TabsContent>
-              </Tabs>
+                  {activeDialogTab === "issue" && addBlockedReason && !stagedBookOption?.onLoan ? (
+                    <p className="mt-1 text-right text-[11px] font-medium text-red-600">
+                      {addBlockedReason}
+                    </p>
+                  ) : null}
+                  <TabsContent
+                    value="issue"
+                    className="mt-2 flex flex-1 min-h-0 flex-col gap-2 data-[state=inactive]:hidden"
+                    forceMount
+                  >
+                    {renderRowsTable(
+                      editableRows.filter((row) => row.isNew),
+                      "No books staged. Pick a book above and click Add.",
+                      "issue",
+                    )}
+                  </TabsContent>
+                  <TabsContent
+                    value="history"
+                    className="mt-2 flex flex-1 min-h-0 flex-col data-[state=inactive]:hidden"
+                    forceMount
+                  >
+                    {renderRowsTable(
+                      editableRows.filter((row) => !row.isNew),
+                      "No issued or returned books.",
+                      "history",
+                    )}
+                  </TabsContent>
+                </Tabs>
+              </div>
 
               <div className="sticky bottom-0 z-20 mt-auto flex items-center justify-end gap-2 border-t bg-white pt-2">
                 <Button
