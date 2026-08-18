@@ -9,6 +9,7 @@ import {
   gte,
   ilike,
   inArray,
+  isNull,
   lt,
   or,
   sql,
@@ -163,8 +164,8 @@ const toDayBounds = (isoDate: string) => {
   return { start, end };
 };
 
-// Circulation desk gate: only patrons who checked in at the library today
-// (IST) may issue, re-issue or return books.
+// Circulation desk gate: only patrons who are INSIDE the library right now
+// (checked in today IST and not yet checked out) may issue/re-issue/return.
 async function hasLibraryEntryToday(userId: number): Promise<boolean> {
   const istNow = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
   const bounds = toDayBounds(istNow.toISOString().slice(0, 10));
@@ -177,6 +178,8 @@ async function hasLibraryEntryToday(userId: number): Promise<boolean> {
         eq(libraryEntryExitModel.userId, userId),
         gte(libraryEntryExitModel.entryTimestamp, bounds.start),
         lt(libraryEntryExitModel.entryTimestamp, bounds.end),
+        // "Present" = checked in and not yet checked out.
+        isNull(libraryEntryExitModel.exitTimestamp),
       ),
     )
     .limit(1);
