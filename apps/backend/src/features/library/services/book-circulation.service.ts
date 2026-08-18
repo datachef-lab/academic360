@@ -78,6 +78,7 @@ export type BookCirculationPreviewRow = {
   copyDetailsId: number;
   borrowingTypeId: number | null;
   accessNumber: string | null;
+  oldAccessNumber: string | null;
   /** Copy's item category, falling back to the book's (same rule the policy resolver uses). */
   itemCategoryName: string | null;
   title: string | null;
@@ -113,6 +114,7 @@ export type BookCirculationMetaResult = {
   bookOptions: Array<{
     copyDetailsId: number;
     accessNumber: string | null;
+    oldAccessNumber: string | null;
     title: string | null;
     author: string | null;
     publication: string | null;
@@ -140,6 +142,15 @@ export type BookCirculationUpsertEntry = {
   // rejections (never the catalog-level "Not to be issued" flag).
   isForcedIssue?: boolean;
 };
+
+// Books carry authors via author_details -> authors (alternate_title is
+// populated for only ~30 books); aggregate the names for display.
+const bookAuthorNames = sql<string | null>`(
+  select string_agg(a.name, ', ' order by ad.id)
+  from author_details ad
+  join authors a on a.id = ad.author_id_fk
+  where ad.book_id_fk = ${bookModel.id}
+)`;
 
 const toDayBounds = (isoDate: string) => {
   const start = new Date(`${isoDate}T00:00:00.000+05:30`);
@@ -444,12 +455,13 @@ export async function getBookCirculationPreviewByUserId(
       copyDetailsId: bookCirculationModel.copyDetailsId,
       borrowingTypeId: bookCirculationModel.borrowingTypeId,
       accessNumber: copyDetailsModel.accessNumber,
+      oldAccessNumber: copyDetailsModel.oldAccessNumber,
       itemCategoryName: sql<string | null>`COALESCE(
         (SELECT ic.name FROM library_item_categories ic WHERE ic.id = ${copyDetailsModel.itemCategoryId}),
         (SELECT ic.name FROM library_item_categories ic WHERE ic.id = ${bookModel.itemCategoryId})
       )`,
       title: bookModel.title,
-      author: bookModel.alternateTitle,
+      author: bookAuthorNames,
       publication: publisherModel.name,
       frontCover: bookModel.frontCover,
       borrowingType: borrowingTypeModel.name,
@@ -521,6 +533,7 @@ export async function getBookCirculationPreviewByUserId(
     copyDetailsId: row.copyDetailsId,
     borrowingTypeId: row.borrowingTypeId,
     accessNumber: row.accessNumber,
+    oldAccessNumber: row.oldAccessNumber,
     itemCategoryName: row.itemCategoryName,
     title: row.title,
     author: row.author,
@@ -594,8 +607,9 @@ export async function searchBookOptions(
     .select({
       copyDetailsId: copyDetailsModel.id,
       accessNumber: copyDetailsModel.accessNumber,
+      oldAccessNumber: copyDetailsModel.oldAccessNumber,
       title: bookModel.title,
-      author: bookModel.alternateTitle,
+      author: bookAuthorNames,
       publication: publisherModel.name,
       frontCover: bookModel.frontCover,
       ...bookOptionAnnotations,
@@ -626,8 +640,9 @@ export async function getBookCirculationMeta(): Promise<BookCirculationMetaResul
       .select({
         copyDetailsId: copyDetailsModel.id,
         accessNumber: copyDetailsModel.accessNumber,
+        oldAccessNumber: copyDetailsModel.oldAccessNumber,
         title: bookModel.title,
-        author: bookModel.alternateTitle,
+        author: bookAuthorNames,
         publication: publisherModel.name,
         frontCover: bookModel.frontCover,
         ...bookOptionAnnotations,

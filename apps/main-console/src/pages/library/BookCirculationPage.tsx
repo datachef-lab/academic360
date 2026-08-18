@@ -441,6 +441,7 @@ export default function BookCirculationPage() {
         copyDetailsId: picked.copyDetailsId,
         borrowingTypeId: null,
         accessNumber: picked.accessNumber,
+        oldAccessNumber: picked.oldAccessNumber ?? null,
         itemCategoryName: picked.itemCategoryName ?? null,
         title: picked.title,
         author: picked.author,
@@ -639,7 +640,7 @@ export default function BookCirculationPage() {
     variant: "issue" | "history",
   ) => {
     const showReturnedOn = variant === "history";
-    const colCount = 6 + (showReturnedOn ? 1 : 0);
+    const colCount = 7 + (showReturnedOn ? 1 : 0);
     const headBase = cn(
       STICKY_TH_BASE,
       "sticky top-0 z-30 bg-slate-100 text-center border-r border-slate-300",
@@ -663,12 +664,13 @@ export default function BookCirculationPage() {
           <TableHeader className={STICKY_THEAD_CLASS}>
             <TableRow className="bg-slate-100">
               <TableHead className={headLeft}>#</TableHead>
-              <TableHead className={cn(headBase, "w-[34%]")}>Book</TableHead>
-              <TableHead className={cn(headBase, "w-[16%]")}>Borrowing Type</TableHead>
-              <TableHead className={cn(headBase, "w-[14%]")}>Issued At</TableHead>
-              <TableHead className={cn(headBase, "w-[13%]")}>Return Date</TableHead>
+              <TableHead className={cn(headBase, "w-[26%]")}>Book</TableHead>
+              <TableHead className={cn(headBase, "w-[15%]")}>Author / Publisher</TableHead>
+              <TableHead className={cn(headBase, "w-[14%]")}>Borrowing Type</TableHead>
+              <TableHead className={cn(headBase, "w-[12%]")}>Issued At</TableHead>
+              <TableHead className={cn(headBase, "w-[11%]")}>Return Date</TableHead>
               {showReturnedOn ? (
-                <TableHead className={cn(headBase, "w-[12%]")}>Returned On</TableHead>
+                <TableHead className={cn(headBase, "w-[10%]")}>Returned On</TableHead>
               ) : null}
               {/* Icon-only actions: fixed px width so the two icons can never
                   wrap onto a second row at any dialog width. */}
@@ -707,15 +709,17 @@ export default function BookCirculationPage() {
                         <Badge className="border border-indigo-300 bg-indigo-100 px-1.5 py-0 text-[10px] font-semibold text-indigo-800 hover:bg-indigo-100">
                           {item.accessNumber || "—"}
                         </Badge>
+                        {item.oldAccessNumber && item.oldAccessNumber !== item.accessNumber ? (
+                          <Badge className="border border-slate-300 bg-slate-100 px-1.5 py-0 text-[10px] font-semibold text-slate-600 hover:bg-slate-100">
+                            Old: {item.oldAccessNumber}
+                          </Badge>
+                        ) : null}
                         {item.itemCategoryName ? (
                           <Badge className="border border-amber-300 bg-amber-100 px-1.5 py-0 text-[10px] font-semibold text-amber-800 hover:bg-amber-100">
                             {item.itemCategoryName}
                           </Badge>
                         ) : null}
                       </div>
-                      {item.author ? (
-                        <p className="truncate text-[11px] text-slate-500">{item.author}</p>
-                      ) : null}
                       {item.isNew && item.policy ? (
                         <>
                           <p className="truncate text-[11px] text-blue-700">
@@ -735,6 +739,10 @@ export default function BookCirculationPage() {
                         </>
                       ) : null}
                     </div>
+                  </TableCell>
+                  <TableCell className={cn(cellBase, "text-left")}>
+                    <p className="truncate text-xs text-slate-700">{item.author || "—"}</p>
+                    <p className="truncate text-[11px] text-slate-500">{item.publication || "—"}</p>
                   </TableCell>
                   <TableCell className={cellBase}>
                     {item.actualReturnTimestamp ? (
@@ -1341,8 +1349,10 @@ export default function BookCirculationPage() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 grid-cols-1 gap-x-6 gap-y-1 text-[13px] md:grid-cols-2 lg:grid-cols-3 xl:w-full xl:flex-none xl:grid-cols-1 xl:gap-y-2">
-                      <div className="flex gap-2">
-                        <span className="w-[96px] flex-shrink-0 text-slate-500">Name:</span>
+                      <div className="flex gap-1.5">
+                        <span className="flex w-[80px] flex-shrink-0 justify-between text-slate-500">
+                          Name<span>:</span>
+                        </span>
                         <span className="min-w-0 font-medium">
                           {previewUser.name || "-"}
                           {/* Red asterisk marks an active account (badges removed). */}
@@ -1353,25 +1363,33 @@ export default function BookCirculationPage() {
                           ) : null}
                         </span>
                       </div>
-                      <div className="flex gap-2">
-                        <span className="w-[96px] flex-shrink-0 text-slate-500">UID:</span>
+                      <div className="flex gap-1.5">
+                        <span className="flex w-[80px] flex-shrink-0 justify-between text-slate-500">
+                          UID<span>:</span>
+                        </span>
                         <span className="min-w-0 font-medium">{previewUser.uid || "-"}</span>
                       </div>
                       {/* Academic fields only make sense for students. */}
                       {previewUser.userType === "STUDENT" ? (
                         <>
-                          <div className="flex gap-2">
-                            <span className="w-[96px] flex-shrink-0 text-slate-500">Course:</span>
+                          <div className="flex gap-1.5">
+                            <span className="flex w-[80px] flex-shrink-0 justify-between text-slate-500">
+                              Course<span>:</span>
+                            </span>
                             <span className="min-w-0 font-medium">{previewBatchProgram}</span>
                           </div>
-                          <div className="flex gap-2">
-                            <span className="w-[96px] flex-shrink-0 text-slate-500">Semester:</span>
+                          <div className="flex gap-1.5">
+                            <span className="flex w-[80px] flex-shrink-0 justify-between text-slate-500">
+                              Semester<span>:</span>
+                            </span>
                             <span className="min-w-0 font-medium">
                               {toSentenceCase(previewUser.classOrSemester)}
                             </span>
                           </div>
-                          <div className="flex gap-2">
-                            <span className="w-[96px] flex-shrink-0 text-slate-500">Section:</span>
+                          <div className="flex gap-1.5">
+                            <span className="flex w-[80px] flex-shrink-0 justify-between text-slate-500">
+                              Section<span>:</span>
+                            </span>
                             <span className="min-w-0 font-medium">
                               {previewUser.section || "-"}
                             </span>
@@ -1383,20 +1401,16 @@ export default function BookCirculationPage() {
                     {/* Circulation stats — label above count. Full row below
                         the banner (<xl); 2×2 in the rail column (xl+). */}
                     <div className="grid w-full auto-rows-fr grid-cols-4 gap-2 xl:grid-cols-2">
-                      <div className="rounded-md border bg-white p-2 flex flex-col justify-between">
-                        <p className="text-[11px] font-medium text-slate-500">Total books</p>
-                        <p className="mt-0.5 text-lg font-semibold leading-tight text-slate-800">
+                      <div className="rounded-md border border-indigo-200 bg-indigo-50 p-2 flex flex-col justify-between">
+                        <p className="text-[11px] font-medium text-indigo-600">Total books</p>
+                        <p className="mt-0.5 text-lg font-semibold leading-tight text-indigo-700">
                           {borrowerStats.total}
                         </p>
                       </div>
                       <div className="rounded-md border border-blue-200 bg-blue-50 p-2 flex flex-col justify-between">
-                        <p className="text-[11px] font-medium text-blue-600">Issued / Re-issued</p>
+                        <p className="text-[11px] font-medium text-blue-600">Issued</p>
                         <p className="mt-0.5 text-lg font-semibold leading-tight text-blue-700">
                           {borrowerStats.issued}
-                          <span className="text-sm font-medium text-blue-500">
-                            {" "}
-                            / {borrowerStats.reissued}
-                          </span>
                         </p>
                       </div>
                       <div className="rounded-md border border-green-200 bg-green-50 p-2 flex flex-col justify-between">
@@ -1571,7 +1585,7 @@ export default function BookCirculationPage() {
                     </TabsContent>
                   </Tabs>
 
-                  <div className="mt-2 flex items-center justify-end gap-2 border-t bg-white pt-2">
+                  <div className="mt-2 flex items-center justify-end gap-2 bg-white pt-1">
                     <Button
                       variant="outline"
                       onClick={() => {
