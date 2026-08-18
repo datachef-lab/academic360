@@ -14,8 +14,11 @@ import {
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
+/** Small status pill rendered after an option's label (e.g. "ON LOAN"). */
+export type ComboboxItemBadge = { label: string; className?: string };
+
 type ComboboxProps = {
-  dataArr: { value: string; label: string; imageUrl?: string }[];
+  dataArr: { value: string; label: string; imageUrl?: string; badge?: ComboboxItemBadge }[];
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -31,7 +34,12 @@ type ComboboxProps = {
   /** Optional label shown when the selected value isn't present in dataArr
    *  (common with async search where the catalogue is paged). */
   selectedLabel?: string;
+  /** Optional pill rendered next to the selected label in the trigger. */
+  selectedBadge?: ComboboxItemBadge | null;
 };
+
+const badgePillClass =
+  "shrink-0 rounded-full border px-1.5 py-0 text-[10px] font-semibold leading-4";
 
 export function Combobox({
   dataArr,
@@ -46,6 +54,7 @@ export function Combobox({
   isSearching = false,
   searchDebounceMs = 250,
   selectedLabel: selectedLabelProp,
+  selectedBadge,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
@@ -98,6 +107,11 @@ export function Combobox({
         >
           <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
             <span className="truncate text-left">{selectedLabel || placeholder}</span>
+            {selectedBadge && selectedLabel ? (
+              <span className={cn(badgePillClass, selectedBadge.className)}>
+                {selectedBadge.label}
+              </span>
+            ) : null}
             {showOptionsHint && !selectedLabel && dataArr.length > 0 && (
               <span className="hidden shrink-0 text-xs text-muted-foreground xl:inline">
                 ({dataArr.filter((item) => item.value !== "").length} option
@@ -170,6 +184,11 @@ export function Combobox({
                     />
                   )}
                   <span>{item.label}</span>
+                  {item.badge ? (
+                    <span className={cn("ml-2", badgePillClass, item.badge.className)}>
+                      {item.badge.label}
+                    </span>
+                  ) : null}
                 </CommandItem>
               ))}
             </CommandGroup>
