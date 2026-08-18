@@ -123,6 +123,10 @@ export type BookCirculationMetaResult = {
     borrowerName: string | null;
     borrowerDueDate: Date | null;
     itemCategoryName: string | null;
+    // False when the copy's current library status disallows issuing it out
+    // (e.g. DAMAGE) — the picker disables selecting these.
+    isIssuable: boolean;
+    statusName: string | null;
   }>;
   borrowingTypeOptions: Array<{ id: number; name: string }>;
   statusOptions: Array<{ id: number; name: string }>;
@@ -581,6 +585,14 @@ const bookOptionAnnotations = {
   itemCategoryName: sql<string | null>`COALESCE(
     (SELECT ic.name FROM library_item_categories ic WHERE ic.id = ${copyDetailsModel.itemCategoryId}),
     (SELECT ic.name FROM library_item_categories ic WHERE ic.id = ${bookModel.itemCategoryId})
+  )`,
+  // Whether the copy's current status permits issuing it out at all.
+  isIssuable: sql<boolean>`COALESCE(
+    (SELECT s.is_issuable FROM library_statuses s WHERE s.id = ${copyDetailsModel.statusId}),
+    true
+  )`,
+  statusName: sql<string | null>`(
+    SELECT s.name FROM library_statuses s WHERE s.id = ${copyDetailsModel.statusId}
   )`,
 };
 

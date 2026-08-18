@@ -105,6 +105,9 @@ export type BookCirculationMetaPayload = {
     borrowerDueDate: string | null;
     /** Copy's item category (falls back to the book's). */
     itemCategoryName: string | null;
+    /** False when the copy's status disallows issuing it out (e.g. DAMAGE). */
+    isIssuable: boolean;
+    statusName: string | null;
   }>;
   borrowingTypeOptions: Array<{ id: number; name: string }>;
 };
