@@ -621,6 +621,7 @@ async function modelToDto(
       class: c.class!,
     })),
     label: meta.label,
+    sequence: meta.sequence,
     createdAt: meta.createdAt || new Date(),
     updatedAt: meta.updatedAt || new Date(),
   } as unknown as SubjectSelectionMetaDto;
@@ -2089,6 +2090,40 @@ export async function createStudentSubjectSelectionsWithValidation(
         }
       }
 
+      // Meta-labeled rows for the email table: the template prefers these over
+      // its legacy field-name mapping, so renaming a subject_selection_meta
+      // label flows straight into the email. The row set mirrors the legacy
+      // display — Minor 4 has no notification field (never shown) and BSC
+      // continues to exclude Minor 3.
+      const familyIndexOfLabel = (label: string) =>
+        notificationFamilyIndex(label.toUpperCase().replace(/[^A-Z0-9]/g, ""));
+      const isBscForEmail =
+        streamInfo?.streamName === "BSC" ||
+        streamInfo?.streamName === "Science" ||
+        whatsappMasterName === "Subject Selection Confirmation - BSC";
+      const selectionRows = dtos
+        .map((d) => {
+          const meta = d.subjectSelectionMeta as any;
+          return {
+            label: String(meta?.label ?? ""),
+            value: d.subject?.name ?? d.subjectGroupingMain?.name ?? "",
+            sequence:
+              typeof meta?.sequence === "number"
+                ? meta.sequence
+                : Number.MAX_SAFE_INTEGER,
+          };
+        })
+        .filter((r) => r.label && r.value.trim() !== "")
+        .filter((r) => {
+          const fam = familyIndexOfLabel(r.label);
+          if (fam?.family === "MINOR" && fam.index === "4") return false;
+          if (isBscForEmail && fam?.family === "MINOR" && fam.index === "3")
+            return false;
+          return true;
+        })
+        .sort((a, b) => a.sequence - b.sequence)
+        .map(({ label, value }) => ({ label, value }));
+
       // Filter contentRows for email based on stream
       let emailContentRows = contentRows;
       if (
@@ -2119,6 +2154,7 @@ export async function createStudentSubjectSelectionsWithValidation(
           templateData: {
             academicYear: academicYearName,
           },
+          selectionRows,
           meta: { devOnly: true },
         },
         content: emailContentRows,
