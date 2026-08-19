@@ -879,6 +879,7 @@ export async function getNotificationPreview(notificationId: number) {
 
   let subject = notif.masterName ?? "Notification";
   let templateData: Record<string, unknown> = {};
+  let selectionRows: Array<{ label: string; value: string }> = [];
   try {
     const parsed = JSON.parse(notif.message ?? "");
     const td = parsed?.notificationEvent?.templateData;
@@ -886,6 +887,8 @@ export async function getNotificationPreview(notificationId: number) {
     if (typeof td?.subject === "string") subject = td.subject;
     else if (typeof parsed?.notificationEvent?.subject === "string")
       subject = parsed.notificationEvent.subject;
+    if (Array.isArray(parsed?.notificationEvent?.selectionRows))
+      selectionRows = parsed.notificationEvent.selectionRows;
   } catch {
     // plain-text message
   }
@@ -916,6 +919,7 @@ export async function getNotificationPreview(notificationId: number) {
         templateData,
         dtoTemplateData: templateData,
         templateList,
+        selectionRows,
         subjectsByCategory: buildSubjectsByCategory(templateList),
         academicYear: String(templateData["academicYear"] ?? ""),
         subject,

@@ -176,30 +176,34 @@
       
       /* Responsive */
       @media (max-width: 600px) {
+        body {
+          padding: 8px 0;
+        }
+
         .email-container {
-          margin: 0 16px;
+          margin: 0 4px;
           border-radius: 8px;
         }
-        
+
         .email-header, .email-content, .email-footer {
-          padding: 20px;
+          padding: 16px 10px;
         }
-        
+
         .email-header h1 {
           font-size: 20px;
         }
-        
+
         .subject-table {
           font-size: 12px;
         }
-        
+
         .subject-table th,
         .subject-table td {
-          padding: 10px 8px;
+          padding: 10px 6px;
         }
-        
+
         .category-cell {
-          width: 150px;
+          width: 60%;
         }
       }
     </style>
@@ -243,9 +247,24 @@
                 function hasValue(obj, key) {
                   return obj && obj[key] && obj[key].trim() !== '';
                 }
-                
+
+                // Preferred path: rows sent by the backend carrying the
+                // subject_selection_meta labels verbatim (rename-proof). The
+                // field-name mapping below only runs for older notifications
+                // that predate selectionRows.
+                const metaRows = (content && Array.isArray(content.selectionRows))
+                  ? content.selectionRows.filter(function (r) {
+                      return r && r.label && String(r.value || '').trim() !== '';
+                    })
+                  : [];
+                if (metaRows.length > 0) {
+                  metaRows.forEach(function (r) {
+                    displayRows.push({ category: r.label, selection: r.value });
+                  });
+                }
+
                 // Minor 1 (Semester I & II)
-                if (hasValue(rows["Minor"], "I")) {
+                if (metaRows.length === 0 && hasValue(rows["Minor"], "I")) {
                   displayRows.push({
                     category: "Minor 1 (Semester I & II)",
                     selection: rows["Minor"]["I"]
@@ -253,7 +272,7 @@
                 }
                 
                 // Minor 2 (Semester III & IV) - only show if Minor 1 is present (traditional programs)
-                if (hasValue(rows["Minor"], "III") && hasValue(rows["Minor"], "I")) {
+                if (metaRows.length === 0 && hasValue(rows["Minor"], "III") && hasValue(rows["Minor"], "I")) {
                   displayRows.push({
                     category: "Minor 2 (Semester III & IV)",
                     selection: rows["Minor"]["III"]
@@ -262,7 +281,7 @@
                 
                 // Minor 3 — for BCOM the group pick spans Semester III to VI (no
                 // Minor 1); for BA/BSC continuing students it is the Semester V pick.
-                if (hasValue(rows["Minor"], "V")) {
+                if (metaRows.length === 0 && hasValue(rows["Minor"], "V")) {
                   displayRows.push({
                     category: hasValue(rows["Minor"], "I")
                       ? "Minor 3 (Semester V)"
@@ -272,7 +291,7 @@
                 }
                 
                 // IDC 1 (Semester I)
-                if (hasValue(rows["IDC"], "I")) {
+                if (metaRows.length === 0 && hasValue(rows["IDC"], "I")) {
                   displayRows.push({
                     category: "IDC 1 (Semester I)",
                     selection: rows["IDC"]["I"]
@@ -280,7 +299,7 @@
                 }
                 
                 // IDC 2 (Semester II)
-                if (hasValue(rows["IDC"], "II")) {
+                if (metaRows.length === 0 && hasValue(rows["IDC"], "II")) {
                   displayRows.push({
                     category: "IDC 2 (Semester II)",
                     selection: rows["IDC"]["II"]
@@ -288,7 +307,7 @@
                 }
                 
                 // IDC 3 (Semester III)
-                if (hasValue(rows["IDC"], "III")) {
+                if (metaRows.length === 0 && hasValue(rows["IDC"], "III")) {
                   displayRows.push({
                     category: "IDC 3 (Semester III)",
                     selection: rows["IDC"]["III"]
@@ -296,7 +315,7 @@
                 }
                 
                 // AEC (Semester III & IV)
-                if (hasValue(rows["AEC"], "III")) {
+                if (metaRows.length === 0 && hasValue(rows["AEC"], "III")) {
                   displayRows.push({
                     category: "AEC (Semester III & IV)",
                     selection: rows["AEC"]["III"]
@@ -304,7 +323,7 @@
                 }
                 
                 // CVAC 4 (Semester II)
-                if (hasValue(rows["CVAC"], "II")) {
+                if (metaRows.length === 0 && hasValue(rows["CVAC"], "II")) {
                   displayRows.push({
                     category: "CVAC 4 (Semester II)",
                     selection: rows["CVAC"]["II"]
