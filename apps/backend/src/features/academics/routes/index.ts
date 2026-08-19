@@ -20,8 +20,10 @@ import declarationMasterRouter from "@/features/academics/routes/declaration-mas
 import declarationRouter from "@/features/academics/routes/declaration.route.js";
 import academicActivityRouter from "@/features/academics/routes/academic-activity.route.js";
 import academicActivityMasterRouter from "@/features/academics/routes/academic-activity-master.route.js";
+import academicProgressionRouter from "@/features/academics/routes/academic-progression.route.js";
 
 export {
+  academicProgressionRouter,
   careerProgressionFormFieldRouter,
   careerProgressionFormRouter,
   certificateFieldMasterRouter,

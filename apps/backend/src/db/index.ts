@@ -1,4 +1,5 @@
 import "dotenv/config";
+import fs from "fs";
 import pg, { PoolClient } from "pg";
 import { createPool, type Pool as MySqlPool } from "mysql2/promise"; // For MySQL (old DB)
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -122,6 +123,62 @@ export const connectToDatabase = async () => {
     log.error("Failed to connect to the database ⚠", { error });
     process.exit(1); // Exit the application if the database connection fails
   }
+};
+
+// Marks360 (external marks read-copy on the academic360 Postgres RDS) — optional;
+// pool is created on first use so the backend boots fine when MARKS360_DB_* env
+// vars are absent. The marks360 data lives in a separate `marks360` database on
+// the same RDS instance and is populated by a manual sync from the Marks360 app.
+//
+// TLS mode is driven by env so the same code works for both deployment shapes:
+//   - RDS (prod): set MARKS360_DB_CA_PATH to the AWS RDS CA bundle (global-bundle.pem)
+//     → the server certificate is verified (rejectUnauthorized: true). Recommended.
+//   - Same-host Postgres (e.g. staging on the same EC2): set MARKS360_DB_SSL=disable
+//     → no TLS (loopback, nothing to MITM).
+//   - Default (no CA, no flag): encrypt without verifying — backward compatible,
+//     logs a warning. Fine for a trusted/local network; NOT for RDS over the wire.
+type Marks360Ssl = false | { rejectUnauthorized: boolean; ca?: string };
+const buildMarks360Ssl = (): Marks360Ssl => {
+  const caPath = process.env.MARKS360_DB_CA_PATH;
+  const mode = (process.env.MARKS360_DB_SSL || "").toLowerCase();
+
+  if (mode === "disable" || mode === "off" || mode === "false") {
+    return false;
+  }
+  if (caPath) {
+    // Verify the server cert against the provided CA bundle (RDS global-bundle.pem).
+    return { rejectUnauthorized: true, ca: fs.readFileSync(caPath, "utf8") };
+  }
+  if (mode === "verify") {
+    // Asked to verify but gave no CA — fail closed rather than run insecurely.
+    throw new Error(
+      "MARKS360_DB_SSL=verify requires MARKS360_DB_CA_PATH to point at the RDS CA bundle",
+    );
+  }
+  // Backward-compatible default: encrypt, do NOT verify the cert.
+  log.warn(
+    "marks360 DB: TLS certificate verification is DISABLED. For RDS set MARKS360_DB_CA_PATH; for a same-host DB set MARKS360_DB_SSL=disable.",
+  );
+  return { rejectUnauthorized: false };
+};
+
+let marks360Pool: pg.Pool | null = null;
+export const getMarks360Connection = (): pg.Pool | null => {
+  if (!process.env.MARKS360_DB_HOST || !process.env.MARKS360_DB_NAME) {
+    return null;
+  }
+  if (!marks360Pool) {
+    marks360Pool = new pg.Pool({
+      host: process.env.MARKS360_DB_HOST,
+      port: parseInt(process.env.MARKS360_DB_PORT || "5432", 10),
+      user: process.env.MARKS360_DB_USER,
+      password: process.env.MARKS360_DB_PASSWORD,
+      database: process.env.MARKS360_DB_NAME,
+      max: 5,
+      ssl: buildMarks360Ssl(),
+    });
+  }
+  return marks360Pool;
 };
 
 createLogger("mysql");
