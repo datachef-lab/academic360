@@ -207,12 +207,25 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
       }
     }
 
-    // Process document uploads
-    const uploadedDocuments = [];
-    let s3UploadedCount = 0; // track S3 successes deterministically
+    // Process document uploads.
+    // Per-file failures are caught individually and DO NOT abort subsequent
+    // files (see catch block below) - so the full per-file pipeline (doc
+    // lookup -> convert -> path -> S3 upload -> DB insert) can safely run
+    // with bounded concurrency instead of one file at a time. Results are
+    // written into an index-preserving slots array (not pushed as they
+    // complete) so the final `uploadedDocuments` order is byte-identical to
+    // the original sequential, in-order-of-`files`, behavior regardless of
+    // which file finishes first. `s3UploadedCount` increments stay
+    // synchronous (no await between read and write), so concurrent
+    // increments from different files remain safe under JS's single-threaded
+    // event loop.
     const documentNamesArray = documentNames ? JSON.parse(documentNames) : [];
+    const uploadedDocumentSlots: (Awaited<
+      ReturnType<typeof createCuRegistrationDocumentUpload>
+    > | undefined)[] = new Array(files.length).fill(undefined);
+    let s3UploadedCount = 0; // track S3 successes deterministically
 
-    for (let i = 0; i < files.length; i++) {
+    const processFile = async (i: number): Promise<void> => {
       const file = files[i];
       const documentName = documentNamesArray[i];
 
@@ -220,7 +233,7 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
         console.warn(
           `[CU-REG BATCH SUBMIT] No document name for file: ${file.originalname}`,
         );
-        continue;
+        return;
       }
 
       try {
@@ -234,7 +247,7 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
           console.warn(
             `[CU-REG BATCH SUBMIT] Document not found: ${documentName}`,
           );
-          continue;
+          return;
         }
 
         // Get conversion settings for this document type
@@ -334,7 +347,7 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
           remarks: `Converted to JPG (${conversionResult.sizeKB.toFixed(2)}KB from ${conversionResult.originalSizeKB.toFixed(2)}KB)`,
         });
 
-        uploadedDocuments.push(documentUpload);
+        uploadedDocumentSlots[i] = documentUpload;
         console.info(
           `[CU-REG BATCH SUBMIT] Document record created for: ${file.originalname}`,
         );
@@ -345,7 +358,30 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
         );
         // Continue with other files even if one fails
       }
-    }
+    };
+
+    // Bounded concurrency pool (max 4 files in flight at once).
+    const CONCURRENCY_LIMIT = 4;
+    let nextFileIndex = 0;
+    const worker = async (): Promise<void> => {
+      while (nextFileIndex < files.length) {
+        const i = nextFileIndex++;
+        await processFile(i);
+      }
+    };
+    await Promise.all(
+      Array.from(
+        { length: Math.min(CONCURRENCY_LIMIT, files.length) },
+        () => worker(),
+      ),
+    );
+
+    // Only drop slots that were never attempted (skipped/threw); a slot
+    // holding `null` (createCuRegistrationDocumentUpload's own "not found"
+    // result) is preserved, matching the original push-as-you-go behavior.
+    const uploadedDocuments = uploadedDocumentSlots.filter(
+      (doc): doc is Exclude<typeof doc, undefined> => doc !== undefined,
+    );
 
     console.info(
       `[CU-REG BATCH SUBMIT] Batch submission completed. Uploaded ${uploadedDocuments.length}/${documentNamesArray.length} documents`,

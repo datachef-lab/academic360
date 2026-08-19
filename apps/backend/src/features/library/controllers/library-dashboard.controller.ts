@@ -116,7 +116,18 @@ export const getLibraryConsistencyReportController = async (
   next: NextFunction,
 ) => {
   try {
-    ok(res, await runLibraryConsistencyCheck());
+    // Ops-only diagnostic scan over the full catalogue; no console caller
+    // pushes a bump on write, so this is TTL-only staleness (10 min is
+    // acceptable for a manually-triggered consistency report).
+    ok(
+      res,
+      await getCachedSnapshot(
+        "library:consistency",
+        "all",
+        600,
+        () => runLibraryConsistencyCheck(),
+      ),
+    );
   } catch (err) {
     handleError(err, res, next);
   }

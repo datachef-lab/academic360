@@ -975,7 +975,7 @@ export async function getMisTableDataLegacy(
   const filters: RealtimeTrackerFilters = {};
   if (sessionId) filters.sessionIds = [sessionId];
   if (classId) filters.classIds = [classId];
-  const payload = await getAffiliationRegistrationData(filters);
+  const payload = await getAffiliationRegistrationDataCached(filters);
   return {
     updatedAt: payload.updatedAt,
     sessionId,

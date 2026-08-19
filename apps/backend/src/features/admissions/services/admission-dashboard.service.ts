@@ -1,5 +1,6 @@
 import { and, count, countDistinct, eq, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db/index.js";
+import { getCachedSnapshot } from "@/services/snapshot-cache.js";
 import {
   applicationFormModel,
   admissionModel,
@@ -71,7 +72,7 @@ const asBuckets = (
     count: Number(r.count),
   }));
 
-export async function getAdmissionDashboard(f: DashboardFilters) {
+async function computeAdmissionDashboard(f: DashboardFilters) {
   const academicYearId = await resolveAcademicYearId(f);
   const where = and(...spineConds(academicYearId, f));
 
@@ -639,4 +640,34 @@ export async function getAdmissionDashboard(f: DashboardFilters) {
     },
     trend: trend.map((t) => ({ date: String(t.day), count: Number(t.count) })),
   };
+}
+
+// This is a ~17-query fan-out over the whole applications table that every
+// open Admission Home dashboard reruns on every poll; share one computation
+// per filter combo fleet-wide via the epoch-keyed snapshot cache
+// (Redis-backed — a bump on any instance is seen by every instance, so this
+// is safe under the multi-instance/no-sticky-sessions prod deployment).
+//
+// TTL-only invalidation: admission/application-form mutations are NOT
+// centralized through one service — application-form.service.ts,
+// admission-general-info.service.ts, admission-academic-info.service.ts,
+// admission-additional-info.service.ts, cu-registration-correction-request
+// .service.ts, and old-student.service.ts all write rows this dashboard
+// aggregates, with no single choke point to bump from. Wiring a bump into
+// each would mean touching files outside this task's scope, so this relies
+// on the 30s TTL alone; that staleness bound is accepted as a known,
+// deliberate tradeoff (same as the notifications worker-status case above).
+export function getAdmissionDashboard(
+  f: DashboardFilters,
+): ReturnType<typeof computeAdmissionDashboard> {
+  return getCachedSnapshot(
+    "admissions:dashboard",
+    JSON.stringify({
+      academicYearId: f.academicYearId ?? null,
+      level: f.level ?? null,
+      formStatus: f.formStatus ?? null,
+    }),
+    30,
+    () => computeAdmissionDashboard(f),
+  );
 }

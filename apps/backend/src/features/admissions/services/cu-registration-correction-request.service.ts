@@ -70,6 +70,41 @@ import { getSignedUrlForFile } from "@/services/s3.service.js";
 import axios from "axios";
 import { UserDto } from "@repo/db/index.js";
 
+// Module-level cache for notificationMasterModel (name+template+variant) lookups.
+// These rows are effectively static config, and the same (name, template, variant)
+// combos are looked up on every notification send in this file. The existing
+// apps/backend/src/services/notificationMastersCache.ts helper doesn't fit here -
+// it only disambiguates by name (or name+variant, without a working variant filter)
+// and returns just the id, whereas call sites in this file need the full row and
+// filter on name+template+variant together. Only positive hits are cached; a miss
+// falls back to the exact same DB query every time (identical to pre-cache behavior).
+const notificationMasterRowCache = new Map<
+  string,
+  typeof notificationMasterModel.$inferSelect
+>();
+async function getCachedNotificationMasterRow(
+  name: string,
+  template: string,
+  variant: string,
+): Promise<typeof notificationMasterModel.$inferSelect | undefined> {
+  const key = `${name}::${template}::${variant}`;
+  const cached = notificationMasterRowCache.get(key);
+  if (cached) return cached;
+
+  const [row] = await db
+    .select()
+    .from(notificationMasterModel)
+    .where(
+      and(
+        eq(notificationMasterModel.name, name),
+        eq(notificationMasterModel.template, template),
+        eq(notificationMasterModel.variant, variant as any),
+      ),
+    );
+  if (row) notificationMasterRowCache.set(key, row);
+  return row;
+}
+
 // Environment detection helpers
 const shouldRedirectToDeveloper = () => {
   const nodeEnv = process.env.NODE_ENV;
@@ -329,35 +364,33 @@ export async function findAllCuRegistrationCorrectionRequests(
   const whereClause =
     whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
-  // Get total count
-  const [{ total }] = await db
-    .select({ total: count() })
-    .from(cuRegistrationCorrectionRequestModel)
-    .leftJoin(
-      studentModel,
-      eq(cuRegistrationCorrectionRequestModel.studentId, studentModel.id),
-    )
-    .leftJoin(userModel, eq(studentModel.userId, userModel.id))
-    .where(whereClause);
+  // Get total count and paginated results concurrently (independent queries)
+  const [[{ total }], requests] = await Promise.all([
+    db
+      .select({ total: count() })
+      .from(cuRegistrationCorrectionRequestModel)
+      .leftJoin(
+        studentModel,
+        eq(cuRegistrationCorrectionRequestModel.studentId, studentModel.id),
+      )
+      .leftJoin(userModel, eq(studentModel.userId, userModel.id))
+      .where(whereClause),
+    db
+      .select()
+      .from(cuRegistrationCorrectionRequestModel)
+      .leftJoin(
+        studentModel,
+        eq(cuRegistrationCorrectionRequestModel.studentId, studentModel.id),
+      )
+      .leftJoin(userModel, eq(studentModel.userId, userModel.id))
+      .where(whereClause)
+      .orderBy(desc(cuRegistrationCorrectionRequestModel.createdAt))
+      .limit(limit)
+      .offset(offset),
+  ]);
 
-  // Get paginated results
-  const requests = await db
-    .select()
-    .from(cuRegistrationCorrectionRequestModel)
-    .leftJoin(
-      studentModel,
-      eq(cuRegistrationCorrectionRequestModel.studentId, studentModel.id),
-    )
-    .leftJoin(userModel, eq(studentModel.userId, userModel.id))
-    .where(whereClause)
-    .orderBy(desc(cuRegistrationCorrectionRequestModel.createdAt))
-    .limit(limit)
-    .offset(offset);
-
-  const requestDtos = await Promise.all(
-    requests.map((request) =>
-      modelToDto(request.cu_registration_correction_requests),
-    ),
+  const requestDtos = await modelsToDtos(
+    requests.map((request) => request.cu_registration_correction_requests),
   );
 
   const totalPages = Math.ceil(total / limit);
@@ -379,9 +412,7 @@ export async function findCuRegistrationCorrectionRequestsByStudentId(
     .where(eq(cuRegistrationCorrectionRequestModel.studentId, studentId))
     .orderBy(desc(cuRegistrationCorrectionRequestModel.createdAt));
 
-  const requestDtos = await Promise.all(
-    requests.map((request) => modelToDto(request)),
-  );
+  const requestDtos = await modelsToDtos(requests);
 
   return requestDtos;
 }
@@ -416,9 +447,7 @@ export async function findCuRegistrationCorrectionRequestsByStudentUid(
     .where(eq(cuRegistrationCorrectionRequestModel.studentId, student.id))
     .orderBy(desc(cuRegistrationCorrectionRequestModel.createdAt));
 
-  const requestDtos = await Promise.all(
-    requests.map((request) => modelToDto(request)),
-  );
+  const requestDtos = await modelsToDtos(requests);
 
   return requestDtos;
 }
@@ -440,37 +469,52 @@ export async function markPhysicalRegistrationDone(
     .where(eq(cuRegistrationCorrectionRequestModel.id, id))
     .returning();
 
-  const [promotion] = await db
-    .select({
-      sessionId: promotionModel.sessionId,
-      classId: promotionModel.classId,
-    })
-    .from(promotionModel)
-    .where(eq(promotionModel.studentId, updated.studentId))
-    .orderBy(desc(promotionModel.createdAt))
-    .limit(1);
-
-  const misData = await getMisTableData(
-    promotion?.sessionId,
-    promotion?.classId,
-  );
-  socketService.sendMisTableUpdate(
-    { sessionId: promotion?.sessionId, classId: promotion?.classId },
-    misData.data,
-    {
-      trigger: "cu_reg_request_update",
-      affectedStudents: 1,
-    },
-  );
-  socketService.sendMisTableUpdateToAll(misData.data, {
-    trigger: "cu_reg_request_update",
-    affectedStudents: 1,
-  });
-  void broadcastCuRegTrackerRefresh("physical_registration_done");
-
   if (!updated) {
     return null;
   }
+
+  // Fire-and-forget: MIS dashboard recompute + socket broadcast. Moved off the
+  // request path (previously ran synchronously, and even ran for failed
+  // updates before the `!updated` check below). Emitted socket calls are
+  // unchanged - only the sequencing relative to the HTTP response moved.
+  setImmediate(() => {
+    void (async () => {
+      try {
+        const [promotion] = await db
+          .select({
+            sessionId: promotionModel.sessionId,
+            classId: promotionModel.classId,
+          })
+          .from(promotionModel)
+          .where(eq(promotionModel.studentId, updated.studentId))
+          .orderBy(desc(promotionModel.createdAt))
+          .limit(1);
+
+        const misData = await getMisTableData(
+          promotion?.sessionId,
+          promotion?.classId,
+        );
+        socketService.sendMisTableUpdate(
+          { sessionId: promotion?.sessionId, classId: promotion?.classId },
+          misData.data,
+          {
+            trigger: "cu_reg_request_update",
+            affectedStudents: 1,
+          },
+        );
+        socketService.sendMisTableUpdateToAll(misData.data, {
+          trigger: "cu_reg_request_update",
+          affectedStudents: 1,
+        });
+        void broadcastCuRegTrackerRefresh("physical_registration_done");
+      } catch (err) {
+        console.error(
+          "[CU-REG CORRECTION][markPhysicalRegistrationDone] Deferred MIS update/broadcast failed:",
+          err,
+        );
+      }
+    })();
+  });
 
   // Send email notification for Part 2 confirmation
   try {
@@ -495,19 +539,11 @@ export async function markPhysicalRegistrationDone(
       );
     } else {
       // Get the notification master for CU Registration Part 2 confirmation
-      const [emailMaster] = await db
-        .select()
-        .from(notificationMasterModel)
-        .where(
-          and(
-            eq(
-              notificationMasterModel.name,
-              "CU Registration Part 2 Confirmation",
-            ),
-            eq(notificationMasterModel.template, "cu-reg-part2-confirmation"),
-            eq(notificationMasterModel.variant, "EMAIL"),
-          ),
-        );
+      const emailMaster = await getCachedNotificationMasterRow(
+        "CU Registration Part 2 Confirmation",
+        "cu-reg-part2-confirmation",
+        "EMAIL",
+      );
 
       if (!emailMaster) {
         console.warn(
@@ -1657,43 +1693,51 @@ export async function updateCuRegistrationCorrectionRequest(
     JSON.stringify({ id: updatedRequest.id }),
   );
 
-  // Emit MIS dashboard update for this student so online/physical flags reflect immediately
-  try {
-    const [promotion] = await db
-      .select({
-        sessionId: promotionModel.sessionId,
-        classId: promotionModel.classId,
-      })
-      .from(promotionModel)
-      .where(eq(promotionModel.studentId, existing.studentId))
-      .orderBy(desc(promotionModel.createdAt))
-      .limit(1);
+  // Fire-and-forget: MIS dashboard recompute + socket broadcast, so the HTTP
+  // response no longer waits on it. Emitted socket calls are unchanged - only
+  // the sequencing relative to the response moved (previously awaited
+  // synchronously on the request path).
+  setImmediate(() => {
+    void (async () => {
+      // Emit MIS dashboard update for this student so online/physical flags reflect immediately
+      try {
+        const [promotion] = await db
+          .select({
+            sessionId: promotionModel.sessionId,
+            classId: promotionModel.classId,
+          })
+          .from(promotionModel)
+          .where(eq(promotionModel.studentId, existing.studentId))
+          .orderBy(desc(promotionModel.createdAt))
+          .limit(1);
 
-    const sessionId = promotion?.sessionId;
-    const classId = promotion?.classId;
-    const misData = await getMisTableData(sessionId as any, classId as any);
-    socketService.sendMisTableUpdate({ sessionId, classId }, misData.data, {
-      trigger: "cu_reg_request_update",
-      affectedStudents: 1,
-    });
-    socketService.sendMisTableUpdateToAll(misData.data, {
-      trigger: "cu_reg_request_update",
-      affectedStudents: 1,
-    });
-    console.info(
-      "[CU-REG CORRECTION][UPDATE] Emitted MIS update for student",
-      existing.studentId,
-    );
-  } catch (emitError) {
-    console.warn(
-      "[CU-REG CORRECTION][UPDATE] Failed to emit MIS update:",
-      emitError,
-    );
-  }
+        const sessionId = promotion?.sessionId;
+        const classId = promotion?.classId;
+        const misData = await getMisTableData(sessionId as any, classId as any);
+        socketService.sendMisTableUpdate({ sessionId, classId }, misData.data, {
+          trigger: "cu_reg_request_update",
+          affectedStudents: 1,
+        });
+        socketService.sendMisTableUpdateToAll(misData.data, {
+          trigger: "cu_reg_request_update",
+          affectedStudents: 1,
+        });
+        console.info(
+          "[CU-REG CORRECTION][UPDATE] Emitted MIS update for student",
+          existing.studentId,
+        );
+      } catch (emitError) {
+        console.warn(
+          "[CU-REG CORRECTION][UPDATE] Failed to emit MIS update:",
+          emitError,
+        );
+      }
 
-  if (isFinalSubmission) {
-    void broadcastCuRegTrackerRefresh("online_registration_done");
-  }
+      if (isFinalSubmission) {
+        void broadcastCuRegTrackerRefresh("online_registration_done");
+      }
+    })();
+  });
 
   return await modelToDto(updatedRequest);
 }
@@ -1783,24 +1827,22 @@ export async function findCuRegistrationCorrectionRequestsByStatus(
 }> {
   const offset = (page - 1) * limit;
 
-  // Get total count
-  const [{ total }] = await db
-    .select({ total: count() })
-    .from(cuRegistrationCorrectionRequestModel)
-    .where(eq(cuRegistrationCorrectionRequestModel.status, status as any));
+  // Get total count and paginated results concurrently (independent queries)
+  const [[{ total }], requests] = await Promise.all([
+    db
+      .select({ total: count() })
+      .from(cuRegistrationCorrectionRequestModel)
+      .where(eq(cuRegistrationCorrectionRequestModel.status, status as any)),
+    db
+      .select()
+      .from(cuRegistrationCorrectionRequestModel)
+      .where(eq(cuRegistrationCorrectionRequestModel.status, status as any))
+      .orderBy(desc(cuRegistrationCorrectionRequestModel.createdAt))
+      .limit(limit)
+      .offset(offset),
+  ]);
 
-  // Get paginated results
-  const requests = await db
-    .select()
-    .from(cuRegistrationCorrectionRequestModel)
-    .where(eq(cuRegistrationCorrectionRequestModel.status, status as any))
-    .orderBy(desc(cuRegistrationCorrectionRequestModel.createdAt))
-    .limit(limit)
-    .offset(offset);
-
-  const requestDtos = await Promise.all(
-    requests.map((request) => modelToDto(request)),
-  );
+  const requestDtos = await modelsToDtos(requests);
 
   const totalPages = Math.ceil(total / limit);
 
@@ -1880,6 +1922,12 @@ export async function updateStudentDataFromCorrectionRequest(
       updatedFields.push("personalDetailsCorrectionRequested");
     }
 
+    // APAAR ID + EWS status both write to studentModel keyed by the same
+    // studentId with non-overlapping fields - collect both into one setData
+    // object and issue a single UPDATE instead of two sequential ones.
+    const studentUpdateData: { apaarId?: string | null; belongsToEWS?: boolean } =
+      {};
+
     // APAAR ID update logic
     if (formData.personalInfo?.apaarId !== undefined) {
       if (correctionFlags.apaarId) {
@@ -1904,10 +1952,7 @@ export async function updateStudentDataFromCorrectionRequest(
               : formData.personalInfo.apaarId;
         }
 
-        await db
-          .update(studentModel)
-          .set({ apaarId: formattedApaarId })
-          .where(eq(studentModel.id, studentId));
+        studentUpdateData.apaarId = formattedApaarId;
 
         console.info("[CU-REG DB UPDATE] Updated APAAR ID", {
           original: formData.personalInfo.apaarId,
@@ -1923,13 +1968,17 @@ export async function updateStudentDataFromCorrectionRequest(
       const ewsValue =
         formData.personalInfo.ews === "Yes" ||
         formData.personalInfo.ews === true;
-      await db
-        .update(studentModel)
-        .set({ belongsToEWS: ewsValue })
-        .where(eq(studentModel.id, studentId));
+      studentUpdateData.belongsToEWS = ewsValue;
 
       updatedFields.push("ewsStatus");
       console.info("[CU-REG DB UPDATE] Updated EWS status", { ews: ewsValue });
+    }
+
+    if (Object.keys(studentUpdateData).length > 0) {
+      await db
+        .update(studentModel)
+        .set(studentUpdateData)
+        .where(eq(studentModel.id, studentId));
     }
 
     // Update addresses if provided (addresses are always editable in the form)
@@ -2118,118 +2167,123 @@ async function isSubjectSelectionRequired(studentId: number): Promise<boolean> {
 }
 
 // Helper function to convert model to DTO
+// Shared column shape for the student+user+programCourse projection used by
+// both the single-row modelToDto and the batched modelsToDtos list assembler.
+const studentDtoSelection = {
+  id: studentModel.id,
+  legacyStudentId: studentModel.legacyStudentId,
+  userId: studentModel.userId,
+  applicationId: studentModel.applicationId,
+  admissionCourseDetailsId: studentModel.admissionCourseDetailsId,
+  programCourseId: studentModel.programCourseId,
+  specializationId: studentModel.specializationId,
+  uid: studentModel.uid,
+  oldUid: studentModel.oldUid,
+  rfidNumber: studentModel.rfidNumber,
+  cuFormNumber: studentModel.cuFormNumber,
+  registrationNumber: studentModel.registrationNumber,
+  rollNumber: studentModel.rollNumber,
+  classRollNumber: studentModel.classRollNumber,
+  apaarId: studentModel.apaarId,
+
+  checkRepeat: studentModel.checkRepeat,
+  community: studentModel.community,
+  handicapped: studentModel.handicapped,
+  lastPassedYear: studentModel.lastPassedYear,
+  notes: studentModel.notes,
+  active: studentModel.active,
+  alumni: studentModel.alumni,
+  leavingDate: studentModel.leavingDate,
+  leavingReason: studentModel.leavingReason,
+  createdAt: studentModel.createdAt,
+  updatedAt: studentModel.updatedAt,
+  programCourseName: programCourseModel.name,
+  user: {
+    id: userModel.id,
+    name: userModel.name,
+    email: userModel.email,
+    phone: userModel.phone,
+    whatsappNumber: userModel.whatsappNumber,
+    image: userModel.image,
+    type: userModel.type,
+    isSuspended: userModel.isSuspended,
+    suspendedReason: userModel.suspendedReason,
+    suspendedTillDate: userModel.suspendedTillDate,
+    isActive: userModel.isActive,
+    sendStagingNotifications: userModel.sendStagingNotifications,
+    createdAt: userModel.createdAt,
+    updatedAt: userModel.updatedAt,
+  },
+} as const;
+
+// Shared column shape for the document+document-master projection.
+const documentDtoSelection = {
+  id: cuRegistrationDocumentUploadModel.id,
+  documentUrl: cuRegistrationDocumentUploadModel.documentUrl,
+  path: cuRegistrationDocumentUploadModel.path,
+  fileName: cuRegistrationDocumentUploadModel.fileName,
+  fileType: cuRegistrationDocumentUploadModel.fileType,
+  fileSize: cuRegistrationDocumentUploadModel.fileSize,
+  remarks: cuRegistrationDocumentUploadModel.remarks,
+  createdAt: cuRegistrationDocumentUploadModel.createdAt,
+  updatedAt: cuRegistrationDocumentUploadModel.updatedAt,
+  document: {
+    id: documentModel.id,
+    name: documentModel.name,
+    description: documentModel.description,
+    sequence: documentModel.sequence,
+    isActive: documentModel.isActive,
+    createdAt: documentModel.createdAt,
+    updatedAt: documentModel.updatedAt,
+  },
+} as const;
+
 async function modelToDto(
   request: CuRegistrationCorrectionRequest,
 ): Promise<CuRegistrationCorrectionRequestDto> {
-  // Get student details with user info and program course
-  const [studentData] = await db
-    .select({
-      id: studentModel.id,
-      legacyStudentId: studentModel.legacyStudentId,
-      userId: studentModel.userId,
-      applicationId: studentModel.applicationId,
-      admissionCourseDetailsId: studentModel.admissionCourseDetailsId,
-      programCourseId: studentModel.programCourseId,
-      specializationId: studentModel.specializationId,
-      uid: studentModel.uid,
-      oldUid: studentModel.oldUid,
-      rfidNumber: studentModel.rfidNumber,
-      cuFormNumber: studentModel.cuFormNumber,
-      registrationNumber: studentModel.registrationNumber,
-      rollNumber: studentModel.rollNumber,
-      classRollNumber: studentModel.classRollNumber,
-      apaarId: studentModel.apaarId,
+  // These 4 lookups are independent of one another (student/user/course info,
+  // physical-marker user, last-updated-by user, documents) - run concurrently.
+  const [studentRows, physicalRegistrationDoneByRows, lastUpdatedByRows, documents] =
+    await Promise.all([
+      db
+        .select(studentDtoSelection)
+        .from(studentModel)
+        .leftJoin(userModel, eq(studentModel.userId, userModel.id))
+        .leftJoin(
+          programCourseModel,
+          eq(studentModel.programCourseId, programCourseModel.id),
+        )
+        .where(eq(studentModel.id, request.studentId)),
+      request.physicalRegistrationDoneBy
+        ? db
+            .select()
+            .from(userModel)
+            .where(eq(userModel.id, request.physicalRegistrationDoneBy))
+        : Promise.resolve([]),
+      request.lastUpdatedBy
+        ? db
+            .select()
+            .from(userModel)
+            .where(eq(userModel.id, request.lastUpdatedBy))
+        : Promise.resolve([]),
+      db
+        .select(documentDtoSelection)
+        .from(cuRegistrationDocumentUploadModel)
+        .leftJoin(
+          documentModel,
+          eq(cuRegistrationDocumentUploadModel.documentId, documentModel.id),
+        )
+        .where(
+          eq(
+            cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
+            request.id!,
+          ),
+        ),
+    ]);
 
-      checkRepeat: studentModel.checkRepeat,
-      community: studentModel.community,
-      handicapped: studentModel.handicapped,
-      lastPassedYear: studentModel.lastPassedYear,
-      notes: studentModel.notes,
-      active: studentModel.active,
-      alumni: studentModel.alumni,
-      leavingDate: studentModel.leavingDate,
-      leavingReason: studentModel.leavingReason,
-      createdAt: studentModel.createdAt,
-      updatedAt: studentModel.updatedAt,
-      programCourseName: programCourseModel.name,
-      user: {
-        id: userModel.id,
-        name: userModel.name,
-        email: userModel.email,
-        phone: userModel.phone,
-        whatsappNumber: userModel.whatsappNumber,
-        image: userModel.image,
-        type: userModel.type,
-        isSuspended: userModel.isSuspended,
-        suspendedReason: userModel.suspendedReason,
-        suspendedTillDate: userModel.suspendedTillDate,
-        isActive: userModel.isActive,
-        sendStagingNotifications: userModel.sendStagingNotifications,
-        createdAt: userModel.createdAt,
-        updatedAt: userModel.updatedAt,
-      },
-    })
-    .from(studentModel)
-    .leftJoin(userModel, eq(studentModel.userId, userModel.id))
-    .leftJoin(
-      programCourseModel,
-      eq(studentModel.programCourseId, programCourseModel.id),
-    )
-    .where(eq(studentModel.id, request.studentId));
-
-  // Get physical registration marked by details
-  let physicalRegistrationDoneBy = null;
-  if (request.physicalRegistrationDoneBy) {
-    const [marker] = await db
-      .select()
-      .from(userModel)
-      .where(eq(userModel.id, request.physicalRegistrationDoneBy));
-    physicalRegistrationDoneBy = marker;
-  }
-
-  // Get last updated by details
-  let lastUpdatedBy = null;
-  if (request.lastUpdatedBy) {
-    const [updater] = await db
-      .select()
-      .from(userModel)
-      .where(eq(userModel.id, request.lastUpdatedBy));
-    lastUpdatedBy = updater;
-  }
-
-  // Get documents
-  const documents = await db
-    .select({
-      id: cuRegistrationDocumentUploadModel.id,
-      documentUrl: cuRegistrationDocumentUploadModel.documentUrl,
-      path: cuRegistrationDocumentUploadModel.path,
-      fileName: cuRegistrationDocumentUploadModel.fileName,
-      fileType: cuRegistrationDocumentUploadModel.fileType,
-      fileSize: cuRegistrationDocumentUploadModel.fileSize,
-      remarks: cuRegistrationDocumentUploadModel.remarks,
-      createdAt: cuRegistrationDocumentUploadModel.createdAt,
-      updatedAt: cuRegistrationDocumentUploadModel.updatedAt,
-      document: {
-        id: documentModel.id,
-        name: documentModel.name,
-        description: documentModel.description,
-        sequence: documentModel.sequence,
-        isActive: documentModel.isActive,
-        createdAt: documentModel.createdAt,
-        updatedAt: documentModel.updatedAt,
-      },
-    })
-    .from(cuRegistrationDocumentUploadModel)
-    .leftJoin(
-      documentModel,
-      eq(cuRegistrationDocumentUploadModel.documentId, documentModel.id),
-    )
-    .where(
-      eq(
-        cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
-        request.id!,
-      ),
-    );
+  const studentData = studentRows[0];
+  const physicalRegistrationDoneBy = physicalRegistrationDoneByRows[0] ?? null;
+  const lastUpdatedBy = lastUpdatedByRows[0] ?? null;
 
   return {
     id: request.id,
@@ -2270,6 +2324,129 @@ async function modelToDto(
       file: null as any, // This will be handled in the controller for file uploads
     })),
   };
+}
+
+// Batched list-assembly path: bulk-fetches student+user+programCourse,
+// physical-done-by users, last-updated-by users, and documents for ALL rows
+// of a page in a handful of queries (instead of 4 queries per row via
+// modelToDto), then assembles DTOs identical to calling modelToDto per row.
+async function modelsToDtos(
+  requests: CuRegistrationCorrectionRequest[],
+): Promise<CuRegistrationCorrectionRequestDto[]> {
+  if (requests.length === 0) return [];
+
+  const studentIds = [...new Set(requests.map((r) => r.studentId))];
+  const userIds = [
+    ...new Set(
+      requests
+        .flatMap((r) => [r.physicalRegistrationDoneBy, r.lastUpdatedBy])
+        .filter((id): id is number => id !== null && id !== undefined),
+    ),
+  ];
+  const requestIds = requests
+    .map((r) => r.id)
+    .filter((id): id is number => id !== null && id !== undefined);
+
+  const [studentRows, userRows, documentRows] = await Promise.all([
+    studentIds.length > 0
+      ? db
+          .select(studentDtoSelection)
+          .from(studentModel)
+          .leftJoin(userModel, eq(studentModel.userId, userModel.id))
+          .leftJoin(
+            programCourseModel,
+            eq(studentModel.programCourseId, programCourseModel.id),
+          )
+          .where(inArray(studentModel.id, studentIds))
+      : Promise.resolve([] as any[]),
+    userIds.length > 0
+      ? db.select().from(userModel).where(inArray(userModel.id, userIds))
+      : Promise.resolve([] as any[]),
+    requestIds.length > 0
+      ? db
+          .select({
+            ...documentDtoSelection,
+            cuRegistrationCorrectionRequestId:
+              cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
+          })
+          .from(cuRegistrationDocumentUploadModel)
+          .leftJoin(
+            documentModel,
+            eq(cuRegistrationDocumentUploadModel.documentId, documentModel.id),
+          )
+          .where(
+            inArray(
+              cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
+              requestIds,
+            ),
+          )
+      : Promise.resolve([] as any[]),
+  ]);
+
+  const studentMap = new Map(studentRows.map((s: any) => [s.id, s]));
+  const userMap = new Map(userRows.map((u) => [u.id, u]));
+  const documentsByRequestId = new Map<number, typeof documentRows>();
+  for (const doc of documentRows) {
+    const key = doc.cuRegistrationCorrectionRequestId;
+    if (key === null || key === undefined) continue;
+    const existing = documentsByRequestId.get(key);
+    if (existing) {
+      existing.push(doc);
+    } else {
+      documentsByRequestId.set(key, [doc]);
+    }
+  }
+
+  return requests.map((request) => {
+    const studentData: any = studentMap.get(request.studentId);
+    const physicalRegistrationDoneBy = request.physicalRegistrationDoneBy
+      ? (userMap.get(request.physicalRegistrationDoneBy) ?? null)
+      : null;
+    const lastUpdatedBy = request.lastUpdatedBy
+      ? (userMap.get(request.lastUpdatedBy) ?? null)
+      : null;
+    const documents = documentsByRequestId.get(request.id!) ?? [];
+
+    return {
+      id: request.id,
+      cuRegistrationApplicationNumber: request.cuRegistrationApplicationNumber,
+      status: request.status,
+      remarks: request.remarks,
+      // Declarations
+      introductoryDeclaration: request.introductoryDeclaration,
+      personalInfoDeclaration: request.personalInfoDeclaration,
+      addressInfoDeclaration: request.addressInfoDeclaration,
+      subjectsDeclaration: request.subjectsDeclaration,
+      documentsDeclaration: request.documentsDeclaration,
+      onlineRegistrationDone: request.onlineRegistrationDone,
+      physicalRegistrationDone: request.physicalRegistrationDone,
+      physicalRegistrationDoneAt: request.physicalRegistrationDoneAt,
+      physicalRegistrationDoneBy: physicalRegistrationDoneBy,
+      lastUpdatedBy: lastUpdatedBy,
+      genderCorrectionRequest: request.genderCorrectionRequest,
+      nationalityCorrectionRequest: request.nationalityCorrectionRequest,
+      aadhaarCardNumberCorrectionRequest:
+        request.aadhaarCardNumberCorrectionRequest,
+      apaarIdCorrectionRequest: request.apaarIdCorrectionRequest,
+      subjectsCorrectionRequest: request.subjectsCorrectionRequest,
+      createdAt: request.createdAt,
+      updatedAt: request.updatedAt,
+      student: studentData!,
+      documents: documents.map((doc) => ({
+        id: doc.id,
+        documentUrl: doc.documentUrl,
+        path: doc.path,
+        fileName: doc.fileName,
+        fileType: doc.fileType,
+        fileSize: doc.fileSize,
+        remarks: doc.remarks,
+        createdAt: doc.createdAt,
+        updatedAt: doc.updatedAt,
+        document: doc.document!,
+        file: null as any, // This will be handled in the controller for file uploads
+      })),
+    } as CuRegistrationCorrectionRequestDto;
+  });
 }
 
 // NOTIFICATION FUNCTIONS
@@ -2319,16 +2496,11 @@ export const sendAdmissionRegistrationEmailNotification = async (
     });
 
     // Get the admission registration notification master for EMAIL
-    const [emailMaster] = await db
-      .select()
-      .from(notificationMasterModel)
-      .where(
-        and(
-          eq(notificationMasterModel.name, "Admission Reg. Form"),
-          eq(notificationMasterModel.template, "adm-reg-form"),
-          eq(notificationMasterModel.variant, "EMAIL"),
-        ),
-      );
+    const emailMaster = await getCachedNotificationMasterRow(
+      "Admission Reg. Form",
+      "adm-reg-form",
+      "EMAIL",
+    );
 
     if (!emailMaster) {
       throw new Error(
@@ -2532,16 +2704,11 @@ export const sendAdmissionRegistrationWhatsAppNotification = async (
     console.log(
       "📱 [CU-REG-NOTIF] Searching for WhatsApp notification master...",
     );
-    const [whatsappMaster] = await db
-      .select()
-      .from(notificationMasterModel)
-      .where(
-        and(
-          eq(notificationMasterModel.name, "Admission Reg. Form"),
-          eq(notificationMasterModel.template, "regp1conf"),
-          eq(notificationMasterModel.variant, "WHATSAPP"),
-        ),
-      );
+    const whatsappMaster = await getCachedNotificationMasterRow(
+      "Admission Reg. Form",
+      "regp1conf",
+      "WHATSAPP",
+    );
 
     console.log(
       "📱 [CU-REG-NOTIF] WhatsApp master search result:",
@@ -2898,14 +3065,16 @@ export const sendAdmissionRegistrationNotification = async (
       boardCode,
     };
 
-    // Send both email and WhatsApp notifications
-    console.log("📧 [CU-REG-NOTIF] Starting email notification...");
-    const emailResult =
-      await sendAdmissionRegistrationEmailNotification(notificationData);
-
-    console.log("📱 [CU-REG-NOTIF] Starting WhatsApp notification...");
-    const whatsappResult =
-      await sendAdmissionRegistrationWhatsAppNotification(notificationData);
+    // Send both email and WhatsApp notifications concurrently - each function
+    // already has its own try/catch and always resolves (never rejects), so
+    // running them in parallel is safe and preserves both results/semantics.
+    console.log(
+      "📧 [CU-REG-NOTIF] Starting email + WhatsApp notifications concurrently...",
+    );
+    const [emailResult, whatsappResult] = await Promise.all([
+      sendAdmissionRegistrationEmailNotification(notificationData),
+      sendAdmissionRegistrationWhatsAppNotification(notificationData),
+    ]);
 
     console.log("📧 [CU-REG-NOTIF] Email notification result:", {
       success: emailResult.success,
@@ -3257,33 +3426,55 @@ export const exportCuRegistrationCorrectionRequests = async (
       `🔍 [CU-REG-EXPORT] Found ${correctionRequests.length} correction requests`,
     );
 
-    // Get mailing addresses separately
-    const mailingAddresses = await db
-      .select({
-        personalDetailsId: addressModel.personalDetailsId,
-        addressLine: addressModel.addressLine,
-        countryId: addressModel.countryId,
-        stateId: addressModel.stateId,
-        districtId: addressModel.districtId,
-        cityId: addressModel.cityId,
-        pincode: addressModel.pincode,
-        otherPoliceStation: addressModel.otherPoliceStation,
-        otherPostoffice: addressModel.otherPostoffice,
-        otherCountry: addressModel.otherCountry,
-        otherState: addressModel.otherState,
-        otherDistrict: addressModel.otherDistrict,
-        otherCity: addressModel.otherCity,
-        countryName: countryModel.name,
-        stateName: stateModel.name,
-        districtName: districtModel.name,
-        cityName: cityModel.name,
-      })
-      .from(addressModel)
-      .leftJoin(countryModel, eq(addressModel.countryId, countryModel.id))
-      .leftJoin(stateModel, eq(addressModel.stateId, stateModel.id))
-      .leftJoin(districtModel, eq(addressModel.districtId, districtModel.id))
-      .leftJoin(cityModel, eq(addressModel.cityId, cityModel.id))
-      .where(eq(addressModel.type, "MAILING"));
+    // Get mailing addresses separately - scoped to only the personal-details
+    // ids actually present in the export result set (mailingAddressMap is
+    // looked up by request.personalDetailsId below), instead of scanning the
+    // entire addresses table.
+    const exportPersonalDetailsIds = [
+      ...new Set(
+        correctionRequests
+          .map((r) => r.personalDetailsId)
+          .filter((id): id is number => id !== null && id !== undefined),
+      ),
+    ];
+
+    const mailingAddresses =
+      exportPersonalDetailsIds.length > 0
+        ? await db
+            .select({
+              personalDetailsId: addressModel.personalDetailsId,
+              addressLine: addressModel.addressLine,
+              countryId: addressModel.countryId,
+              stateId: addressModel.stateId,
+              districtId: addressModel.districtId,
+              cityId: addressModel.cityId,
+              pincode: addressModel.pincode,
+              otherPoliceStation: addressModel.otherPoliceStation,
+              otherPostoffice: addressModel.otherPostoffice,
+              otherCountry: addressModel.otherCountry,
+              otherState: addressModel.otherState,
+              otherDistrict: addressModel.otherDistrict,
+              otherCity: addressModel.otherCity,
+              countryName: countryModel.name,
+              stateName: stateModel.name,
+              districtName: districtModel.name,
+              cityName: cityModel.name,
+            })
+            .from(addressModel)
+            .leftJoin(countryModel, eq(addressModel.countryId, countryModel.id))
+            .leftJoin(stateModel, eq(addressModel.stateId, stateModel.id))
+            .leftJoin(
+              districtModel,
+              eq(addressModel.districtId, districtModel.id),
+            )
+            .leftJoin(cityModel, eq(addressModel.cityId, cityModel.id))
+            .where(
+              and(
+                eq(addressModel.type, "MAILING"),
+                inArray(addressModel.personalDetailsId, exportPersonalDetailsIds),
+              ),
+            )
+        : [];
 
     // Get user names for physical marked by
     const userIds = [

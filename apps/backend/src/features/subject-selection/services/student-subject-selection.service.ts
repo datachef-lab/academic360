@@ -37,6 +37,7 @@ import { socketService } from "@/services/socketService.js";
 import { enqueueNotification } from "@/services/notificationClient.js";
 import type { ReportExportFilters } from "@/utils/report-export-filters.js";
 import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
+import { getCachedSnapshot } from "@/services/snapshot-cache.js";
 import {
   getNotificationMasterIdByName,
   getNotificationMasterIdByNameAndVariant,
@@ -4910,7 +4911,7 @@ export async function exportStudentSubjectSelections(
 }
 
 // Live counts by Program-Course for an academic year
-export async function getLiveSelectionCountsByProgramCourse(
+async function computeLiveSelectionCountsByProgramCourse(
   academicYearId: number,
 ) {
   const metas = await db
@@ -4923,38 +4924,44 @@ export async function getLiveSelectionCountsByProgramCourse(
     return { updatedAt: new Date().toISOString(), programCourses: [] };
   }
 
-  const doneRows = await db
-    .select({
-      programCourseId: promotionModel.programCourseId,
-      doneCount:
-        sql<number>`COUNT(DISTINCT ${studentSubjectSelectionModel.studentId})`.as(
-          "doneCount",
+  // doneRows and eligibleRows are independent aggregates (neither depends on
+  // the other's result) — run them concurrently instead of sequentially.
+  const [doneRows, eligibleRows] = await Promise.all([
+    db
+      .select({
+        programCourseId: promotionModel.programCourseId,
+        doneCount:
+          sql<number>`COUNT(DISTINCT ${studentSubjectSelectionModel.studentId})`.as(
+            "doneCount",
+          ),
+      })
+      .from(studentSubjectSelectionModel)
+      .innerJoin(
+        studentModel,
+        eq(studentModel.id, studentSubjectSelectionModel.studentId),
+      )
+      .leftJoin(promotionModel, eq(promotionModel.studentId, studentModel.id))
+      .where(
+        and(
+          inArray(
+            studentSubjectSelectionModel.subjectSelectionMetaId,
+            metaIds,
+          ),
+          eq(studentSubjectSelectionModel.isActive, true),
         ),
-    })
-    .from(studentSubjectSelectionModel)
-    .innerJoin(
-      studentModel,
-      eq(studentModel.id, studentSubjectSelectionModel.studentId),
-    )
-    .leftJoin(promotionModel, eq(promotionModel.studentId, studentModel.id))
-    .where(
-      and(
-        inArray(studentSubjectSelectionModel.subjectSelectionMetaId, metaIds),
-        eq(studentSubjectSelectionModel.isActive, true),
-      ),
-    )
-    .groupBy(promotionModel.programCourseId);
-
-  const eligibleRows = await db
-    .select({
-      programCourseId: promotionModel.programCourseId,
-      eligibleCount: sql<number>`COUNT(DISTINCT ${studentModel.id})`.as(
-        "eligibleCount",
-      ),
-    })
-    .from(studentModel)
-    .leftJoin(promotionModel, eq(promotionModel.studentId, studentModel.id))
-    .groupBy(promotionModel.programCourseId);
+      )
+      .groupBy(promotionModel.programCourseId),
+    db
+      .select({
+        programCourseId: promotionModel.programCourseId,
+        eligibleCount: sql<number>`COUNT(DISTINCT ${studentModel.id})`.as(
+          "eligibleCount",
+        ),
+      })
+      .from(studentModel)
+      .leftJoin(promotionModel, eq(promotionModel.studentId, studentModel.id))
+      .groupBy(promotionModel.programCourseId),
+  ]);
 
   const pcIds = [
     ...new Set(
@@ -4992,6 +4999,24 @@ export async function getLiveSelectionCountsByProgramCourse(
   });
 
   return { updatedAt: new Date().toISOString(), programCourses };
+}
+
+// Whole-student-body live aggregation, hit by every open selection-progress
+// widget; share one computation per academic year fleet-wide via the
+// epoch-keyed snapshot cache (Redis-backed, safe across the multi-instance
+// no-sticky-sessions prod deployment — bumpSnapshotEpoch on any instance is
+// seen by all). TTL-only invalidation here (no dedicated mutation-bump wired
+// for this scope): 30s staleness on a live-progress counter is acceptable,
+// same precedent as the other dashboards in this pass.
+export function getLiveSelectionCountsByProgramCourse(
+  academicYearId: number,
+): ReturnType<typeof computeLiveSelectionCountsByProgramCourse> {
+  return getCachedSnapshot(
+    "subject-selection:metrics-live",
+    String(academicYearId),
+    30,
+    () => computeLiveSelectionCountsByProgramCourse(academicYearId),
+  );
 }
 
 // Helper function to emit MIS table updates via socket

@@ -112,24 +112,27 @@ export const downloadJournalExcelController = async (
     const search =
       typeof req.query.search === "string" ? req.query.search : undefined;
 
-    const buffer = await exportJournalsExcel({
-      search,
-      subjectGroupId: parseQueryInt(req.query, "subjectGroupId"),
-      entryModeId: parseQueryInt(req.query, "entryModeId"),
-      languageId: parseQueryInt(req.query, "languageId"),
-      bindingId: parseQueryInt(req.query, "bindingId"),
-      periodId: parseQueryInt(req.query, "periodId"),
-      publisherId: parseQueryInt(req.query, "publisherId"),
-    });
-
     const filename = `library-journals-${new Date().toISOString().slice(0, 10)}.xlsx`;
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.setHeader("Content-Length", buffer.length);
-    res.status(200).send(buffer);
+
+    // Streamed directly to `res` (see exportJournalsExcel) — Content-Length
+    // is unknown up front and intentionally omitted.
+    await exportJournalsExcel(
+      {
+        search,
+        subjectGroupId: parseQueryInt(req.query, "subjectGroupId"),
+        entryModeId: parseQueryInt(req.query, "entryModeId"),
+        languageId: parseQueryInt(req.query, "languageId"),
+        bindingId: parseQueryInt(req.query, "bindingId"),
+        periodId: parseQueryInt(req.query, "periodId"),
+        publisherId: parseQueryInt(req.query, "publisherId"),
+      },
+      res,
+    );
   } catch (error) {
     handleError(error, res, next);
   }

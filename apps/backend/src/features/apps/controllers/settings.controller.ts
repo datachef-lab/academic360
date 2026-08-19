@@ -171,6 +171,11 @@ export const downloadSettingFileHandler = async (
         .json(new ApiResponse(404, "NOT_FOUND", "File not found on server"));
     }
 
+    // This caller never sends If-None-Match, so notModified cannot occur here;
+    // the guard keeps the union types honest.
+    if ("notModified" in fileStreamData) {
+      return res.status(304).end();
+    }
     const { stream, contentType } = fileStreamData;
     res.setHeader("Content-Type", contentType);
     return stream.pipe(res);
@@ -182,21 +187,34 @@ export const downloadSettingFileHandler = async (
 export async function getSettingFileController(req: Request, res: Response) {
   try {
     const { idOrName } = req.params;
-    const fileStreamData = await getSettingFileService(idOrName as string);
+    const ifNoneMatch = req.headers["if-none-match"];
+    const fileStreamData = await getSettingFileService(
+      idOrName as string,
+      typeof ifNoneMatch === "string" ? ifNoneMatch : undefined,
+    );
 
     if (!fileStreamData) {
       res.status(404).json({ message: "Setting file not found" });
       return;
     }
 
-    const { stream, contentType } = fileStreamData;
+    // Cache-Control is identical for the 304 and 200 paths so the browser
+    // keeps its cached copy after revalidating.
+    const cacheControl = req.query.v
+      ? "public, max-age=31536000, immutable"
+      : "public, max-age=3600";
+    res.setHeader("ETag", fileStreamData.etag);
+    res.setHeader("Cache-Control", cacheControl);
 
-    res.setHeader("Content-Type", contentType);
-    if (req.query.v) {
-      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-    } else {
-      res.setHeader("Cache-Control", "public, max-age=3600");
+    // Repeat request with a matching validator — skip the S3 fetch and the
+    // (potentially multi-MB) body entirely.
+    if ("notModified" in fileStreamData) {
+      res.status(304).end();
+      return;
     }
+
+    const { stream, contentType } = fileStreamData;
+    res.setHeader("Content-Type", contentType);
     stream.pipe(res);
   } catch (error) {
     console.error("Error sending file:", error);

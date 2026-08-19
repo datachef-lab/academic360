@@ -14,9 +14,25 @@ import { bookCirculationModel } from "@repo/db/schemas/models/library/book-circu
 import { copyDetailsModel } from "@repo/db/schemas/models/library/copy-details.model.js";
 import { bookModel } from "@repo/db/schemas/models/library/book.model.js";
 import { borrowingTypeModel } from "@repo/db/schemas/models/library/borrowing-type.model.js";
-import { and, count, desc, eq, gte, ilike, lt, or, sql, SQL } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  lt,
+  or,
+  sql,
+  SQL,
+} from "drizzle-orm";
 import ExcelJS from "exceljs";
-import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
+import type { Response } from "express";
+import {
+  styleStreamedBodyRow,
+  styleStreamedHeaderRow,
+} from "@/utils/excel-report-styling.js";
 
 type CreateLibraryEntryExitInput = Omit<LibraryEntryExit, "id">;
 type UpdateLibraryEntryExitInput = Partial<Omit<LibraryEntryExit, "id">>;
@@ -246,23 +262,171 @@ export async function findLibraryEntryExitPaginated(
   };
 }
 
+/**
+ * Batch version of the `user` half of `getLibraryEntryExitPreviewByUserId`
+ * — the export only ever reads `preview.user` fields (never
+ * `circulationRows` / `bookCirculationSummary`), so this skips the
+ * per-user circulation query entirely on top of batching the two lookups
+ * that matter. Same field set (incl. the program-course/affiliation/
+ * regulation-type SHORT names) so the export stays byte-identical; this is
+ * why it's a bespoke batch helper rather than the more generic
+ * `enrichUsersForReport` in report-common/enrich-users.ts, which doesn't
+ * carry the short-name columns this export's fallback (`shortName ||
+ * fullName`) depends on.
+ */
+export async function getLibraryEntryExitPreviewHeadersByUserIds(
+  userIds: number[],
+): Promise<Map<number, LibraryEntryExitPreviewHeader>> {
+  const out = new Map<number, LibraryEntryExitPreviewHeader>();
+  const uniqueIds = Array.from(new Set(userIds.filter((n) => Number.isFinite(n))));
+  if (uniqueIds.length === 0) return out;
+
+  const baseUsers = await db
+    .select({
+      userId: userModel.id,
+      userType: userModel.type,
+      name: userModel.name,
+      image: userModel.image,
+      isActive: userModel.isActive,
+      email: userModel.email,
+      phone: userModel.phone,
+      whatsapp: userModel.whatsappNumber,
+      studentId: studentModel.id,
+      studentUid: studentModel.uid,
+      studentRfid: studentModel.rfidNumber,
+      rollNumber: studentModel.rollNumber,
+      registrationNumber: studentModel.registrationNumber,
+      classRollNumber: studentModel.classRollNumber,
+      staffUid: staffModel.uid,
+      staffRfid: staffModel.rfidNumber,
+      staffCode: staffModel.codeNumber,
+      attendanceCode: staffModel.attendanceCode,
+    })
+    .from(userModel)
+    .leftJoin(studentModel, eq(studentModel.userId, userModel.id))
+    .leftJoin(staffModel, eq(staffModel.userId, userModel.id))
+    .where(inArray(userModel.id, uniqueIds));
+
+  const studentIds = baseUsers
+    .map((r) => r.studentId)
+    .filter((id): id is number => id != null);
+
+  const promotionRows =
+    studentIds.length === 0
+      ? []
+      : await db
+          .select({
+            studentId: promotionModel.studentId,
+            className: classModel.name,
+            shiftName: shiftModel.name,
+            sectionName: sectionModel.name,
+            programCourseName: programCourseModel.name,
+            programCourseShortName: programCourseModel.shortName,
+            affiliationName: affiliationModel.name,
+            affiliationShortName: affiliationModel.shortName,
+            regulationTypeName: regulationTypeModel.name,
+            regulationTypeShortName: regulationTypeModel.shortName,
+          })
+          .from(promotionModel)
+          .leftJoin(classModel, eq(promotionModel.classId, classModel.id))
+          .leftJoin(shiftModel, eq(promotionModel.shiftId, shiftModel.id))
+          .leftJoin(sectionModel, eq(promotionModel.sectionId, sectionModel.id))
+          .leftJoin(
+            programCourseModel,
+            eq(promotionModel.programCourseId, programCourseModel.id),
+          )
+          .leftJoin(
+            affiliationModel,
+            eq(programCourseModel.affiliationId, affiliationModel.id),
+          )
+          .leftJoin(
+            regulationTypeModel,
+            eq(programCourseModel.regulationTypeId, regulationTypeModel.id),
+          )
+          .where(inArray(promotionModel.studentId, studentIds))
+          .orderBy(desc(promotionModel.id));
+
+  // Keep the FIRST promotion seen per student — rows come back ordered by
+  // id DESC, so first = latest, matching the single-user helper's
+  // `orderBy(desc(promotionModel.id)).limit(1)`.
+  const promoByStudent = new Map<number, (typeof promotionRows)[number]>();
+  for (const r of promotionRows) {
+    if (r.studentId == null) continue;
+    if (!promoByStudent.has(r.studentId)) promoByStudent.set(r.studentId, r);
+  }
+
+  // Staff shift — only for staff users with no student record, mirroring the
+  // single-user helper's `else if (userType === "STAFF")` branch.
+  const staffUserIds = baseUsers
+    .filter((r) => r.studentId == null && r.userType === "STAFF")
+    .map((r) => r.userId);
+  const staffShiftByUser = new Map<number, string | null>();
+  if (staffUserIds.length > 0) {
+    const rows = await db
+      .select({ userId: staffModel.userId, shiftName: shiftModel.name })
+      .from(staffModel)
+      .leftJoin(shiftModel, eq(staffModel.shiftId, shiftModel.id))
+      .where(inArray(staffModel.userId, staffUserIds));
+    for (const r of rows) {
+      if (r.userId != null) staffShiftByUser.set(r.userId, r.shiftName);
+    }
+  }
+
+  for (const r of baseUsers) {
+    const promo = r.studentId != null ? promoByStudent.get(r.studentId) : undefined;
+    const shift =
+      promo?.shiftName ??
+      (r.studentId == null && r.userType === "STAFF"
+        ? (staffShiftByUser.get(r.userId) ?? null)
+        : null);
+    out.set(r.userId, {
+      userId: r.userId,
+      userType: r.userType ?? "",
+      name: r.name,
+      image: r.image,
+      isActive: r.isActive ?? null,
+      uid: r.studentUid ?? r.staffUid ?? null,
+      rfid: r.studentRfid ?? r.staffRfid ?? null,
+      rollNumber: r.rollNumber ?? null,
+      registrationNumber: r.registrationNumber ?? null,
+      classRollNumber: r.classRollNumber ?? null,
+      email: r.email,
+      phone: r.phone,
+      whatsapp: r.whatsapp,
+      staffCode: r.staffCode ?? null,
+      attendanceCode: r.attendanceCode ?? null,
+      classOrSemester: promo?.className ?? null,
+      shift,
+      section: promo?.sectionName ?? null,
+      programCourse: promo?.programCourseName ?? null,
+      programCourseShortName: promo?.programCourseShortName ?? null,
+      affiliation: promo?.affiliationName ?? null,
+      affiliationShortName: promo?.affiliationShortName ?? null,
+      regulationType: promo?.regulationTypeName ?? null,
+      regulationTypeShortName: promo?.regulationTypeShortName ?? null,
+    });
+  }
+
+  return out;
+}
+
+/**
+ * Streams the entry/exit export directly to the response instead of
+ * building the whole workbook in memory: rows are read from the DB in
+ * fixed-size chunks (keyset-paginated on id, same `ORDER BY id DESC` as
+ * before) and each chunk's user context is bulk-fetched (see
+ * `getLibraryEntryExitPreviewHeadersByUserIds` above) instead of N+1'ing
+ * `getLibraryEntryExitPreviewByUserId` per row. Column set, order, values
+ * and styling are unchanged from the previous buffered implementation.
+ */
 export async function exportLibraryEntryExitExcel(
   filters: LibraryEntryExitExportFilters,
-): Promise<Buffer> {
+  res: Response,
+): Promise<void> {
   const conditions = buildFilterConditions(filters);
   const whereClause = conditions.length ? and(...conditions) : undefined;
 
-  const rows = await db
-    .select({
-      id: libraryEntryExitModel.id,
-      userId: libraryEntryExitModel.userId,
-      currentStatus: libraryEntryExitModel.currentStatus,
-      entryTimestamp: libraryEntryExitModel.entryTimestamp,
-      exitTimestamp: libraryEntryExitModel.exitTimestamp,
-    })
-    .from(libraryEntryExitModel)
-    .where(whereClause)
-    .orderBy(desc(libraryEntryExitModel.id));
+  const CHUNK_SIZE = 2000;
 
   const formatDateTime = (value: Date | string | null) => {
     if (!value) return "";
@@ -289,8 +453,14 @@ export async function exportLibraryEntryExitExcel(
       .join(" ");
   };
 
-  const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet("Entry Exit");
+  const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+    stream: res,
+    useStyles: true,
+    useSharedStrings: true,
+  });
+  const sheet = workbook.addWorksheet("Entry Exit", {
+    views: [{ state: "frozen", ySplit: 1 }],
+  });
 
   sheet.columns = [
     { header: "Entry/Exit ID", key: "entryExitId", width: 14 },
@@ -318,54 +488,83 @@ export async function exportLibraryEntryExitExcel(
     { header: "Registration Number", key: "registrationNumber", width: 20 },
     { header: "Class Roll Number", key: "classRollNumber", width: 18 },
   ];
+  styleStreamedHeaderRow(sheet.getRow(1));
+  sheet.getRow(1).commit();
 
-  const previews = await Promise.all(
-    rows.map(async (row) => ({
-      row,
-      preview: await getLibraryEntryExitPreviewByUserId(row.userId),
-    })),
-  );
+  let lastId: number | null = null;
+  for (;;) {
+    const chunkConditions = [...conditions];
+    if (lastId != null) {
+      chunkConditions.push(lt(libraryEntryExitModel.id, lastId));
+    }
+    const chunkWhere = chunkConditions.length
+      ? and(...chunkConditions)
+      : undefined;
 
-  previews.forEach(({ row, preview }) => {
-    const user = preview?.user;
-    sheet.addRow({
-      entryExitId: row.id,
-      currentStatus: toSentenceCase(row.currentStatus),
-      entryTime: formatDateTime(row.entryTimestamp),
-      exitTime: formatDateTime(row.exitTimestamp),
-      userId: row.userId,
-      userType: toSentenceCase(user?.userType),
-      userActive:
-        user?.isActive === null || user?.isActive === undefined
-          ? ""
-          : user.isActive
-            ? "Active"
-            : "Inactive",
-      name: user?.name ?? "",
-      uid: user?.uid ?? "",
-      rfid: user?.rfid ?? "",
-      rollNumber: user?.rollNumber ?? "",
-      registrationNumber: user?.registrationNumber ?? "",
-      classRollNumber: user?.classRollNumber ?? "",
-      email: user?.email ?? "",
-      phone: user?.phone ?? "",
-      whatsapp: user?.whatsapp ?? "",
-      staffCode: user?.staffCode ?? "",
-      attendanceCode: user?.attendanceCode ?? "",
-      classOrSemester: user?.classOrSemester ?? "",
-      shift: user?.shift ?? "",
-      section: user?.section ?? "",
-      programCourse: user?.programCourseShortName || user?.programCourse || "",
-      affiliation: user?.affiliationShortName || user?.affiliation || "",
-      regulationType:
-        user?.regulationTypeShortName || user?.regulationType || "",
-    });
-  });
+    const chunk = await db
+      .select({
+        id: libraryEntryExitModel.id,
+        userId: libraryEntryExitModel.userId,
+        currentStatus: libraryEntryExitModel.currentStatus,
+        entryTimestamp: libraryEntryExitModel.entryTimestamp,
+        exitTimestamp: libraryEntryExitModel.exitTimestamp,
+      })
+      .from(libraryEntryExitModel)
+      .where(chunkWhere)
+      .orderBy(desc(libraryEntryExitModel.id))
+      .limit(CHUNK_SIZE);
 
-  applyStandardExcelReportTableStyling(sheet);
+    if (chunk.length === 0) break;
 
-  const result = await workbook.xlsx.writeBuffer();
-  return Buffer.isBuffer(result) ? result : Buffer.from(result);
+    const userHeaders = await getLibraryEntryExitPreviewHeadersByUserIds(
+      chunk.map((row) => row.userId),
+    );
+
+    for (const row of chunk) {
+      const user = userHeaders.get(row.userId);
+      const dataRow = sheet.addRow({
+        entryExitId: row.id,
+        currentStatus: toSentenceCase(row.currentStatus),
+        entryTime: formatDateTime(row.entryTimestamp),
+        exitTime: formatDateTime(row.exitTimestamp),
+        userId: row.userId,
+        userType: toSentenceCase(user?.userType),
+        userActive:
+          user?.isActive === null || user?.isActive === undefined
+            ? ""
+            : user.isActive
+              ? "Active"
+              : "Inactive",
+        name: user?.name ?? "",
+        uid: user?.uid ?? "",
+        rfid: user?.rfid ?? "",
+        rollNumber: user?.rollNumber ?? "",
+        registrationNumber: user?.registrationNumber ?? "",
+        classRollNumber: user?.classRollNumber ?? "",
+        email: user?.email ?? "",
+        phone: user?.phone ?? "",
+        whatsapp: user?.whatsapp ?? "",
+        staffCode: user?.staffCode ?? "",
+        attendanceCode: user?.attendanceCode ?? "",
+        classOrSemester: user?.classOrSemester ?? "",
+        shift: user?.shift ?? "",
+        section: user?.section ?? "",
+        programCourse:
+          user?.programCourseShortName || user?.programCourse || "",
+        affiliation: user?.affiliationShortName || user?.affiliation || "",
+        regulationType:
+          user?.regulationTypeShortName || user?.regulationType || "",
+      });
+      styleStreamedBodyRow(dataRow);
+      dataRow.commit();
+    }
+
+    if (chunk.length < CHUNK_SIZE) break;
+    lastId = chunk[chunk.length - 1].id;
+  }
+
+  sheet.commit();
+  await workbook.commit();
 }
 
 export async function searchLibraryUsers(

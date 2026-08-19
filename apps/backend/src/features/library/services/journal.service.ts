@@ -1,7 +1,11 @@
 import ExcelJS from "exceljs";
 import { db } from "@/db/index.js";
-import { and, asc, count, desc, eq, ilike, or, SQL } from "drizzle-orm";
-import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
+import { and, asc, count, desc, eq, ilike, lt, or, SQL } from "drizzle-orm";
+import type { Response } from "express";
+import {
+  styleStreamedBodyRow,
+  styleStreamedHeaderRow,
+} from "@/utils/excel-report-styling.js";
 import { journalModel } from "@repo/db/schemas/models/library/journal.model.js";
 import { journalTypeModel } from "@repo/db/schemas/models/library/journal-type.model.js";
 import { entryModeModel } from "@repo/db/schemas/models/library/entry-mode.model.js";
@@ -234,50 +238,27 @@ const formatExcelDateTime = (value: Date | string | null) => {
   });
 };
 
+/**
+ * Streams the journals export directly to `res` in ID-descending keyset
+ * chunks instead of pulling the full (up to 100k row) result set into
+ * memory. The `.limit(100_000)` cap on total rows is preserved exactly.
+ */
 export async function exportJournalsExcel(
   filters: JournalExportFilters,
-): Promise<Buffer> {
+  res: Response,
+): Promise<void> {
   const whereClause = buildListWhere(filters);
+  const HARD_CAP = 100_000;
+  const CHUNK_SIZE = 2000;
 
-  const rows = await db
-    .select({
-      id: journalModel.id,
-      title: journalModel.title,
-      issnNumber: journalModel.issnNumber,
-      sizeInCM: journalModel.sizeInCM,
-      journalTypeName: journalTypeModel.name,
-      publisherName: publisherModel.name,
-      entryModeName: entryModeModel.name,
-      languageName: languageMediumModel.name,
-      bindingName: bindingModel.name,
-      periodName: libraryPeriodModel.name,
-      subjectGroupName: subjectGroupingMainModel.name,
-      createdAt: journalModel.createdAt,
-      updatedAt: journalModel.updatedAt,
-    })
-    .from(journalModel)
-    .leftJoin(journalTypeModel, eq(journalModel.type, journalTypeModel.id))
-    .leftJoin(publisherModel, eq(journalModel.publisherId, publisherModel.id))
-    .leftJoin(entryModeModel, eq(journalModel.entryModeId, entryModeModel.id))
-    .leftJoin(
-      languageMediumModel,
-      eq(journalModel.languageId, languageMediumModel.id),
-    )
-    .leftJoin(bindingModel, eq(journalModel.bindingId, bindingModel.id))
-    .leftJoin(
-      libraryPeriodModel,
-      eq(journalModel.periodId, libraryPeriodModel.id),
-    )
-    .leftJoin(
-      subjectGroupingMainModel,
-      eq(journalModel.subjectGroupId, subjectGroupingMainModel.id),
-    )
-    .where(whereClause)
-    .orderBy(desc(journalModel.id))
-    .limit(100_000);
-
-  const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet("Journals");
+  const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+    stream: res,
+    useStyles: true,
+    useSharedStrings: true,
+  });
+  const sheet = workbook.addWorksheet("Journals", {
+    views: [{ state: "frozen", ySplit: 1 }],
+  });
 
   sheet.columns = [
     { header: "ID", key: "id", width: 10 },
@@ -294,29 +275,96 @@ export async function exportJournalsExcel(
     { header: "Created at", key: "createdAt", width: 22 },
     { header: "Updated at", key: "updatedAt", width: 22 },
   ];
+  styleStreamedHeaderRow(sheet.getRow(1));
+  sheet.getRow(1).commit();
 
-  for (const row of rows) {
-    sheet.addRow({
-      id: row.id,
-      title: row.title ?? "",
-      journalType: row.journalTypeName ?? "",
-      subjectGroup: row.subjectGroupName ?? "",
-      entryMode: row.entryModeName ?? "",
-      publisher: row.publisherName ?? "",
-      language: row.languageName ?? "",
-      binding: row.bindingName ?? "",
-      period: row.periodName ?? "",
-      issn: row.issnNumber ?? "",
-      sizeCm: row.sizeInCM ?? "",
-      createdAt: formatExcelDateTime(row.createdAt),
-      updatedAt: formatExcelDateTime(row.updatedAt),
-    });
+  let lastId: number | null = null;
+  let totalFetched = 0;
+  for (;;) {
+    const remaining = HARD_CAP - totalFetched;
+    if (remaining <= 0) break;
+    const take = Math.min(CHUNK_SIZE, remaining);
+
+    const cursorCond: SQL | undefined =
+      lastId != null ? lt(journalModel.id, lastId) : undefined;
+    const chunkWhere: SQL | undefined = whereClause
+      ? cursorCond
+        ? and(whereClause, cursorCond)
+        : whereClause
+      : cursorCond;
+
+    const chunk = await db
+      .select({
+        id: journalModel.id,
+        title: journalModel.title,
+        issnNumber: journalModel.issnNumber,
+        sizeInCM: journalModel.sizeInCM,
+        journalTypeName: journalTypeModel.name,
+        publisherName: publisherModel.name,
+        entryModeName: entryModeModel.name,
+        languageName: languageMediumModel.name,
+        bindingName: bindingModel.name,
+        periodName: libraryPeriodModel.name,
+        subjectGroupName: subjectGroupingMainModel.name,
+        createdAt: journalModel.createdAt,
+        updatedAt: journalModel.updatedAt,
+      })
+      .from(journalModel)
+      .leftJoin(journalTypeModel, eq(journalModel.type, journalTypeModel.id))
+      .leftJoin(
+        publisherModel,
+        eq(journalModel.publisherId, publisherModel.id),
+      )
+      .leftJoin(
+        entryModeModel,
+        eq(journalModel.entryModeId, entryModeModel.id),
+      )
+      .leftJoin(
+        languageMediumModel,
+        eq(journalModel.languageId, languageMediumModel.id),
+      )
+      .leftJoin(bindingModel, eq(journalModel.bindingId, bindingModel.id))
+      .leftJoin(
+        libraryPeriodModel,
+        eq(journalModel.periodId, libraryPeriodModel.id),
+      )
+      .leftJoin(
+        subjectGroupingMainModel,
+        eq(journalModel.subjectGroupId, subjectGroupingMainModel.id),
+      )
+      .where(chunkWhere)
+      .orderBy(desc(journalModel.id))
+      .limit(take);
+
+    if (chunk.length === 0) break;
+
+    for (const row of chunk) {
+      const dataRow = sheet.addRow({
+        id: row.id,
+        title: row.title ?? "",
+        journalType: row.journalTypeName ?? "",
+        subjectGroup: row.subjectGroupName ?? "",
+        entryMode: row.entryModeName ?? "",
+        publisher: row.publisherName ?? "",
+        language: row.languageName ?? "",
+        binding: row.bindingName ?? "",
+        period: row.periodName ?? "",
+        issn: row.issnNumber ?? "",
+        sizeCm: row.sizeInCM ?? "",
+        createdAt: formatExcelDateTime(row.createdAt),
+        updatedAt: formatExcelDateTime(row.updatedAt),
+      });
+      styleStreamedBodyRow(dataRow);
+      dataRow.commit();
+    }
+
+    totalFetched += chunk.length;
+    if (chunk.length < take) break;
+    lastId = chunk[chunk.length - 1].id;
   }
 
-  applyStandardExcelReportTableStyling(sheet);
-
-  const result = await workbook.xlsx.writeBuffer();
-  return Buffer.isBuffer(result) ? result : Buffer.from(result);
+  sheet.commit();
+  await workbook.commit();
 }
 
 export async function getJournalById(

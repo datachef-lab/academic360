@@ -1,8 +1,12 @@
 import ExcelJS from "exceljs";
 import { db } from "@/db/index.js";
-import { and, count, desc, eq, ilike, or, SQL } from "drizzle-orm";
+import { and, count, desc, eq, ilike, lt, or, SQL } from "drizzle-orm";
+import type { Response } from "express";
 import { ApiError } from "@/utils/ApiError.js";
-import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
+import {
+  styleStreamedBodyRow,
+  styleStreamedHeaderRow,
+} from "@/utils/excel-report-styling.js";
 import { bookModel } from "@repo/db/schemas/models/library/book.model.js";
 import { copyDetailsModel } from "@repo/db/schemas/models/library/copy-details.model.js";
 import { enclosureModel } from "@repo/db/schemas/models/library/enclosure.model.js";
@@ -299,66 +303,29 @@ const formatExcelDateTime = (value: Date | string | null) => {
   });
 };
 
+/**
+ * Streams the books export directly to `res` in ID-descending keyset chunks
+ * instead of pulling the full (up to 100k row) result set into memory and
+ * building the workbook in one shot. The `.limit(100_000)` cap on total rows
+ * returned is preserved exactly — only how those rows are fetched (chunked)
+ * and written (streamed) changed.
+ */
 export async function exportBooksExcel(
   filters: BookExportFilters,
-): Promise<Buffer> {
+  res: Response,
+): Promise<void> {
   const whereClause = buildListWhere(filters);
+  const HARD_CAP = 100_000;
+  const CHUNK_SIZE = 2000;
 
-  const rows = await db
-    .select({
-      id: bookModel.id,
-      title: bookModel.title,
-      subTitle: bookModel.subTitle,
-      alternateTitle: bookModel.alternateTitle,
-      isbn: bookModel.isbn,
-      edition: bookModel.edition,
-      publishedYear: bookModel.publishedYear,
-      publisherName: publisherModel.name,
-      languageName: languageMediumModel.name,
-      subjectGroupName: subjectGroupingMainModel.name,
-      seriesName: seriesModel.name,
-      documentTypeName: libraryDocumentTypeModel.name,
-      libraryArticleName: libraryArticleModel.name,
-      journalTitle: journalModel.title,
-      periodName: libraryPeriodModel.name,
-      enclosureName: enclosureModel.name,
-      callNumber: bookModel.callNumber,
-      issueNumber: bookModel.issueNumber,
-      isUniqueAccess: bookModel.isUniqueAccess,
-      createdAt: bookModel.createdAt,
-      updatedAt: bookModel.updatedAt,
-    })
-    .from(bookModel)
-    .leftJoin(publisherModel, eq(bookModel.publisherId, publisherModel.id))
-    .leftJoin(
-      languageMediumModel,
-      eq(bookModel.languageId, languageMediumModel.id),
-    )
-    .leftJoin(
-      subjectGroupingMainModel,
-      eq(bookModel.subjectGroupId, subjectGroupingMainModel.id),
-    )
-    .leftJoin(seriesModel, eq(bookModel.seriesId, seriesModel.id))
-    .leftJoin(
-      libraryDocumentTypeModel,
-      eq(bookModel.libraryDocumentTypeId, libraryDocumentTypeModel.id),
-    )
-    .leftJoin(
-      libraryArticleModel,
-      eq(libraryDocumentTypeModel.libraryArticleId, libraryArticleModel.id),
-    )
-    .leftJoin(journalModel, eq(bookModel.journalId, journalModel.id))
-    .leftJoin(
-      libraryPeriodModel,
-      eq(bookModel.frequency, libraryPeriodModel.id),
-    )
-    .leftJoin(enclosureModel, eq(bookModel.enclosureId, enclosureModel.id))
-    .where(whereClause)
-    .orderBy(desc(bookModel.id))
-    .limit(100_000);
-
-  const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet("Books");
+  const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+    stream: res,
+    useStyles: true,
+    useSharedStrings: true,
+  });
+  const sheet = workbook.addWorksheet("Books", {
+    views: [{ state: "frozen", ySplit: 1 }],
+  });
 
   sheet.columns = [
     { header: "ID", key: "id", width: 10 },
@@ -383,37 +350,113 @@ export async function exportBooksExcel(
     { header: "Created at", key: "createdAt", width: 22 },
     { header: "Updated at", key: "updatedAt", width: 22 },
   ];
+  styleStreamedHeaderRow(sheet.getRow(1));
+  sheet.getRow(1).commit();
 
-  for (const row of rows) {
-    sheet.addRow({
-      id: row.id,
-      title: row.title ?? "",
-      subTitle: row.subTitle ?? "",
-      alternateTitle: row.alternateTitle ?? "",
-      isbn: row.isbn ?? "",
-      edition: row.edition ?? "",
-      publishedYear: row.publishedYear ?? "",
-      publisher: row.publisherName ?? "",
-      language: row.languageName ?? "",
-      subjectGroup: row.subjectGroupName ?? "",
-      series: row.seriesName ?? "",
-      docType: row.documentTypeName ?? "",
-      docTypeArticle: row.libraryArticleName ?? "",
-      journal: row.journalTitle ?? "",
-      period: row.periodName ?? "",
-      enclosure: row.enclosureName ?? "",
-      callNumber: row.callNumber ?? "",
-      issueNumber: row.issueNumber ?? "",
-      uniqueAccess: row.isUniqueAccess ? "Yes" : "No",
-      createdAt: formatExcelDateTime(row.createdAt),
-      updatedAt: formatExcelDateTime(row.updatedAt),
-    });
+  let lastId: number | null = null;
+  let totalFetched = 0;
+  for (;;) {
+    const remaining = HARD_CAP - totalFetched;
+    if (remaining <= 0) break;
+    const take = Math.min(CHUNK_SIZE, remaining);
+
+    const cursorCond: SQL | undefined = lastId != null ? lt(bookModel.id, lastId) : undefined;
+    const chunkWhere: SQL | undefined = whereClause
+      ? cursorCond
+        ? and(whereClause, cursorCond)
+        : whereClause
+      : cursorCond;
+
+    const chunk = await db
+      .select({
+        id: bookModel.id,
+        title: bookModel.title,
+        subTitle: bookModel.subTitle,
+        alternateTitle: bookModel.alternateTitle,
+        isbn: bookModel.isbn,
+        edition: bookModel.edition,
+        publishedYear: bookModel.publishedYear,
+        publisherName: publisherModel.name,
+        languageName: languageMediumModel.name,
+        subjectGroupName: subjectGroupingMainModel.name,
+        seriesName: seriesModel.name,
+        documentTypeName: libraryDocumentTypeModel.name,
+        libraryArticleName: libraryArticleModel.name,
+        journalTitle: journalModel.title,
+        periodName: libraryPeriodModel.name,
+        enclosureName: enclosureModel.name,
+        callNumber: bookModel.callNumber,
+        issueNumber: bookModel.issueNumber,
+        isUniqueAccess: bookModel.isUniqueAccess,
+        createdAt: bookModel.createdAt,
+        updatedAt: bookModel.updatedAt,
+      })
+      .from(bookModel)
+      .leftJoin(publisherModel, eq(bookModel.publisherId, publisherModel.id))
+      .leftJoin(
+        languageMediumModel,
+        eq(bookModel.languageId, languageMediumModel.id),
+      )
+      .leftJoin(
+        subjectGroupingMainModel,
+        eq(bookModel.subjectGroupId, subjectGroupingMainModel.id),
+      )
+      .leftJoin(seriesModel, eq(bookModel.seriesId, seriesModel.id))
+      .leftJoin(
+        libraryDocumentTypeModel,
+        eq(bookModel.libraryDocumentTypeId, libraryDocumentTypeModel.id),
+      )
+      .leftJoin(
+        libraryArticleModel,
+        eq(libraryDocumentTypeModel.libraryArticleId, libraryArticleModel.id),
+      )
+      .leftJoin(journalModel, eq(bookModel.journalId, journalModel.id))
+      .leftJoin(
+        libraryPeriodModel,
+        eq(bookModel.frequency, libraryPeriodModel.id),
+      )
+      .leftJoin(enclosureModel, eq(bookModel.enclosureId, enclosureModel.id))
+      .where(chunkWhere)
+      .orderBy(desc(bookModel.id))
+      .limit(take);
+
+    if (chunk.length === 0) break;
+
+    for (const row of chunk) {
+      const dataRow = sheet.addRow({
+        id: row.id,
+        title: row.title ?? "",
+        subTitle: row.subTitle ?? "",
+        alternateTitle: row.alternateTitle ?? "",
+        isbn: row.isbn ?? "",
+        edition: row.edition ?? "",
+        publishedYear: row.publishedYear ?? "",
+        publisher: row.publisherName ?? "",
+        language: row.languageName ?? "",
+        subjectGroup: row.subjectGroupName ?? "",
+        series: row.seriesName ?? "",
+        docType: row.documentTypeName ?? "",
+        docTypeArticle: row.libraryArticleName ?? "",
+        journal: row.journalTitle ?? "",
+        period: row.periodName ?? "",
+        enclosure: row.enclosureName ?? "",
+        callNumber: row.callNumber ?? "",
+        issueNumber: row.issueNumber ?? "",
+        uniqueAccess: row.isUniqueAccess ? "Yes" : "No",
+        createdAt: formatExcelDateTime(row.createdAt),
+        updatedAt: formatExcelDateTime(row.updatedAt),
+      });
+      styleStreamedBodyRow(dataRow);
+      dataRow.commit();
+    }
+
+    totalFetched += chunk.length;
+    if (chunk.length < take) break;
+    lastId = chunk[chunk.length - 1].id;
   }
 
-  applyStandardExcelReportTableStyling(sheet);
-
-  const result = await workbook.xlsx.writeBuffer();
-  return Buffer.isBuffer(result) ? result : Buffer.from(result);
+  sheet.commit();
+  await workbook.commit();
 }
 
 async function countCopyDetailsForBook(bookId: number): Promise<number> {

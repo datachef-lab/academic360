@@ -640,3 +640,164 @@ export async function downloadCuRegistrationDocumentsAsZip(
     );
   }
 }
+
+export type CuRegistrationZipContentType = "pdfs" | "documents";
+
+export interface StreamCuRegistrationDocumentsZipHandlers {
+  io?: any;
+  userId?: string;
+  uploadSessionId?: string;
+  /**
+   * Fires once, right after the file listing is known and before the first
+   * entry is appended — the only safe point to set response headers (or
+   * bail with a 404) once bytes start streaming.
+   */
+  onListed: (info: { fileCount: number }) => void;
+  append: (entryName: string, buffer: Buffer) => void;
+}
+
+const CU_REGISTRATION_DOWNLOAD_CONCURRENCY = 5;
+
+/**
+ * Streaming replacement for the single-content-type half of
+ * `downloadCuRegistrationDocumentsAsZip` — used by the live download
+ * endpoints (cu-registration-document-download.controller.ts). Differs from
+ * the buffered original in two ways:
+ *
+ *  1. S3 GETs run in small concurrent batches (`CU_REGISTRATION_DOWNLOAD_
+ *     CONCURRENCY` at a time) instead of one full sequential loop, so
+ *     network latency doesn't serialize the whole download; buffers are
+ *     handed off to the caller's `append` (which writes them into an
+ *     `archiver` ZIP stream) as soon as each batch resolves, so at most
+ *     ~5 file buffers are ever resident at once instead of every file in
+ *     the folder.
+ *  2. It only ever builds ONE archive (either PDFs or documents), matching
+ *     what `downloadCuRegistrationDocumentsController` actually delivers
+ *     today — see the controller for why "combined" collapses to "pdfs".
+ *
+ * File set and per-entry names are unchanged from the original: PDFs keep
+ * their flat `{applicationNumber}.pdf` naming, documents keep their
+ * `{subfolder}/{filename}` structure, and both preserve the original
+ * S3-listing order.
+ */
+export async function streamCuRegistrationDocumentsZip(
+  year: number,
+  regulationType: string,
+  contentType: CuRegistrationZipContentType,
+  handlers: StreamCuRegistrationDocumentsZipHandlers,
+): Promise<{ fileCount: number }> {
+  const { io, userId, uploadSessionId } = handlers;
+  const emit = (payload: Record<string, unknown>) => {
+    if (!io || !userId) return;
+    io.to(`user:${userId}`).emit("download_progress", {
+      id: uploadSessionId || `download-${Date.now()}`,
+      userId,
+      type: "download_progress",
+      createdAt: new Date(),
+      sessionId: uploadSessionId,
+      ...payload,
+    });
+  };
+
+  const region = process.env.AWS_REGION || "ap-south-1";
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID?.trim() || "";
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY?.trim() || "";
+  const s3Client = new S3Client({
+    region,
+    ...(accessKeyId && secretAccessKey
+      ? { credentials: { accessKeyId, secretAccessKey } }
+      : {}),
+  });
+
+  const bucket = process.env.AWS_S3_BUCKET!;
+  const rootFolder = process.env.AWS_ROOT_FOLDER || "";
+  const basePath = rootFolder
+    ? `${rootFolder}/${year}/${regulationType}`
+    : `${year}/${regulationType}`;
+
+  const isPdf = contentType === "pdfs";
+  const listPath = isPdf ? `${basePath}/students` : `${basePath}/adm-reg-docs`;
+  const stage = isPdf ? "downloading_pdfs" : "downloading_documents";
+
+  emit({
+    message: isPdf ? "Listing PDF files..." : "Listing uploaded documents...",
+    progress: 10,
+    status: "started",
+    stage: "listing",
+  });
+
+  const allFiles = await listFilesInFolder(listPath);
+  const fileKeys = isPdf
+    ? allFiles.filter(
+        (key) => key.endsWith(".pdf") && key.includes("/adm-reg-forms/"),
+      )
+    : allFiles;
+
+  handlers.onListed({ fileCount: fileKeys.length });
+
+  emit({
+    message: `Found ${fileKeys.length} ${isPdf ? "PDF files" : "documents"} to download`,
+    progress: 20,
+    status: "in_progress",
+    stage,
+    [isPdf ? "pdfCount" : "documentsCount"]: fileKeys.length,
+  });
+
+  let appended = 0;
+  for (
+    let i = 0;
+    i < fileKeys.length;
+    i += CU_REGISTRATION_DOWNLOAD_CONCURRENCY
+  ) {
+    const batch = fileKeys.slice(i, i + CU_REGISTRATION_DOWNLOAD_CONCURRENCY);
+    const batchResults = await Promise.all(
+      batch.map(async (key) => {
+        try {
+          const command = new GetObjectCommand({ Bucket: bucket, Key: key });
+          const response = await s3Client.send(command);
+          const bytes = await response.Body!.transformToByteArray();
+          return { key, buffer: Buffer.from(bytes) };
+        } catch (error) {
+          console.error(
+            `[CU-REG-DOWNLOAD] Error downloading ${isPdf ? "PDF" : "document"} ${key}:`,
+            error,
+          );
+          return { key, buffer: null };
+        }
+      }),
+    );
+
+    // Preserve original listing order: batchResults mirrors `batch`'s
+    // index order regardless of which S3 GET resolved first.
+    for (const { key, buffer } of batchResults) {
+      if (!buffer) continue;
+      const pathParts = key.split("/");
+      const fileName = pathParts[pathParts.length - 1];
+      const entryName = isPdf
+        ? fileName
+        : `${pathParts[pathParts.length - 2]}/${fileName}`;
+      handlers.append(entryName, buffer);
+      appended++;
+
+      emit({
+        message: `Downloading ${isPdf ? "PDF" : "document"} ${appended}/${fileKeys.length}`,
+        progress: 20 + Math.round((appended / Math.max(fileKeys.length, 1)) * 60),
+        status: "in_progress",
+        stage,
+        currentFile: fileName,
+        [isPdf ? "pdfCount" : "documentsCount"]: appended,
+        [isPdf ? "pdfTotal" : "documentsTotal"]: fileKeys.length,
+      });
+    }
+  }
+
+  emit({
+    message: `Download completed! ${appended} ${isPdf ? "PDFs" : "documents"} processed`,
+    progress: 100,
+    status: "completed",
+    stage: "completed",
+    [isPdf ? "pdfCount" : "documentsCount"]: appended,
+  });
+
+  return { fileCount: appended };
+}

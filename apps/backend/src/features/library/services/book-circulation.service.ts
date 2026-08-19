@@ -14,8 +14,12 @@ import {
   sql,
   SQL,
 } from "drizzle-orm";
+import type { Response } from "express";
 import { ApiError } from "@/utils/ApiError.js";
-import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
+import {
+  styleStreamedBodyRow,
+  styleStreamedHeaderRow,
+} from "@/utils/excel-report-styling.js";
 import { bookCirculationModel } from "@repo/db/schemas/models/library/book-circulation.model.js";
 import { copyDetailsModel } from "@repo/db/schemas/models/library/copy-details.model.js";
 import { bookModel } from "@repo/db/schemas/models/library/book.model.js";
@@ -1249,13 +1253,20 @@ const formatExcelDate = (value: Date | string | null) => {
   return parsed.toLocaleDateString("en-GB");
 };
 
+/**
+ * Streams the book-circulation export directly to `res` in ID-descending
+ * keyset chunks instead of pulling the full (up to 100k row) result set
+ * into memory. The `.limit(100_000)` cap on total rows is preserved
+ * exactly.
+ */
 export async function exportBookCirculationExcel(
   filters: Omit<BookCirculationFilters, "page" | "limit">,
-): Promise<Buffer> {
-  const whereConditions: SQL[] = [];
+  res: Response,
+): Promise<void> {
+  const baseConditions: SQL[] = [];
   if (filters.search?.trim()) {
     const searchTerm = `%${filters.search.trim()}%`;
-    whereConditions.push(
+    baseConditions.push(
       or(
         ilike(userModel.name, searchTerm),
         ilike(studentModel.uid, searchTerm),
@@ -1267,53 +1278,21 @@ export async function exportBookCirculationExcel(
     );
   }
   if (filters.userType) {
-    whereConditions.push(eq(userModel.type, filters.userType));
+    baseConditions.push(eq(userModel.type, filters.userType));
   }
-  whereConditions.push(...buildCirculationFilterConditions(filters));
-  const whereClause = whereConditions.length
-    ? and(...whereConditions)
-    : undefined;
+  baseConditions.push(...buildCirculationFilterConditions(filters));
 
-  const rows = await db
-    .select({
-      circulationId: bookCirculationModel.id,
-      userName: userModel.name,
-      userType: userModel.type,
-      studentUid: studentModel.uid,
-      staffUid: staffModel.uid,
-      attendanceCode: staffModel.attendanceCode,
-      bookTitle: bookModel.title,
-      accessNumber: copyDetailsModel.accessNumber,
-      author: bookModel.alternateTitle,
-      borrowingType: borrowingTypeModel.name,
-      isReturned: bookCirculationModel.isReturned,
-      isReIssued: bookCirculationModel.isReIssued,
-      issueTimestamp: bookCirculationModel.issueTimestamp,
-      returnTimestamp: bookCirculationModel.returnTimestamp,
-      actualReturnTimestamp: bookCirculationModel.actualReturnTimestamp,
-      fineAmount: bookCirculationModel.fineAmount,
-      fineWaiver: bookCirculationModel.fineWaiver,
-      updatedAt: bookCirculationModel.updatedAt,
-    })
-    .from(bookCirculationModel)
-    .leftJoin(userModel, eq(bookCirculationModel.userId, userModel.id))
-    .leftJoin(studentModel, eq(studentModel.userId, userModel.id))
-    .leftJoin(staffModel, eq(staffModel.userId, userModel.id))
-    .leftJoin(
-      copyDetailsModel,
-      eq(bookCirculationModel.copyDetailsId, copyDetailsModel.id),
-    )
-    .leftJoin(bookModel, eq(copyDetailsModel.bookId, bookModel.id))
-    .leftJoin(
-      borrowingTypeModel,
-      eq(bookCirculationModel.borrowingTypeId, borrowingTypeModel.id),
-    )
-    .where(whereClause)
-    .orderBy(desc(bookCirculationModel.id))
-    .limit(100_000);
+  const HARD_CAP = 100_000;
+  const CHUNK_SIZE = 2000;
 
-  const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet("Book Circulation");
+  const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+    stream: res,
+    useStyles: true,
+    useSharedStrings: true,
+  });
+  const sheet = workbook.addWorksheet("Book Circulation", {
+    views: [{ state: "frozen", ySplit: 1 }],
+  });
   sheet.columns = [
     { header: "Circulation ID", key: "id", width: 14 },
     { header: "User", key: "userName", width: 24 },
@@ -1331,35 +1310,98 @@ export async function exportBookCirculationExcel(
     { header: "Fine", key: "fine", width: 12 },
     { header: "Updated at", key: "updatedAt", width: 22 },
   ];
+  styleStreamedHeaderRow(sheet.getRow(1));
+  sheet.getRow(1).commit();
 
-  for (const row of rows) {
-    const state = row.isReturned
-      ? "RETURNED"
-      : row.isReIssued
-        ? "REISSUED"
-        : new Date(row.returnTimestamp).getTime() < Date.now()
-          ? "OVERDUE"
-          : "ISSUED";
-    sheet.addRow({
-      id: row.circulationId,
-      userName: row.userName ?? "",
-      userType: row.userType ?? "",
-      uid: row.studentUid ?? row.staffUid ?? "",
-      attendanceCode: row.attendanceCode ?? "",
-      bookTitle: row.bookTitle ?? "",
-      accessNumber: row.accessNumber ?? "",
-      author: row.author ?? "",
-      borrowingType: row.borrowingType ?? "",
-      state,
-      issuedAt: formatExcelDateTime(row.issueTimestamp),
-      returnDate: formatExcelDate(row.returnTimestamp),
-      returnedOn: formatExcelDateTime(row.actualReturnTimestamp),
-      fine: Math.max(0, (row.fineAmount ?? 0) - (row.fineWaiver ?? 0)),
-      updatedAt: formatExcelDateTime(row.updatedAt),
-    });
+  let lastId: number | null = null;
+  let totalFetched = 0;
+  for (;;) {
+    const remaining = HARD_CAP - totalFetched;
+    if (remaining <= 0) break;
+    const take = Math.min(CHUNK_SIZE, remaining);
+
+    const chunkConditions = [...baseConditions];
+    if (lastId != null) {
+      chunkConditions.push(lt(bookCirculationModel.id, lastId));
+    }
+    const chunkWhere = chunkConditions.length
+      ? and(...chunkConditions)
+      : undefined;
+
+    const chunk = await db
+      .select({
+        circulationId: bookCirculationModel.id,
+        userName: userModel.name,
+        userType: userModel.type,
+        studentUid: studentModel.uid,
+        staffUid: staffModel.uid,
+        attendanceCode: staffModel.attendanceCode,
+        bookTitle: bookModel.title,
+        accessNumber: copyDetailsModel.accessNumber,
+        author: bookModel.alternateTitle,
+        borrowingType: borrowingTypeModel.name,
+        isReturned: bookCirculationModel.isReturned,
+        isReIssued: bookCirculationModel.isReIssued,
+        issueTimestamp: bookCirculationModel.issueTimestamp,
+        returnTimestamp: bookCirculationModel.returnTimestamp,
+        actualReturnTimestamp: bookCirculationModel.actualReturnTimestamp,
+        fineAmount: bookCirculationModel.fineAmount,
+        fineWaiver: bookCirculationModel.fineWaiver,
+        updatedAt: bookCirculationModel.updatedAt,
+      })
+      .from(bookCirculationModel)
+      .leftJoin(userModel, eq(bookCirculationModel.userId, userModel.id))
+      .leftJoin(studentModel, eq(studentModel.userId, userModel.id))
+      .leftJoin(staffModel, eq(staffModel.userId, userModel.id))
+      .leftJoin(
+        copyDetailsModel,
+        eq(bookCirculationModel.copyDetailsId, copyDetailsModel.id),
+      )
+      .leftJoin(bookModel, eq(copyDetailsModel.bookId, bookModel.id))
+      .leftJoin(
+        borrowingTypeModel,
+        eq(bookCirculationModel.borrowingTypeId, borrowingTypeModel.id),
+      )
+      .where(chunkWhere)
+      .orderBy(desc(bookCirculationModel.id))
+      .limit(take);
+
+    if (chunk.length === 0) break;
+
+    for (const row of chunk) {
+      const state = row.isReturned
+        ? "RETURNED"
+        : row.isReIssued
+          ? "REISSUED"
+          : new Date(row.returnTimestamp).getTime() < Date.now()
+            ? "OVERDUE"
+            : "ISSUED";
+      const dataRow = sheet.addRow({
+        id: row.circulationId,
+        userName: row.userName ?? "",
+        userType: row.userType ?? "",
+        uid: row.studentUid ?? row.staffUid ?? "",
+        attendanceCode: row.attendanceCode ?? "",
+        bookTitle: row.bookTitle ?? "",
+        accessNumber: row.accessNumber ?? "",
+        author: row.author ?? "",
+        borrowingType: row.borrowingType ?? "",
+        state,
+        issuedAt: formatExcelDateTime(row.issueTimestamp),
+        returnDate: formatExcelDate(row.returnTimestamp),
+        returnedOn: formatExcelDateTime(row.actualReturnTimestamp),
+        fine: Math.max(0, (row.fineAmount ?? 0) - (row.fineWaiver ?? 0)),
+        updatedAt: formatExcelDateTime(row.updatedAt),
+      });
+      styleStreamedBodyRow(dataRow);
+      dataRow.commit();
+    }
+
+    totalFetched += chunk.length;
+    if (chunk.length < take) break;
+    lastId = chunk[chunk.length - 1].circulationId;
   }
 
-  applyStandardExcelReportTableStyling(sheet);
-  const result = await workbook.xlsx.writeBuffer();
-  return Buffer.isBuffer(result) ? result : Buffer.from(result);
+  sheet.commit();
+  await workbook.commit();
 }

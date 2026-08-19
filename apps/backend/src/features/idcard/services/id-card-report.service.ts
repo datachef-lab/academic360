@@ -7,11 +7,14 @@ const archiverFactory = createRequire(import.meta.url)("archiver") as (
   format: "zip" | "tar",
   opts?: { zlib?: { level?: number } },
 ) => import("archiver").Archiver;
-import { PassThrough } from "node:stream";
+import { PassThrough, Writable} from "node:stream";
 
 import { db } from "@/db/index.js";
 import { getBufferFromS3 } from "@/services/s3.service.js";
-import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
+import {
+  styleStreamedBodyRow,
+  styleStreamedHeaderRow,
+} from "@/utils/excel-report-styling.js";
 import {
   idCardIssueModel,
   studentModel,
@@ -86,12 +89,91 @@ export async function fetchIssuesForDate(date: string): Promise<ReportRow[]> {
     .orderBy(asc(idCardIssueModel.createdAt));
 }
 
-export async function buildExcelReport(date: string): Promise<Buffer> {
-  const rows = await fetchIssuesForDate(date);
-  const wb = new ExcelJS.Workbook();
+/**
+ * Same query as `fetchIssuesForDate`, but keyset-paginated in `(createdAt,
+ * id)` chunks — `id` is added purely as a deterministic tiebreaker for
+ * pagination (the original single-shot query had no secondary sort, so ties
+ * on `createdAt` were already DB-plan-dependent; adding `id` only makes that
+ * previously-unspecified ordering stable, it doesn't change which rows or
+ * values come back).
+ */
+async function fetchIssuesForDateChunk(
+  date: string,
+  cursor: { createdAt: Date; id: number } | null,
+  limit: number,
+): Promise<ReportRow[]> {
+  const conditions = [
+    sql`date_trunc('day', ${idCardIssueModel.issueDate}) = ${date}::date`,
+  ];
+  if (cursor) {
+    conditions.push(
+      sql`(${idCardIssueModel.createdAt}, ${idCardIssueModel.id}) > (${cursor.createdAt.toISOString()}::timestamptz, ${cursor.id})`,
+    );
+  }
+
+  return db
+    .select({
+      id: idCardIssueModel.id,
+      uid: idCardIssueModel.uidSnapshot,
+      name: idCardIssueModel.nameSnapshot,
+      phone: idCardIssueModel.mobileSnapshot,
+      bloodGroup: idCardIssueModel.bloodGroupSnapshot,
+      course: idCardIssueModel.courseSnapshot,
+      section: sql<
+        string | null
+      >`COALESCE(${idCardIssueModel.sectionSnapshot}, (
+        SELECT sec.name FROM promotions pr
+        JOIN sections sec ON sec.id = pr.section_id_fk
+        WHERE pr.student_id_fk = ${idCardIssueModel.studentId}
+        ORDER BY pr.id DESC LIMIT 1))`,
+      classRollNumber: sql<
+        string | null
+      >`COALESCE(${idCardIssueModel.classRollNumberSnapshot}, ${studentModel.classRollNumber}, (
+        SELECT pr.class_roll_number FROM promotions pr
+        WHERE pr.student_id_fk = ${idCardIssueModel.studentId}
+        ORDER BY pr.id DESC LIMIT 1))`,
+      validTill: idCardIssueModel.validTill,
+      issueStatus: idCardIssueModel.issueStatus,
+      remarks: idCardIssueModel.remarks,
+      createdAt: idCardIssueModel.createdAt,
+      frontImageKey: idCardIssueModel.frontImageKey,
+    })
+    .from(idCardIssueModel)
+    .leftJoin(studentModel, eq(studentModel.id, idCardIssueModel.studentId))
+    .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+    .where(and(...conditions))
+    .orderBy(asc(idCardIssueModel.createdAt), asc(idCardIssueModel.id))
+    .limit(limit);
+}
+
+/**
+ * Streams the day's ID-card issuance report directly to `res` instead of
+ * building the workbook fully in memory — rows are pulled from the DB in
+ * fixed-size chunks (see `fetchIssuesForDateChunk`) and written as they
+ * arrive.
+ */
+export async function buildExcelReport(
+  date: string,
+  // A plain `NodeJS.WritableStream` rather than Express's `Response` — this
+  // is all ExcelJS's `WorkbookWriter` needs (it's just handed through as
+  // `{ stream }`), and it lets the report-job queue in
+  // reports/report-generators.ts reuse this streaming path via a
+  // `PassThrough` to still get a `Buffer` back for its job-storage
+  // contract, instead of duplicating this function for that caller.
+  res: Writable,
+): Promise<void> {
+  const CHUNK_SIZE = 2000;
+
+  const wb = new ExcelJS.stream.xlsx.WorkbookWriter({
+    stream: res,
+    useStyles: true,
+    useSharedStrings: true,
+  });
   wb.creator = "academic360";
   wb.created = new Date();
-  const ws = wb.addWorksheet(`ID Cards ${date}`);
+  const ws = wb.addWorksheet(`ID Cards ${date}`, {
+    views: [{ state: "frozen", ySplit: 1 }],
+  });
 
   ws.columns = [
     { header: "ID", key: "id", width: 8 },
@@ -107,20 +189,32 @@ export async function buildExcelReport(date: string): Promise<Buffer> {
     { header: "Remarks", key: "remarks", width: 30 },
     { header: "Created At", key: "createdAt", width: 22 },
   ];
-  rows.forEach((r) => {
-    ws.addRow({
-      ...r,
-      createdAt: r.createdAt
-        ? new Date(r.createdAt).toISOString().replace("T", " ").slice(0, 19)
-        : "",
-    });
-  });
+  styleStreamedHeaderRow(ws.getRow(1));
+  ws.getRow(1).commit();
 
-  // Grey header fill + grid borders + frozen header — same as the other exports.
-  applyStandardExcelReportTableStyling(ws);
+  let cursor: { createdAt: Date; id: number } | null = null;
+  for (;;) {
+    const chunk = await fetchIssuesForDateChunk(date, cursor, CHUNK_SIZE);
+    if (chunk.length === 0) break;
 
-  const buf = await wb.xlsx.writeBuffer();
-  return Buffer.from(buf);
+    for (const r of chunk) {
+      const dataRow = ws.addRow({
+        ...r,
+        createdAt: r.createdAt
+          ? new Date(r.createdAt).toISOString().replace("T", " ").slice(0, 19)
+          : "",
+      });
+      styleStreamedBodyRow(dataRow);
+      dataRow.commit();
+    }
+
+    if (chunk.length < CHUNK_SIZE) break;
+    const last = chunk[chunk.length - 1];
+    cursor = { createdAt: last.createdAt, id: last.id };
+  }
+
+  ws.commit();
+  await wb.commit();
 }
 
 export function streamZipForDate(date: string) {

@@ -1,4 +1,5 @@
 import type { Request } from "express";
+import { PassThrough } from "node:stream";
 import { parseReportExportFilters } from "@/utils/report-export-filters.js";
 import type { GeneratedReport, ReportProgress } from "./report-job.service.js";
 import {
@@ -12,7 +13,10 @@ import {
   exportStudentSubjectsReport,
 } from "@/features/subject-selection/services/student-subject-selection.service.js";
 import { exportPromotionStudentsReport } from "@/features/academics/services/promotion.service.js";
-import { exportCareerProgressionFormsExcel } from "@/features/academics/services/career-progression-form-export.service.js";
+import {
+  careerProgressionExportFileName,
+  exportCareerProgressionFormsExcel,
+} from "@/features/academics/services/career-progression-form-export.service.js";
 import { exportDeclarationsReport } from "@/features/academics/services/declaration-export.service.js";
 import { exportAdmitCardDistributionsReport } from "@/features/exams/services/admit-card.service.js";
 import { exportCuRegistrationCorrectionRequests } from "@/features/admissions/services/cu-registration-correction-request.service.js";
@@ -58,6 +62,32 @@ export interface ReportDescriptor {
   key: string;
   label: string;
   generate: (ctx: GeneratorContext) => Promise<GeneratedReport>;
+}
+
+/**
+ * A couple of exports (id-card daily excel, career progression) were
+ * converted to stream straight to an HTTP response (see
+ * idcard/services/id-card-report.service.ts and
+ * academics/services/career-progression-form-export.service.ts) to stop
+ * their live download endpoints from OOMing on a fully-buffered workbook.
+ * This job queue's contract is a `Buffer` it stores/serves later, not a
+ * live response — so here we hand those writers a `PassThrough` and collect
+ * everything written to it into a `Buffer`, instead of duplicating a
+ * buffered code path.
+ */
+async function collectStreamToBuffer(
+  write: (stream: PassThrough) => Promise<void>,
+): Promise<Buffer> {
+  const stream = new PassThrough();
+  const chunks: Buffer[] = [];
+  stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+  const ended = new Promise<void>((resolve, reject) => {
+    stream.on("end", resolve);
+    stream.on("error", reject);
+  });
+  await write(stream);
+  await ended;
+  return Buffer.concat(chunks);
 }
 
 /* ------------------------------ param helpers ----------------------------- */
@@ -281,12 +311,18 @@ const DESCRIPTORS: ReportDescriptor[] = [
     label: "Career Progression Form Report",
     generate: async ({ req, onProgress }) => {
       // academicYearId is optional here — the page allows "All years".
-      const res = await exportCareerProgressionFormsExcel({
-        academicYearId: num(req, "academicYearId"),
-        filters: filtersOf(req),
-        onProgress,
-      });
-      return { buffer: res.buffer, fileName: res.fileName, contentType: XLSX };
+      const academicYearId = num(req, "academicYearId");
+      const filters = filtersOf(req);
+      const buffer = await collectStreamToBuffer((stream) =>
+        exportCareerProgressionFormsExcel({
+          academicYearId,
+          filters,
+          onProgress,
+          res: stream,
+        }).then(() => undefined),
+      );
+      const fileName = careerProgressionExportFileName(academicYearId);
+      return { buffer, fileName, contentType: XLSX };
     },
   },
   {
@@ -308,7 +344,9 @@ const DESCRIPTORS: ReportDescriptor[] = [
     label: "ID Card Daily Excel Report",
     generate: async ({ req }) => {
       const date = str(req, "date") ?? "";
-      const buffer = await buildExcelReport(date);
+      const buffer = await collectStreamToBuffer((stream) =>
+        buildExcelReport(date, stream),
+      );
       return {
         buffer,
         fileName: `id_card_report_${date || "all"}.xlsx`,
