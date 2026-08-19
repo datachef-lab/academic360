@@ -191,11 +191,15 @@ export async function getAllSubjectGroupingMains(): Promise<
     db
       .select()
       .from(academicYearModel)
-      .where(inArray(academicYearModel.id, uniq(mains.map((m) => m.academicYearId)))),
+      .where(
+        inArray(academicYearModel.id, uniq(mains.map((m) => m.academicYearId))),
+      ),
     db
       .select()
       .from(subjectTypeModel)
-      .where(inArray(subjectTypeModel.id, uniq(mains.map((m) => m.subjectTypeId)))),
+      .where(
+        inArray(subjectTypeModel.id, uniq(mains.map((m) => m.subjectTypeId))),
+      ),
     db
       .select({
         id: subjectGroupingProgramCourseModel.id,
@@ -236,7 +240,8 @@ export async function getAllSubjectGroupingMains(): Promise<
     db
       .select({
         id: subjectGroupingSubjectModel.id,
-        subjectGroupingMainId: subjectGroupingSubjectModel.subjectGroupingMainId,
+        subjectGroupingMainId:
+          subjectGroupingSubjectModel.subjectGroupingMainId,
         subjectId: subjectGroupingSubjectModel.subjectId,
         subject: {
           id: subjectModel.id,
@@ -275,7 +280,8 @@ export async function getAllSubjectGroupingMains(): Promise<
   const dtos: SubjectGroupingMainDto[] = [];
   for (const main of mains) {
     const ay = ayById.get(main.academicYearId);
-    const st = main.subjectTypeId != null ? stById.get(main.subjectTypeId) : undefined;
+    const st =
+      main.subjectTypeId != null ? stById.get(main.subjectTypeId) : undefined;
     if (!ay || !st || !main.id) continue;
     dtos.push({
       ...main,
