@@ -200,9 +200,95 @@ export async function findById(id: number) {
 
 export async function findAllDtos() {
   const programCourses = await db.select().from(programCourseModel);
-  return (
-    await Promise.all(programCourses.map(async (pc) => await modelToDto(pc)))
-  ).filter((ele) => ele !== null);
+
+  // Resolve each related row once per DISTINCT id instead of once per program
+  // course. Many program courses share the same course/stream/affiliation/etc,
+  // so the previous per-row modelToDto fanned out into hundreds of duplicate
+  // findById calls. We call the SAME findById functions here (so every nested
+  // DTO shape — e.g. course.courseFormatResponse — is byte-identical), just
+  // deduped through per-dimension maps.
+  const distinct = (ids: (number | null | undefined)[]) =>
+    Array.from(new Set(ids.filter((id): id is number => id != null)));
+
+  const buildMap = async <T>(
+    ids: number[],
+    fetch: (id: number) => Promise<T>,
+  ): Promise<Map<number, T>> => {
+    const entries = await Promise.all(
+      ids.map(async (id) => [id, await fetch(id)] as const),
+    );
+    return new Map(entries);
+  };
+
+  const [
+    courseMap,
+    courseTypeMap,
+    courseLevelMap,
+    affiliationMap,
+    regulationTypeMap,
+    streamMap,
+  ] = await Promise.all([
+    buildMap(
+      distinct(programCourses.map((pc) => pc.courseId)),
+      courseService.findById,
+    ),
+    buildMap(
+      distinct(programCourses.map((pc) => pc.courseTypeId)),
+      courseTypeService.findById,
+    ),
+    buildMap(
+      distinct(programCourses.map((pc) => pc.courseLevelId)),
+      courseLevelService.findById,
+    ),
+    buildMap(
+      distinct(programCourses.map((pc) => pc.affiliationId)),
+      affiliationService.findById,
+    ),
+    buildMap(
+      distinct(programCourses.map((pc) => pc.regulationTypeId)),
+      regulationTypeService.findById,
+    ),
+    buildMap(
+      distinct(programCourses.map((pc) => pc.streamId)),
+      streamService.findById,
+    ),
+  ]);
+
+  return programCourses
+    .map((pc): ProgramCourseDto | null => {
+      if (!pc) return null;
+      const {
+        courseId,
+        courseTypeId,
+        courseLevelId,
+        affiliationId,
+        regulationTypeId,
+        streamId,
+        ...rest
+      } = pc;
+      return {
+        ...rest,
+        course: courseId != null ? (courseMap.get(courseId) ?? null) : null,
+        courseType:
+          courseTypeId != null
+            ? (courseTypeMap.get(courseTypeId) ?? null)
+            : null,
+        courseLevel:
+          courseLevelId != null
+            ? (courseLevelMap.get(courseLevelId) ?? null)
+            : null,
+        affiliation:
+          affiliationId != null
+            ? (affiliationMap.get(affiliationId) ?? null)
+            : null,
+        regulationType:
+          regulationTypeId != null
+            ? (regulationTypeMap.get(regulationTypeId) ?? null)
+            : null,
+        stream: streamId != null ? (streamMap.get(streamId) ?? null) : null,
+      };
+    })
+    .filter((ele): ele is ProgramCourseDto => ele !== null);
 }
 
 export async function getAllProgramCourses() {
