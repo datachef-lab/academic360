@@ -24,6 +24,19 @@ export const createFeeHead = async (
       updatedByUserId: userId,
     })
     .returning();
+
+  // Emit socket event for fee head creation (the console subscribes to
+  // fee_head_created but nothing was emitting it — mirrors the update path).
+  const io = socketService.getIO();
+  if (io && created) {
+    io.emit("fee_head_created", {
+      feeHeadId: created.id,
+      type: "creation",
+      message: "A new fee head has been created",
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   return created;
 };
 
