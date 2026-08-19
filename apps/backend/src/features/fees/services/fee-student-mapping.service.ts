@@ -26,7 +26,10 @@ import {
   promotionModel,
 } from "@repo/db/schemas";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
-import { FeeStudentMappingDto, FeeGroupPromotionMappingDto } from "@repo/db/dtos/fees";
+import {
+  FeeStudentMappingDto,
+  FeeGroupPromotionMappingDto,
+} from "@repo/db/dtos/fees";
 import { PromotionDto } from "@repo/db/dtos/batches";
 import {
   withAdvisoryXactLock,
@@ -865,10 +868,7 @@ async function assembleFeeStudentMappingDtos(
       .from(feeStudentReceiptNumberModel)
       .where(
         and(
-          inArray(
-            feeStudentReceiptNumberModel.feeStudentMappingId,
-            mappingIds,
-          ),
+          inArray(feeStudentReceiptNumberModel.feeStudentMappingId, mappingIds),
           eq(feeStudentReceiptNumberModel.isDeprecated, false),
         ),
       ),
@@ -960,8 +960,7 @@ async function assembleFeeStudentMappingDtos(
 
     const gatewayTxnDate =
       extractTxnDateFromGateway(
-        (payment as { gatewayResponse?: unknown } | undefined)
-          ?.gatewayResponse,
+        (payment as { gatewayResponse?: unknown } | undefined)?.gatewayResponse,
       ) || null;
     const transactionDate: FeeStudentMappingDto["transactionDate"] =
       (payment as { txnDate?: string | null } | undefined)?.txnDate ??

@@ -886,7 +886,9 @@ export async function modelToDetailedDtoBatch(
   const regulationTypeIds = uniq(
     paperList.map((p) => p.regulationTypeId as number),
   );
-  const academicYearIds = uniq(paperList.map((p) => p.academicYearId as number));
+  const academicYearIds = uniq(
+    paperList.map((p) => p.academicYearId as number),
+  );
   const subjectTypeIds = uniq(paperList.map((p) => p.subjectTypeId as number));
   const programCourseIds = uniq(
     paperList.map((p) => p.programCourseId as number),

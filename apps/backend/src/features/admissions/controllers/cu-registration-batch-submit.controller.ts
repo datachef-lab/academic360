@@ -220,9 +220,10 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
     // increments from different files remain safe under JS's single-threaded
     // event loop.
     const documentNamesArray = documentNames ? JSON.parse(documentNames) : [];
-    const uploadedDocumentSlots: (Awaited<
-      ReturnType<typeof createCuRegistrationDocumentUpload>
-    > | undefined)[] = new Array(files.length).fill(undefined);
+    const uploadedDocumentSlots: (
+      | Awaited<ReturnType<typeof createCuRegistrationDocumentUpload>>
+      | undefined
+    )[] = new Array(files.length).fill(undefined);
     let s3UploadedCount = 0; // track S3 successes deterministically
 
     const processFile = async (i: number): Promise<void> => {
@@ -370,9 +371,8 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
       }
     };
     await Promise.all(
-      Array.from(
-        { length: Math.min(CONCURRENCY_LIMIT, files.length) },
-        () => worker(),
+      Array.from({ length: Math.min(CONCURRENCY_LIMIT, files.length) }, () =>
+        worker(),
       ),
     );
 

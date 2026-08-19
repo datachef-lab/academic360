@@ -311,14 +311,8 @@ export async function exportJournalsExcel(
       })
       .from(journalModel)
       .leftJoin(journalTypeModel, eq(journalModel.type, journalTypeModel.id))
-      .leftJoin(
-        publisherModel,
-        eq(journalModel.publisherId, publisherModel.id),
-      )
-      .leftJoin(
-        entryModeModel,
-        eq(journalModel.entryModeId, entryModeModel.id),
-      )
+      .leftJoin(publisherModel, eq(journalModel.publisherId, publisherModel.id))
+      .leftJoin(entryModeModel, eq(journalModel.entryModeId, entryModeModel.id))
       .leftJoin(
         languageMediumModel,
         eq(journalModel.languageId, languageMediumModel.id),

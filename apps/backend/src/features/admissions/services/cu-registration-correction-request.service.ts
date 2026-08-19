@@ -1925,8 +1925,10 @@ export async function updateStudentDataFromCorrectionRequest(
     // APAAR ID + EWS status both write to studentModel keyed by the same
     // studentId with non-overlapping fields - collect both into one setData
     // object and issue a single UPDATE instead of two sequential ones.
-    const studentUpdateData: { apaarId?: string | null; belongsToEWS?: boolean } =
-      {};
+    const studentUpdateData: {
+      apaarId?: string | null;
+      belongsToEWS?: boolean;
+    } = {};
 
     // APAAR ID update logic
     if (formData.personalInfo?.apaarId !== undefined) {
@@ -2243,43 +2245,47 @@ async function modelToDto(
 ): Promise<CuRegistrationCorrectionRequestDto> {
   // These 4 lookups are independent of one another (student/user/course info,
   // physical-marker user, last-updated-by user, documents) - run concurrently.
-  const [studentRows, physicalRegistrationDoneByRows, lastUpdatedByRows, documents] =
-    await Promise.all([
-      db
-        .select(studentDtoSelection)
-        .from(studentModel)
-        .leftJoin(userModel, eq(studentModel.userId, userModel.id))
-        .leftJoin(
-          programCourseModel,
-          eq(studentModel.programCourseId, programCourseModel.id),
-        )
-        .where(eq(studentModel.id, request.studentId)),
-      request.physicalRegistrationDoneBy
-        ? db
-            .select()
-            .from(userModel)
-            .where(eq(userModel.id, request.physicalRegistrationDoneBy))
-        : Promise.resolve([]),
-      request.lastUpdatedBy
-        ? db
-            .select()
-            .from(userModel)
-            .where(eq(userModel.id, request.lastUpdatedBy))
-        : Promise.resolve([]),
-      db
-        .select(documentDtoSelection)
-        .from(cuRegistrationDocumentUploadModel)
-        .leftJoin(
-          documentModel,
-          eq(cuRegistrationDocumentUploadModel.documentId, documentModel.id),
-        )
-        .where(
-          eq(
-            cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
-            request.id!,
-          ),
+  const [
+    studentRows,
+    physicalRegistrationDoneByRows,
+    lastUpdatedByRows,
+    documents,
+  ] = await Promise.all([
+    db
+      .select(studentDtoSelection)
+      .from(studentModel)
+      .leftJoin(userModel, eq(studentModel.userId, userModel.id))
+      .leftJoin(
+        programCourseModel,
+        eq(studentModel.programCourseId, programCourseModel.id),
+      )
+      .where(eq(studentModel.id, request.studentId)),
+    request.physicalRegistrationDoneBy
+      ? db
+          .select()
+          .from(userModel)
+          .where(eq(userModel.id, request.physicalRegistrationDoneBy))
+      : Promise.resolve([]),
+    request.lastUpdatedBy
+      ? db
+          .select()
+          .from(userModel)
+          .where(eq(userModel.id, request.lastUpdatedBy))
+      : Promise.resolve([]),
+    db
+      .select(documentDtoSelection)
+      .from(cuRegistrationDocumentUploadModel)
+      .leftJoin(
+        documentModel,
+        eq(cuRegistrationDocumentUploadModel.documentId, documentModel.id),
+      )
+      .where(
+        eq(
+          cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
+          request.id!,
         ),
-    ]);
+      ),
+  ]);
 
   const studentData = studentRows[0];
   const physicalRegistrationDoneBy = physicalRegistrationDoneByRows[0] ?? null;
@@ -3471,7 +3477,10 @@ export const exportCuRegistrationCorrectionRequests = async (
             .where(
               and(
                 eq(addressModel.type, "MAILING"),
-                inArray(addressModel.personalDetailsId, exportPersonalDetailsIds),
+                inArray(
+                  addressModel.personalDetailsId,
+                  exportPersonalDetailsIds,
+                ),
               ),
             )
         : [];

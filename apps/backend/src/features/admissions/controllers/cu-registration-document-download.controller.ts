@@ -103,10 +103,7 @@ async function streamCuRegistrationZipResponse(
 
     await archive.finalize();
   } catch (error) {
-    console.error(
-      `[CU-REG-DOWNLOAD] Error downloading ${contentType}:`,
-      error,
-    );
+    console.error(`[CU-REG-DOWNLOAD] Error downloading ${contentType}:`, error);
     handleError(error, res, next);
   }
 }

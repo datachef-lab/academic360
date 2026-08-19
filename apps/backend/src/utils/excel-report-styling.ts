@@ -22,10 +22,22 @@ export const EXCEL_REPORT_HEADER_THIN_BORDER = Object.freeze({
 });
 
 export const EXCEL_REPORT_BODY_THIN_BORDER = Object.freeze({
-  top: { style: "thin" as const, color: { argb: EXCEL_REPORT_BODY_BORDER_COLOR_ARGB } },
-  left: { style: "thin" as const, color: { argb: EXCEL_REPORT_BODY_BORDER_COLOR_ARGB } },
-  bottom: { style: "thin" as const, color: { argb: EXCEL_REPORT_BODY_BORDER_COLOR_ARGB } },
-  right: { style: "thin" as const, color: { argb: EXCEL_REPORT_BODY_BORDER_COLOR_ARGB } },
+  top: {
+    style: "thin" as const,
+    color: { argb: EXCEL_REPORT_BODY_BORDER_COLOR_ARGB },
+  },
+  left: {
+    style: "thin" as const,
+    color: { argb: EXCEL_REPORT_BODY_BORDER_COLOR_ARGB },
+  },
+  bottom: {
+    style: "thin" as const,
+    color: { argb: EXCEL_REPORT_BODY_BORDER_COLOR_ARGB },
+  },
+  right: {
+    style: "thin" as const,
+    color: { argb: EXCEL_REPORT_BODY_BORDER_COLOR_ARGB },
+  },
 });
 
 /**

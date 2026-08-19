@@ -360,7 +360,8 @@ export async function exportBooksExcel(
     if (remaining <= 0) break;
     const take = Math.min(CHUNK_SIZE, remaining);
 
-    const cursorCond: SQL | undefined = lastId != null ? lt(bookModel.id, lastId) : undefined;
+    const cursorCond: SQL | undefined =
+      lastId != null ? lt(bookModel.id, lastId) : undefined;
     const chunkWhere: SQL | undefined = whereClause
       ? cursorCond
         ? and(whereClause, cursorCond)

@@ -4943,10 +4943,7 @@ async function computeLiveSelectionCountsByProgramCourse(
       .leftJoin(promotionModel, eq(promotionModel.studentId, studentModel.id))
       .where(
         and(
-          inArray(
-            studentSubjectSelectionModel.subjectSelectionMetaId,
-            metaIds,
-          ),
+          inArray(studentSubjectSelectionModel.subjectSelectionMetaId, metaIds),
           eq(studentSubjectSelectionModel.isActive, true),
         ),
       )

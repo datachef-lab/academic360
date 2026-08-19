@@ -385,9 +385,7 @@ export async function getPromotionsByStudentIdOverview(studentId: number) {
   ]);
 
   const academicYearMap = new Map(academicYearRows.map((ay) => [ay.id, ay]));
-  const promotionStatusMap = new Map(
-    promotionStatusRows.map((p) => [p.id, p]),
-  );
+  const promotionStatusMap = new Map(promotionStatusRows.map((p) => [p.id, p]));
 
   const results: unknown[] = [];
 

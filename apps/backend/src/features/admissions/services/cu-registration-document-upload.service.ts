@@ -781,7 +781,8 @@ export async function streamCuRegistrationDocumentsZip(
 
       emit({
         message: `Downloading ${isPdf ? "PDF" : "document"} ${appended}/${fileKeys.length}`,
-        progress: 20 + Math.round((appended / Math.max(fileKeys.length, 1)) * 60),
+        progress:
+          20 + Math.round((appended / Math.max(fileKeys.length, 1)) * 60),
         status: "in_progress",
         stage,
         currentFile: fileName,

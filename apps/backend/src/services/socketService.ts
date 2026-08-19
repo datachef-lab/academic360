@@ -1185,7 +1185,9 @@ class SocketService {
     return studentIds;
   }
 
-  public async getOnlineStudentLoginTime(userId: number): Promise<string | null> {
+  public async getOnlineStudentLoginTime(
+    userId: number,
+  ): Promise<string | null> {
     const local = this.userConnectedAt.get(String(userId));
     if (local) return local.toISOString();
     // Student may be connected to another instance — read Redis info

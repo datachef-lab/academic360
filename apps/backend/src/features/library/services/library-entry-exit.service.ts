@@ -278,7 +278,9 @@ export async function getLibraryEntryExitPreviewHeadersByUserIds(
   userIds: number[],
 ): Promise<Map<number, LibraryEntryExitPreviewHeader>> {
   const out = new Map<number, LibraryEntryExitPreviewHeader>();
-  const uniqueIds = Array.from(new Set(userIds.filter((n) => Number.isFinite(n))));
+  const uniqueIds = Array.from(
+    new Set(userIds.filter((n) => Number.isFinite(n))),
+  );
   if (uniqueIds.length === 0) return out;
 
   const baseUsers = await db
@@ -373,7 +375,8 @@ export async function getLibraryEntryExitPreviewHeadersByUserIds(
   }
 
   for (const r of baseUsers) {
-    const promo = r.studentId != null ? promoByStudent.get(r.studentId) : undefined;
+    const promo =
+      r.studentId != null ? promoByStudent.get(r.studentId) : undefined;
     const shift =
       promo?.shiftName ??
       (r.studentId == null && r.userType === "STAFF"

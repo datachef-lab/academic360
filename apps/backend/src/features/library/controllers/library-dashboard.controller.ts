@@ -121,11 +121,8 @@ export const getLibraryConsistencyReportController = async (
     // acceptable for a manually-triggered consistency report).
     ok(
       res,
-      await getCachedSnapshot(
-        "library:consistency",
-        "all",
-        600,
-        () => runLibraryConsistencyCheck(),
+      await getCachedSnapshot("library:consistency", "all", 600, () =>
+        runLibraryConsistencyCheck(),
       ),
     );
   } catch (err) {
