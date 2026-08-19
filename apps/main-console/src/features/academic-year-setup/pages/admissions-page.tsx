@@ -334,6 +334,7 @@ export default function AdmissionsPage() {
                     name={card.illustrationName}
                     image={card.illustration ?? undefined}
                     alt={`${card.title} illustration`}
+                    dimmed={card.badge === "Under construction"}
                   />
                   <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/85 via-black/50 to-transparent p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                     <p className="text-xs leading-relaxed text-white sm:text-sm">
