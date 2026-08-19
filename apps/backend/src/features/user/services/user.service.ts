@@ -538,18 +538,33 @@ export async function findProfileInfo(
       .then((r) => r[0] ?? null),
   ]);
 
-  const personalDetailsDto: PersonalDetailsDto | null = personalDetailsRaw
-    ? await mapPersonalDetailsToDtoWithAddresses(personalDetailsRaw, student)
-    : null;
-  const healthDto: HealthDto | null = healthRaw
-    ? await mapHealthToDto(healthRaw)
-    : null;
-  const accommodationDto: AccommodationDto | null = accommodationRaw
-    ? await mapAccommodationToDto(accommodationRaw)
-    : null;
-  const transportDetailsDto = transportRaw
-    ? await mapTransportDetailsToDto(transportRaw)
-    : null;
+  // These four DTO mappers each take a different already-fetched raw row and
+  // are fully independent, but each fans out its own sub-queries (personal
+  // details alone resolves the country/state/city/district address cascade).
+  // Running them concurrently instead of one-after-another cuts the profile's
+  // round-trip chain with byte-identical output.
+  const [
+    personalDetailsDto,
+    healthDto,
+    accommodationDto,
+    transportDetailsDto,
+  ]: [
+    PersonalDetailsDto | null,
+    HealthDto | null,
+    AccommodationDto | null,
+    Awaited<ReturnType<typeof mapTransportDetailsToDto>> | null,
+  ] = await Promise.all([
+    personalDetailsRaw
+      ? mapPersonalDetailsToDtoWithAddresses(personalDetailsRaw, student)
+      : Promise.resolve(null),
+    healthRaw ? mapHealthToDto(healthRaw) : Promise.resolve(null),
+    accommodationRaw
+      ? mapAccommodationToDto(accommodationRaw)
+      : Promise.resolve(null),
+    transportRaw
+      ? mapTransportDetailsToDto(transportRaw)
+      : Promise.resolve(null),
+  ]);
 
   //   const [
   //     personalDetails,
