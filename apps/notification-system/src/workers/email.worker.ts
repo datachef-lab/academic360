@@ -397,7 +397,7 @@ async function processBatch() {
       if (computedTemplateData) {
         // Initialize categories
         subjectsByCategory = {
-          Minor: { I: "", II: "", III: "", IV: "" },
+          Minor: { I: "", II: "", III: "", IV: "", V: "" },
           IDC: { I: "", II: "", III: "", IV: "" },
           AEC: { I: "", II: "", III: "", IV: "" },
           CVAC: { I: "", II: "", III: "", IV: "" },
@@ -421,9 +421,10 @@ async function processBatch() {
               subjectsByCategory["Minor"]["IV"] = subjectName;
             }
           } else if (fieldName.includes("Minor 3")) {
-            // If Minor 3 exists in master/meta it should appear in Sem III
+            // Minor 3 keeps its own slot so it never overwrites the Minor 2
+            // value in Sem III; the template picks its label.
             if (hasValue) {
-              subjectsByCategory["Minor"]["III"] = subjectName;
+              subjectsByCategory["Minor"]["V"] = subjectName;
             }
           } else if (fieldName.includes("IDC 1")) {
             if (hasValue) subjectsByCategory["IDC"]["I"] = subjectName;

@@ -260,11 +260,14 @@
                   });
                 }
                 
-                // Minor 3 (Semester III) - onwards and show if Minor 1 is not present (BCOM programs)
-                if (hasValue(rows["Minor"], "III") && !hasValue(rows["Minor"], "I")) {
+                // Minor 3 — for BCOM the group pick spans Semester III to VI (no
+                // Minor 1); for BA/BSC continuing students it is the Semester V pick.
+                if (hasValue(rows["Minor"], "V")) {
                   displayRows.push({
-                    category: "Minor (Semester III to VI)",
-                    selection: rows["Minor"]["III"]
+                    category: hasValue(rows["Minor"], "I")
+                      ? "Minor 3 (Semester V)"
+                      : "Minor 3 (Semester III to VI)",
+                    selection: rows["Minor"]["V"]
                   });
                 }
                 
