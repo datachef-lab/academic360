@@ -235,16 +235,37 @@ export async function findSubjectsSelections(studentId: number) {
     //     relatedSubjects,
     //     subjectTypesWithPapers)
 
-    // Process selected minor subjects in parallel
-    const selectedMinorDetailedList = await Promise.all(
-      studentSelectedMinorSubjects.map(async (selection) => {
-        const [foundPaper] = await db
+    // Precompute detailed DTOs for EVERY paper this request will need, in one
+    // batched pass, instead of the previous per-paper modelToDetailedDto (9
+    // sequential queries each) fired from inside the nested loops below. Covers
+    // both the optional papers from subjectTypesWithPapers and the papers behind
+    // the student's selected minor subjects. Output per paper is identical to
+    // calling modelToDetailedDto individually.
+    const minorPaperIds = Array.from(
+      new Set(studentSelectedMinorSubjects.map((s) => s.paperId)),
+    );
+    const minorPapers = minorPaperIds.length
+      ? await db
           .select()
           .from(paperModel)
-          .where(eq(paperModel.id, selection.paperId));
+          .where(inArray(paperModel.id, minorPaperIds as number[]))
+      : [];
+    const optionalPapers = subjectTypesWithPapers
+      .map((row) => row.paper)
+      .filter((p): p is NonNullable<typeof p> => !!p);
+    const detailedByPaperId = await paperService.modelToDetailedDtoBatch([
+      ...optionalPapers,
+      ...minorPapers,
+    ]);
 
-        return await paperService.modelToDetailedDto(foundPaper);
-      }),
+    // Build the selected-minor detailed list from the batch map (paper order
+    // preserved via the selections list), matching the prior filter of nulls.
+    const minorPaperById = new Map(minorPapers.map((p) => [p.id, p]));
+    const selectedMinorDetailedList = studentSelectedMinorSubjects.map(
+      (selection) => {
+        const paper = minorPaperById.get(selection.paperId);
+        return paper ? (detailedByPaperId.get(paper.id!) ?? null) : null;
+      },
     );
 
     const formatedSelectedMinorSubjects = selectedMinorDetailedList.filter(
@@ -307,7 +328,7 @@ export async function findSubjectsSelections(studentId: number) {
                 !["AEC", "IDC"].includes(subjectType.code || "")
               ) {
                 // If the subject is pass, then add the paper to the paper options
-                const detailed = await paperService.modelToDetailedDto(paper);
+                const detailed = detailedByPaperId.get(paper.id!) ?? null;
                 // console.log(
                 //   "adding the paper to the paper options",
                 //   detailed?.subject.name,
@@ -335,7 +356,7 @@ export async function findSubjectsSelections(studentId: number) {
 
               // If any of the related subject-subs is pass, then add the paper to the paper options
               if (isRelatedSubjectSubPass) {
-                const detailed = await paperService.modelToDetailedDto(paper);
+                const detailed = detailedByPaperId.get(paper.id!) ?? null;
                 // console.log(
                 //   "adding the paper to the paper options by related subject subs:",
                 //   detailed?.subject.name,
@@ -347,7 +368,7 @@ export async function findSubjectsSelections(studentId: number) {
         } else {
           // No condition found
           // console.log("// No condition found", s.boardSubject.boardSubjectName.name, subject?.name);
-          const detailed = await paperService.modelToDetailedDto(paper);
+          const detailed = detailedByPaperId.get(paper.id!) ?? null;
           // Use fuzzy name matching instead of strict equality
           const studentSubject = detailed
             ? studentSubjects.find((el) =>
