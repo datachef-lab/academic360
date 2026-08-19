@@ -78,19 +78,17 @@ import { UserDto } from "@repo/db/index.js";
 // and returns just the id, whereas call sites in this file need the full row and
 // filter on name+template+variant together. Only positive hits are cached; a miss
 // falls back to the exact same DB query every time (identical to pre-cache behavior).
-const notificationMasterRowCache = new Map<
-  string,
-  typeof notificationMasterModel.$inferSelect
->();
+// Always reads fresh from the DB. An earlier in-process Map cache here was the
+// one cache in this branch NOT backed by the Redis epoch store, so under the
+// multi-instance/no-sticky-sessions topology an admin edit to a notification
+// master could be served stale indefinitely by other instances. This is not a
+// hot path (only fires when a CU-reg notification is built), so a fresh indexed
+// lookup each time is correct and cheap — no fleet-consistency risk.
 async function getCachedNotificationMasterRow(
   name: string,
   template: string,
   variant: string,
 ): Promise<typeof notificationMasterModel.$inferSelect | undefined> {
-  const key = `${name}::${template}::${variant}`;
-  const cached = notificationMasterRowCache.get(key);
-  if (cached) return cached;
-
   const [row] = await db
     .select()
     .from(notificationMasterModel)
@@ -101,7 +99,6 @@ async function getCachedNotificationMasterRow(
         eq(notificationMasterModel.variant, variant as any),
       ),
     );
-  if (row) notificationMasterRowCache.set(key, row);
   return row;
 }
 

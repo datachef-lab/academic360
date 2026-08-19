@@ -7,9 +7,12 @@
 --
 -- Hand-authored (not drizzle-kit generated) on the same precedent as 0189/0191:
 -- fully idempotent, no snapshot file (indexes are not mirrored in the drizzle
--- models, so schema diffing is unaffected). Tag skips 0195 deliberately —
--- develop already owns 0195_service_requests, so this file merges down without
--- a filename collision.
+-- models, so schema diffing is unaffected). Numbered 0195 to follow main's last
+-- migration 0194 with no gap. NOTE for a future merge-down to develop: develop
+-- independently uses 0195_service_requests, so this file must be renumbered
+-- (to develop's next free number) before it lands there — a same-number/
+-- different-content collision would break drizzle's linear journal (ADR 0028).
+-- That reconciliation is intentionally deferred to the develop merge.
 --
 -- The composed-accession trigram index matches the `composedAccessNumber`
 -- expression that exists on develop's book-circulation.service.ts. On main the
