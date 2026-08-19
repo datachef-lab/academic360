@@ -243,7 +243,7 @@ This is a deploy-sequencing consideration (affects all instances equally at migr
 - **B2 — NOT a bug (verified).** Both sub-queries and the outer query all `ORDER BY id DESC`, and each branch returns its own top-`N` by id. Any record excluded from a branch's top-`N` necessarily has `N` higher-id rows in that same branch already present in the union, so it could never belong to the true combined top-`N`-by-id. The result set is correct for the id-desc ordering the picker uses.
 - **B3 — kept, accepted low-risk.** Verified no caller of the email path auto-retries (OTP/notification routes return the error; "resend" is a deliberate user action = a new send). The 10s `Promise.race` bounds a real hang; the theoretical duplicate needs an auto-retry that does not exist. Bounded-wait > unbounded-hang here.
 - **B4 — accepted (minor).** The report-job stream-to-buffer adapter runs off the request path in the async job queue; a stuck job is visible/retryable in that system. Left as-is.
-- **A3 / A4 — accepted tradeoffs, flagged for sign-off.** A3 (per-instance 60s reference-data cache in student-console) is a self-declared accepted staleness window on slow-changing admin master data. A4 (websocket-only transport) is the *correct* fix for the multi-instance/no-sticky-sessions topology (long-polling splits handshakes across instances); the residual is that a client unable to upgrade to WS gets no realtime — acceptable for an internal console behind an ALB that passes WS.
+- **A3 / A4 — accepted tradeoffs, flagged for sign-off.** A3 (per-instance 60s reference-data cache in student-console) is a self-declared accepted staleness window on slow-changing admin master data. A4 (websocket-only transport) is the _correct_ fix for the multi-instance/no-sticky-sessions topology (long-polling splits handshakes across instances); the residual is that a client unable to upgrade to WS gets no realtime — acceptable for an internal console behind an ALB that passes WS.
 - **C1 / C2 / C3 — already on current `main`.** These were flagged against the old merge-base; current `main` already contains them (merged earlier today), so they are not new changes this branch introduces.
 - **D1 — migration renumbered 0195 and confirmed skip-safe.** `0196` → `0195` (main ends at 0194, no gap). `when = 1787138439000` exceeds main's watermark (1786701133486) and develop's highest stamp (1787118909043), so it applies on the main→prod deploy rather than being silently skipped. A future merge-down to develop still needs a renumber (develop owns `0195_service_requests`) — noted in the migration header.
 
@@ -254,3 +254,35 @@ This is a deploy-sequencing consideration (affects all instances equally at migr
 ## Checked and confirmed _not_ an issue
 
 **`library-copy-details` report job key rename**: `apps/main-console/src/pages/library/LibraryReportsPage.tsx:168-169` renames the report picker entry to `id: "copy-details"`, `jobKey: "library-copy-details"`. `apps/backend/src/features/reports/report-generators.ts:465` independently renames the backend job registry key to `key: "library-copy-details"`. Both sides were read directly and agree on the string `library-copy-details` — this cross-service rename is coordinated correctly and does not break the report-generation flow.
+
+---
+
+## Caching-safety audit + fees/CU-reg latency (2026-08-19, later pass)
+
+Full re-audit of every cache on the branch (19 caches inventoried) plus the two pages flagged slow.
+
+### Stale-data bug found and FIXED — `rt:fee_mis` snapshot never invalidated on payments
+
+- **Reader:** `getFeeMisDataCached` → `getCachedSnapshot("rt:fee_mis", …, 60s)` (`realtime-tracker.service.ts:1045`), used by both the HTTP controller and the socket push.
+- **Bug:** on a real fee payment, `scheduleFeesDashboardBroadcast` fired `emitFeeMisRefresh` (raw `io.emit`, telling every Fee MIS viewer to refetch) but nothing bumped the `rt:fee_mis` epoch — only the legacy-import path ever did. So the refetch returned pre-payment paid/unpaid counts for up to 60s: a refresh that displays stale numbers.
+- **Fix (`fees-dashboard.socket.ts`):** `bumpSnapshotEpoch("rt:fee_mis")` in the debounce callback BEFORE `emitFeeMisRefresh` (invalidate-before-broadcast, same pattern as `scheduleRealtimeTrackerBroadcast`). Commit `0bd2c38d7`.
+
+### Remaining TTL-only caches (NEW on this branch) — user decision required
+
+Both are epoch-cached but never bumped by a mutation, so they can show up to 30s-stale numbers where main showed none:
+
+- `admissions:dashboard` (30s) — mutated by ~6 application-write services (scattered; no single choke point).
+- `subject-selection:metrics-live` (30s) — mutated on subject-selection submit (choke point exists near `emitMisTableUpdates`).
+  Author-documented as "acceptable" precedent, but this contradicts the "no stale data" bar — flagged for explicit go/no-go rather than silently accepted or silently changed.
+
+### Low-severity (self-heals in ≤60s): library background schedulers
+
+`library-fine-accrual`, `journal-issue-predictor`, `library-legacy-sync` write library data without bumping `library:dashboard`/`library:reports` epochs; Redis TTL still expires the entry within 60s, so staleness is bounded and self-healing. One-line bump per scheduler would close it.
+
+### Verified SAFE (correct invalidation): library dashboard/reports (middleware bumps on every write), notifications, settings ETag, react-query staleTime additions (socket-invalidated), `canonicalScopeCache` (pre-existing), `notificationMastersCache` (immutable FK id only).
+
+### Latency fixes (byte-identical output verified on live data)
+
+- `program-courses/dtos` (fees-dashboard boot path): deduped per-distinct-id findById — ~200ms → ~15ms warm (22058-byte payload unchanged). Commit `f2dc9ed31`.
+- CU-reg form pair: `subject-selections` findPromotion∥findHierarchy parallelized (~195–346 → ~115–296ms); `user profile` address-DTO loop parallelized (~215–311 → ~142–193ms). Payloads 54422/41362 bytes unchanged. Form waits on the slower of the two → ~350ms → ~190ms. Commit `28f657228`.
+- Fees dashboard core aggregation left untouched: already `Promise.all` + 90s scope-cached (~160ms warm); rewriting its SQL pre-merge judged not worth the risk.
