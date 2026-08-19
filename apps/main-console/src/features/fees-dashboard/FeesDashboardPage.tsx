@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axiosInstance from "@/utils/api";
 import type { ApiResponse } from "@/types/api-response";
 import type { AcademicActivityDto } from "@repo/db/dtos/academics";
@@ -145,6 +145,14 @@ function FeesDashboardContent({
   );
 }
 
+/** Boot reference data — activities + program courses, neither year-dependent. */
+function fetchFeesReferenceData() {
+  return Promise.all([
+    axiosInstance.get<ApiResponse<AcademicActivityDto[]>>("/api/academics/academic-activities"),
+    getProgramCourseDtos(),
+  ]);
+}
+
 export default function FeesDashboardPage() {
   const { currentAcademicYear, availableAcademicYears, loadAcademicYears } = useAcademicYear();
   const [filters, setFilters] = useState<FeesDashboardFilters>({});
@@ -153,11 +161,25 @@ export default function FeesDashboardPage() {
   const [filtersReady, setFiltersReady] = useState(false);
   const [filtersInitError, setFiltersInitError] = useState<string | null>(null);
 
+  // Reference data (academic activities + program courses) that resolveSmartDefaults
+  // needs. NEITHER depends on the academic year — both fetch everything and are
+  // filtered client-side — so kick them off at mount in parallel with the
+  // academic-year load instead of waiting for the year to resolve first. This
+  // removes one sequential hop from the dashboard boot. Consumed once (ref
+  // nulled after use) so a later filter-reset re-fetches fresh reference data.
+  const referenceDataRef = useRef<ReturnType<typeof fetchFeesReferenceData> | null>(null);
+
   useEffect(() => {
     if (availableAcademicYears.length === 0) {
       void loadAcademicYears();
     }
   }, [availableAcademicYears.length, loadAcademicYears]);
+
+  useEffect(() => {
+    if (!referenceDataRef.current) {
+      referenceDataRef.current = fetchFeesReferenceData();
+    }
+  }, []);
 
   const resolveSmartDefaults = async (
     academicYearId: number,
@@ -172,10 +194,11 @@ export default function FeesDashboardPage() {
     };
 
     try {
-      const [activitiesRes, programCoursesRes] = await Promise.all([
-        axiosInstance.get<ApiResponse<AcademicActivityDto[]>>("/api/academics/academic-activities"),
-        getProgramCourseDtos(),
-      ]);
+      // Use the mount-time prefetch if it's still available (boot path); consume
+      // it so a subsequent filter-reset fetches fresh reference data.
+      const pending = referenceDataRef.current ?? fetchFeesReferenceData();
+      referenceDataRef.current = null;
+      const [activitiesRes, programCoursesRes] = await pending;
 
       const activities = activitiesRes.data?.payload;
       const programCourses = Array.isArray(programCoursesRes) ? programCoursesRes : [];
