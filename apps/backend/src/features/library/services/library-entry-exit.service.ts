@@ -14,7 +14,7 @@ import { bookCirculationModel } from "@repo/db/schemas/models/library/book-circu
 import { copyDetailsModel } from "@repo/db/schemas/models/library/copy-details.model.js";
 import { bookModel } from "@repo/db/schemas/models/library/book.model.js";
 import { borrowingTypeModel } from "@repo/db/schemas/models/library/borrowing-type.model.js";
-import { and, count, desc, eq, gte, ilike, lt, or, SQL } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, lt, or, sql, SQL } from "drizzle-orm";
 import ExcelJS from "exceljs";
 import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
 
@@ -218,33 +218,23 @@ export async function findLibraryEntryExitPaginated(
     .limit(limit)
     .offset(offset);
 
-  const [{ total }] = await db
-    .select({ total: count() })
+  // Single pass for all three totals: the previous three identical-join count
+  // queries tripled the scan cost of every list-page load. FILTER preserves
+  // the exact per-status semantics of the separate queries.
+  const [counters] = await db
+    .select({
+      total: count(),
+      checkedIn: sql<number>`count(*) filter (where ${libraryEntryExitModel.currentStatus} = 'CHECKED_IN')`,
+      checkedOut: sql<number>`count(*) filter (where ${libraryEntryExitModel.currentStatus} = 'CHECKED_OUT')`,
+    })
     .from(libraryEntryExitModel)
     .leftJoin(userModel, eq(libraryEntryExitModel.userId, userModel.id))
     .leftJoin(studentModel, eq(studentModel.userId, userModel.id))
     .leftJoin(staffModel, eq(staffModel.userId, userModel.id))
     .where(whereClause);
-
-  const [checkedInCounter] = await db
-    .select({ total: count() })
-    .from(libraryEntryExitModel)
-    .leftJoin(userModel, eq(libraryEntryExitModel.userId, userModel.id))
-    .leftJoin(studentModel, eq(studentModel.userId, userModel.id))
-    .leftJoin(staffModel, eq(staffModel.userId, userModel.id))
-    .where(
-      and(whereClause, eq(libraryEntryExitModel.currentStatus, "CHECKED_IN")),
-    );
-
-  const [checkedOutCounter] = await db
-    .select({ total: count() })
-    .from(libraryEntryExitModel)
-    .leftJoin(userModel, eq(libraryEntryExitModel.userId, userModel.id))
-    .leftJoin(studentModel, eq(studentModel.userId, userModel.id))
-    .leftJoin(staffModel, eq(staffModel.userId, userModel.id))
-    .where(
-      and(whereClause, eq(libraryEntryExitModel.currentStatus, "CHECKED_OUT")),
-    );
+  const total = counters?.total ?? 0;
+  const checkedInCounter = { total: Number(counters?.checkedIn ?? 0) };
+  const checkedOutCounter = { total: Number(counters?.checkedOut ?? 0) };
 
   return {
     rows,

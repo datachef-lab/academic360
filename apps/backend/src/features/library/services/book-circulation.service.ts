@@ -253,176 +253,141 @@ export async function findBookCirculationPaginated(
   ].length
     ? and(...[...circulationUserConditions, ...circulationConditions])
     : undefined;
-  const circulationRows = await db
-    .select({
-      circulationId: bookCirculationModel.id,
-      userId: userModel.id,
-      userName: userModel.name,
-      userType: userModel.type,
-      studentUid: studentModel.uid,
-      staffUid: staffModel.uid,
-      attendanceCode: staffModel.attendanceCode,
-      image: userModel.image,
-      isReturned: bookCirculationModel.isReturned,
-      isReIssued: bookCirculationModel.isReIssued,
-      returnTimestamp: bookCirculationModel.returnTimestamp,
-      actualReturnTimestamp: bookCirculationModel.actualReturnTimestamp,
-      fineAmount: bookCirculationModel.fineAmount,
-      fineWaiver: bookCirculationModel.fineWaiver,
-      updatedAt: bookCirculationModel.updatedAt,
-    })
-    .from(bookCirculationModel)
-    .leftJoin(userModel, eq(bookCirculationModel.userId, userModel.id))
-    .leftJoin(studentModel, eq(studentModel.userId, userModel.id))
-    .leftJoin(staffModel, eq(staffModel.userId, userModel.id))
-    .leftJoin(
-      copyDetailsModel,
-      eq(bookCirculationModel.copyDetailsId, copyDetailsModel.id),
-    )
-    .leftJoin(bookModel, eq(copyDetailsModel.bookId, bookModel.id))
-    .where(whereCirculations)
-    .orderBy(desc(bookCirculationModel.id));
+  // One SQL pass: per-user aggregates + (when searching) zero-stats matched
+  // users, ordered and paginated in the database. The previous implementation
+  // fetched EVERY matching circulation row (no LIMIT), aggregated into a JS
+  // Map and sliced in JS — a full join scan per keystroke, and the biggest
+  // single contributor to the 2026-08-19 RDS incident.
+  //
+  // Semantics preserved exactly from the JS aggregation it replaces:
+  // - one row per user; latest_id = max(circulation id) drives the ordering
+  // - returned / issued (open) / overdue (open + past due) counts
+  // - daysLate + fine summed over OPEN rows only (basis = actual return or now)
+  // - lastUpdatedAt = max(updated_at) over all the user's matching rows
+  // - searched users with no matching circulations appended with zero stats
+  //   (latest_id 0 → they sort last, in user.id desc order)
+  const hasSearch = Boolean(search?.trim());
+  const aggFilter = whereCirculations
+    ? sql`(${whereCirculations}) and ${userModel.id} is not null`
+    : sql`${userModel.id} is not null`;
+  const extraFilter = hasSearch
+    ? sql`(${userConditions.length ? and(...userConditions)! : sql`true`})
+        and ${userModel.id} not in (select agg.user_id from agg)`
+    : sql`false`;
 
-  const now = Date.now();
-  const aggregateMap = new Map<
-    number,
-    {
-      latestCirculationId: number;
-      userName: string | null;
-      userType: string | null;
-      studentUid: string | null;
-      staffUid: string | null;
-      attendanceCode: string | null;
-      image: string | null;
-      issued: number;
-      overdue: number;
-      returned: number;
-      daysLate: number;
-      fine: number;
-      lastUpdatedAt: Date | null;
-    }
-  >();
-  for (const row of circulationRows) {
-    if (row.userId === null || row.circulationId === null) continue;
+  const withClause = sql`
+    with agg as (
+      select
+        ${userModel.id} as user_id,
+        max(${bookCirculationModel.id}) as latest_id,
+        max(${userModel.name}) as user_name,
+        max(${userModel.type}) as user_type,
+        max(${studentModel.uid}) as student_uid,
+        max(${staffModel.uid}) as staff_uid,
+        max(${staffModel.attendanceCode}) as attendance_code,
+        max(${userModel.image}) as image,
+        count(*) filter (where ${bookCirculationModel.isReturned}) as returned,
+        count(*) filter (where not ${bookCirculationModel.isReturned}) as issued,
+        count(*) filter (
+          where not ${bookCirculationModel.isReturned}
+            and ${bookCirculationModel.returnTimestamp} is not null
+            and ${bookCirculationModel.returnTimestamp} < now()
+        ) as overdue,
+        coalesce(sum(
+          greatest(0, floor(extract(epoch from (
+            coalesce(${bookCirculationModel.actualReturnTimestamp}, now())
+              - ${bookCirculationModel.returnTimestamp}
+          )) / 86400))
+        ) filter (
+          where not ${bookCirculationModel.isReturned}
+            and ${bookCirculationModel.returnTimestamp} is not null
+        ), 0) as days_late,
+        coalesce(sum(
+          greatest(0, coalesce(${bookCirculationModel.fineAmount}, 0)
+            - coalesce(${bookCirculationModel.fineWaiver}, 0))
+        ) filter (where not ${bookCirculationModel.isReturned}), 0) as fine,
+        max(${bookCirculationModel.updatedAt}) as last_updated_at
+      from ${bookCirculationModel}
+        left join ${userModel} on ${bookCirculationModel.userId} = ${userModel.id}
+        left join ${studentModel} on ${studentModel.userId} = ${userModel.id}
+        left join ${staffModel} on ${staffModel.userId} = ${userModel.id}
+        left join ${copyDetailsModel} on ${bookCirculationModel.copyDetailsId} = ${copyDetailsModel.id}
+        left join ${bookModel} on ${copyDetailsModel.bookId} = ${bookModel.id}
+      where ${aggFilter}
+      group by ${userModel.id}
+    ),
+    extra as (
+      select
+        ${userModel.id} as user_id,
+        0 as latest_id,
+        ${userModel.name} as user_name,
+        ${userModel.type} as user_type,
+        ${studentModel.uid} as student_uid,
+        ${staffModel.uid} as staff_uid,
+        ${staffModel.attendanceCode} as attendance_code,
+        ${userModel.image} as image,
+        0 as returned, 0 as issued, 0 as overdue,
+        0 as days_late, 0 as fine,
+        null::timestamp as last_updated_at
+      from ${userModel}
+        left join ${studentModel} on ${studentModel.userId} = ${userModel.id}
+        left join ${staffModel} on ${staffModel.userId} = ${userModel.id}
+      where ${extraFilter}
+    )`;
 
-    if (!aggregateMap.has(row.userId)) {
-      aggregateMap.set(row.userId, {
-        latestCirculationId: row.circulationId,
-        userName: row.userName,
-        userType: row.userType,
-        studentUid: row.studentUid,
-        staffUid: row.staffUid,
-        attendanceCode: row.attendanceCode,
-        image: row.image,
-        issued: 0,
-        overdue: 0,
-        returned: 0,
-        daysLate: 0,
-        fine: 0,
-        lastUpdatedAt: null,
-      });
-    }
-    const bucket = aggregateMap.get(row.userId)!;
-    const dueMs = new Date(row.returnTimestamp).getTime();
-    const actualMs = row.actualReturnTimestamp
-      ? new Date(row.actualReturnTimestamp).getTime()
-      : null;
-    if (!bucket.lastUpdatedAt || row.updatedAt > bucket.lastUpdatedAt) {
-      bucket.lastUpdatedAt = row.updatedAt;
-    }
+  const pageResult = await db.execute(sql`
+    ${withClause}
+    select * from (
+      select * from agg
+      union all
+      select * from extra
+    ) t
+    order by latest_id desc, user_id desc
+    limit ${limit} offset ${offset}`);
 
-    // "Recent Books" summary:
-    // - returned: completed circulations
-    // - issued: currently with the user (includes overdue)
-    // - overdue: subset of issued whose due date has passed
-    if (row.isReturned) {
-      bucket.returned += 1;
-    } else {
-      bucket.issued += 1;
-      if (!Number.isNaN(dueMs) && dueMs < now) {
-        bucket.overdue += 1;
-      }
-    }
+  const totalResult = await db.execute(sql`
+    ${withClause}
+    select (select count(*) from agg) + (select count(*) from extra) as total`);
 
-    if (!row.isReturned) {
-      const basisMs = actualMs ?? now;
-      if (!Number.isNaN(dueMs) && basisMs > dueMs) {
-        bucket.daysLate += Math.floor(
-          (basisMs - dueMs) / (1000 * 60 * 60 * 24),
-        );
-      }
-      bucket.fine += Math.max(0, (row.fineAmount ?? 0) - (row.fineWaiver ?? 0));
-    }
-  }
+  type PagedRow = {
+    user_id: number;
+    user_name: string | null;
+    user_type: string | null;
+    student_uid: string | null;
+    staff_uid: string | null;
+    attendance_code: string | null;
+    image: string | null;
+    issued: string | number;
+    overdue: string | number;
+    returned: string | number;
+    days_late: string | number;
+    fine: string | number;
+    last_updated_at: Date | string | null;
+  };
 
-  // If searched user has no circulation rows, still show them with zero summary.
-  if (search?.trim()) {
-    const whereUsers = userConditions.length
-      ? and(...userConditions)
-      : undefined;
-    const matchedUsers = await db
-      .select({
-        userId: userModel.id,
-        userName: userModel.name,
-        userType: userModel.type,
-        studentUid: studentModel.uid,
-        staffUid: staffModel.uid,
-        attendanceCode: staffModel.attendanceCode,
-        image: userModel.image,
-      })
-      .from(userModel)
-      .leftJoin(studentModel, eq(studentModel.userId, userModel.id))
-      .leftJoin(staffModel, eq(staffModel.userId, userModel.id))
-      .where(whereUsers)
-      .orderBy(desc(userModel.id));
-
-    for (const user of matchedUsers) {
-      if (aggregateMap.has(user.userId)) continue;
-      aggregateMap.set(user.userId, {
-        latestCirculationId: 0,
-        userName: user.userName,
-        userType: user.userType,
-        studentUid: user.studentUid,
-        staffUid: user.staffUid,
-        attendanceCode: user.attendanceCode,
-        image: user.image,
-        issued: 0,
-        overdue: 0,
-        returned: 0,
-        daysLate: 0,
-        fine: 0,
-        lastUpdatedAt: null,
-      });
-    }
-  }
-
-  const orderedUsers = Array.from(aggregateMap.entries())
-    .sort((a, b) => b[1].latestCirculationId - a[1].latestCirculationId)
-    .slice(offset, offset + limit);
-
-  const resultRows: BookCirculationListRow[] = orderedUsers.map(
-    ([userId, stats]) => {
-      return {
-        userId,
-        userName: stats.userName,
-        userType: stats.userType,
-        studentUid: stats.studentUid,
-        staffUid: stats.staffUid,
-        attendanceCode: stats.attendanceCode,
-        image: stats.image,
-        recentBooks: {
-          issued: stats.issued,
-          overdue: stats.overdue,
-          returned: stats.returned,
-        },
-        daysLate: stats.daysLate,
-        fine: stats.fine,
-        lastUpdatedAt: stats.lastUpdatedAt,
-      };
+  const resultRows: BookCirculationListRow[] = (
+    pageResult.rows as unknown as PagedRow[]
+  ).map((row) => ({
+    userId: Number(row.user_id),
+    userName: row.user_name,
+    userType: row.user_type,
+    studentUid: row.student_uid,
+    staffUid: row.staff_uid,
+    attendanceCode: row.attendance_code,
+    image: row.image,
+    recentBooks: {
+      issued: Number(row.issued),
+      overdue: Number(row.overdue),
+      returned: Number(row.returned),
     },
-  );
+    daysLate: Number(row.days_late),
+    fine: Number(row.fine),
+    lastUpdatedAt: row.last_updated_at ? new Date(row.last_updated_at) : null,
+  }));
 
-  const total = aggregateMap.size;
+  const total = Number(
+    (totalResult.rows[0] as unknown as { total: string | number })?.total ?? 0,
+  );
 
   return {
     rows: resultRows,
@@ -605,16 +570,30 @@ export async function searchBookOptions(
     .leftJoin(publisherModel, eq(bookModel.publisherId, publisherModel.id));
 
   if (trimmed) {
+    // Two-phase: resolve candidate copy ids first through the two trigram
+    // indexes (an OR spanning copy_details AND books can only BitmapOr on one
+    // relation, so it seq-scanned), then annotate only those ≤limit rows —
+    // the correlated borrower/on-loan subqueries used to run per MATCHED row
+    // across the whole table. This was the 48-97s query of the 2026-08-19
+    // incident.
     const term = `%${trimmed}%`;
+    const candidates = await db.execute(sql`
+      (select cd.id from ${copyDetailsModel} cd
+        where cd.access_number ilike ${term}
+        order by cd.id desc limit ${safeLimit})
+      union
+      (select cd.id from ${copyDetailsModel} cd
+        join ${bookModel} b on b.id = cd.book_id_fk
+        where b.title ilike ${term}
+        order by cd.id desc limit ${safeLimit})
+      order by id desc limit ${safeLimit}`);
+    const ids = (candidates.rows as unknown as { id: number }[]).map((r) =>
+      Number(r.id),
+    );
+    if (ids.length === 0) return [];
     return baseQuery
-      .where(
-        or(
-          ilike(copyDetailsModel.accessNumber, term),
-          ilike(bookModel.title, term),
-        )!,
-      )
-      .orderBy(desc(copyDetailsModel.id))
-      .limit(safeLimit);
+      .where(inArray(copyDetailsModel.id, ids))
+      .orderBy(desc(copyDetailsModel.id));
   }
 
   return baseQuery.orderBy(desc(copyDetailsModel.id)).limit(safeLimit);
