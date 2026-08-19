@@ -11,6 +11,10 @@ import {
   toggleInstitutionStatus,
   InstitutionResult,
 } from "@/lib/services/institution.service";
+import { createTtlCache } from "@/lib/utils/ttl-cache";
+
+// See @/lib/utils/ttl-cache for scope/limitations (60s, per-instance).
+const listCache = createTtlCache<{ success: true; data: unknown }>(60_000);
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,8 +32,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, data: result });
     }
 
+    const cached = listCache.get();
+    if (cached) {
+      return NextResponse.json(cached);
+    }
     const institutions = await getAllInstitutions();
-    return NextResponse.json({ success: true, data: institutions });
+    const payload = { success: true as const, data: institutions };
+    listCache.set(undefined, payload);
+    return NextResponse.json(payload);
   } catch (error) {
     console.error("Error in GET /api/institutions:", error);
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
@@ -54,6 +64,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(result, { status: 400 });
     }
 
+    listCache.clear();
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     console.error("Error in POST /api/institutions:", error);
@@ -92,6 +103,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json(result, { status: 400 });
     }
 
+    listCache.clear();
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error in PUT /api/institutions:", error);
@@ -114,6 +126,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json(result, { status: 400 });
     }
 
+    listCache.clear();
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error in PATCH /api/institutions:", error);

@@ -10,6 +10,14 @@ import {
   updateDegree,
   toggleDegreeStatus,
 } from "@/lib/services/degree.service";
+import { createTtlCache } from "@/lib/utils/ttl-cache";
+
+// See @/lib/utils/ttl-cache for scope/limitations (60s, per-instance).
+// Note: /api/degrees/upload also writes degree rows via a bulk-import
+// endpoint in a separate route module, so it cannot clear this cache
+// instance directly - a bulk upload there can leave this list stale for up
+// to the TTL. Left as-is since that route is out of scope for this change.
+const listCache = createTtlCache<{ success: true; data: unknown }>(60_000);
 
 export async function GET(request: Request) {
   try {
@@ -24,8 +32,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, data: result });
     }
 
+    const cached = listCache.get();
+    if (cached) {
+      return NextResponse.json(cached);
+    }
     const degrees = await getAllDegrees();
-    return NextResponse.json({ success: true, data: degrees });
+    const payload = { success: true as const, data: degrees };
+    listCache.set(undefined, payload);
+    return NextResponse.json(payload);
   } catch (error) {
     console.error("Error in GET /api/degrees:", error);
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
@@ -41,6 +55,7 @@ export async function POST(request: Request) {
       return NextResponse.json(result, { status: 400 });
     }
 
+    listCache.clear();
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     console.error("Error in POST /api/degrees:", error);
@@ -64,6 +79,7 @@ export async function PUT(request: Request) {
       return NextResponse.json(result, { status: 400 });
     }
 
+    listCache.clear();
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error in PUT /api/degrees:", error);
@@ -86,6 +102,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json(result, { status: 400 });
     }
 
+    listCache.clear();
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error in PATCH /api/degrees:", error);

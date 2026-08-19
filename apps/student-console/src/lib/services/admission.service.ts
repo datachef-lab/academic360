@@ -204,20 +204,23 @@ async function modelToDto(adm: Admission): Promise<AdmissionDto | null> {
 }
 
 export async function admissionStats() {
-  const [{ admissionYearCount }] = await dbPostgres
-    .select({ admissionYearCount: count() })
-    .from(admissions);
-  const [{ totalApplications }] = await dbPostgres
-    .select({ totalApplications: count() })
-    .from(applicationForms);
-  const [{ totalPayments }] = await dbPostgres
-    .select({ totalPayments: count() })
-    .from(applicationForms)
-    .where(eq(applicationForms.formStatus, "PAYMENT_SUCCESS"));
-  const [{ totalDrafts }] = await dbPostgres
-    .select({ totalDrafts: count() })
-    .from(applicationForms)
-    .where(eq(applicationForms.formStatus, "DRAFT"));
+  const [
+    [{ admissionYearCount }],
+    [{ totalApplications }],
+    [{ totalPayments }],
+    [{ totalDrafts }],
+  ] = await Promise.all([
+    dbPostgres.select({ admissionYearCount: count() }).from(admissions),
+    dbPostgres.select({ totalApplications: count() }).from(applicationForms),
+    dbPostgres
+      .select({ totalPayments: count() })
+      .from(applicationForms)
+      .where(eq(applicationForms.formStatus, "PAYMENT_SUCCESS")),
+    dbPostgres
+      .select({ totalDrafts: count() })
+      .from(applicationForms)
+      .where(eq(applicationForms.formStatus, "DRAFT")),
+  ]);
 
   return {
     admissionYearCount,
@@ -258,67 +261,74 @@ export async function findAllAdmissionSummary(page: number = 1, size: number = 1
 }
 
 export async function getApplicationFormStats(admissionId: number) {
-  const [{ totalApplications }] = await dbPostgres
-    .select({ totalApplications: count() })
-    .from(applicationForms)
-    .where(eq(applicationForms.admissionId, admissionId));
-
-  const [{ paymentsDone }] = await dbPostgres
-    .select({ paymentsDone: count() })
-    .from(applicationForms)
-    .where(
-      and(
-        eq(applicationForms.admissionId, admissionId),
-        eq(applicationForms.formStatus, "PAYMENT_SUCCESS"),
+  const [
+    [{ totalApplications }],
+    [{ paymentsDone }],
+    [{ drafts }],
+    [{ submitted }],
+    [{ approved }],
+    [{ rejected }],
+    [{ paymentDue }],
+  ] = await Promise.all([
+    dbPostgres
+      .select({ totalApplications: count() })
+      .from(applicationForms)
+      .where(eq(applicationForms.admissionId, admissionId)),
+    dbPostgres
+      .select({ paymentsDone: count() })
+      .from(applicationForms)
+      .where(
+        and(
+          eq(applicationForms.admissionId, admissionId),
+          eq(applicationForms.formStatus, "PAYMENT_SUCCESS"),
+        ),
       ),
-    );
-
-  const [{ drafts }] = await dbPostgres
-    .select({ drafts: count() })
-    .from(applicationForms)
-    .where(
-      and(eq(applicationForms.admissionId, admissionId), eq(applicationForms.formStatus, "DRAFT")),
-    );
-
-  const [{ submitted }] = await dbPostgres
-    .select({ submitted: count() })
-    .from(applicationForms)
-    .where(
-      and(
-        eq(applicationForms.admissionId, admissionId),
-        eq(applicationForms.formStatus, "SUBMITTED"),
+    dbPostgres
+      .select({ drafts: count() })
+      .from(applicationForms)
+      .where(
+        and(
+          eq(applicationForms.admissionId, admissionId),
+          eq(applicationForms.formStatus, "DRAFT"),
+        ),
       ),
-    );
-
-  const [{ approved }] = await dbPostgres
-    .select({ approved: count() })
-    .from(applicationForms)
-    .where(
-      and(
-        eq(applicationForms.admissionId, admissionId),
-        eq(applicationForms.formStatus, "APPROVED"),
+    dbPostgres
+      .select({ submitted: count() })
+      .from(applicationForms)
+      .where(
+        and(
+          eq(applicationForms.admissionId, admissionId),
+          eq(applicationForms.formStatus, "SUBMITTED"),
+        ),
       ),
-    );
-
-  const [{ rejected }] = await dbPostgres
-    .select({ rejected: count() })
-    .from(applicationForms)
-    .where(
-      and(
-        eq(applicationForms.admissionId, admissionId),
-        eq(applicationForms.formStatus, "REJECTED"),
+    dbPostgres
+      .select({ approved: count() })
+      .from(applicationForms)
+      .where(
+        and(
+          eq(applicationForms.admissionId, admissionId),
+          eq(applicationForms.formStatus, "APPROVED"),
+        ),
       ),
-    );
-
-  const [{ paymentDue }] = await dbPostgres
-    .select({ paymentDue: count() })
-    .from(applicationForms)
-    .where(
-      and(
-        eq(applicationForms.admissionId, admissionId),
-        eq(applicationForms.formStatus, "PAYMENT_DUE"),
+    dbPostgres
+      .select({ rejected: count() })
+      .from(applicationForms)
+      .where(
+        and(
+          eq(applicationForms.admissionId, admissionId),
+          eq(applicationForms.formStatus, "REJECTED"),
+        ),
       ),
-    );
+    dbPostgres
+      .select({ paymentDue: count() })
+      .from(applicationForms)
+      .where(
+        and(
+          eq(applicationForms.admissionId, admissionId),
+          eq(applicationForms.formStatus, "PAYMENT_DUE"),
+        ),
+      ),
+  ]);
 
   return {
     totalApplications,

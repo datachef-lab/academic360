@@ -108,14 +108,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ year: st
     // Debug: log filters
     console.log("API filters:", filters);
 
-    // Get stats and applications using service functions
-    const stats = await getApplicationFormStats(admission.id!);
-    const { applications, totalItems } = await getApplicationFormsByAdmissionId(
-      admission.id!,
-      page,
-      size,
-      filters,
-    );
+    // Get stats and applications using service functions (independent queries)
+    const [stats, { applications, totalItems }] = await Promise.all([
+      getApplicationFormStats(admission.id!),
+      getApplicationFormsByAdmissionId(admission.id!, page, size, filters),
+    ]);
 
     // Add compatibility fields for frontend
     const statsWithCompat = {

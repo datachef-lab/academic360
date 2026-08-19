@@ -7,6 +7,7 @@ import { dbPostgres } from "@/db";
 import { categories } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { createTtlCache } from "@/lib/utils/ttl-cache";
 
 const categorySchema = z.object({
   id: z.number().optional(),
@@ -15,10 +16,19 @@ const categorySchema = z.object({
   code: z.string().min(1),
 });
 
+// See @/lib/utils/ttl-cache for scope/limitations (60s, per-instance).
+const listCache = createTtlCache<{ success: true; data: unknown }>(60_000);
+
 export async function GET() {
   try {
+    const cached = listCache.get();
+    if (cached) {
+      return NextResponse.json(cached);
+    }
     const allCategories = await dbPostgres.select().from(categories);
-    return NextResponse.json({ success: true, data: allCategories });
+    const payload = { success: true as const, data: allCategories };
+    listCache.set(undefined, payload);
+    return NextResponse.json(payload);
   } catch (error: any) {
     console.error("Error fetching categories:", error);
     return NextResponse.json(
@@ -42,6 +52,7 @@ export async function POST(req: Request) {
       })
       .returning();
 
+    listCache.clear();
     return NextResponse.json({ success: true, data: newCategory });
   } catch (error: any) {
     console.error("Error creating category:", error);
@@ -78,6 +89,7 @@ export async function PUT(req: Request) {
       return NextResponse.json({ success: false, message: "Category not found" }, { status: 404 });
     }
 
+    listCache.clear();
     return NextResponse.json({ success: true, data: updatedCategory });
   } catch (error: any) {
     console.error("Error updating category:", error);
@@ -106,6 +118,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ success: false, message: "Category not found" }, { status: 404 });
     }
 
+    listCache.clear();
     return NextResponse.json({ success: true, data: deletedCategory });
   } catch (error: any) {
     console.error("Error deleting category:", error);

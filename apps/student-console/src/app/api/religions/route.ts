@@ -7,6 +7,7 @@ import { dbPostgres } from "@/db";
 import { religion } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { createTtlCache } from "@/lib/utils/ttl-cache";
 
 const religionSchema = z.object({
   id: z.number().optional(),
@@ -14,10 +15,19 @@ const religionSchema = z.object({
   sequence: z.number().optional(),
 });
 
+// See @/lib/utils/ttl-cache for scope/limitations (60s, per-instance).
+const listCache = createTtlCache<{ success: true; data: unknown }>(60_000);
+
 export async function GET() {
   try {
+    const cached = listCache.get();
+    if (cached) {
+      return NextResponse.json(cached);
+    }
     const allReligions = await dbPostgres.select().from(religion);
-    return NextResponse.json({ success: true, data: allReligions });
+    const payload = { success: true as const, data: allReligions };
+    listCache.set(undefined, payload);
+    return NextResponse.json(payload);
   } catch (error: any) {
     console.error("Error fetching religions:", error);
     return NextResponse.json(
@@ -37,6 +47,7 @@ export async function POST(req: Request) {
       .values({ name: validatedData.name, sequence: validatedData.sequence })
       .returning();
 
+    listCache.clear();
     return NextResponse.json({ success: true, data: newReligion });
   } catch (error: any) {
     console.error("Error creating religion:", error);
@@ -69,6 +80,7 @@ export async function PUT(req: Request) {
       return NextResponse.json({ success: false, message: "Religion not found" }, { status: 404 });
     }
 
+    listCache.clear();
     return NextResponse.json({ success: true, data: updatedReligion });
   } catch (error: any) {
     console.error("Error updating religion:", error);
@@ -97,6 +109,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ success: false, message: "Religion not found" }, { status: 404 });
     }
 
+    listCache.clear();
     return NextResponse.json({ success: true, data: deletedReligion });
   } catch (error: any) {
     console.error("Error deleting religion:", error);

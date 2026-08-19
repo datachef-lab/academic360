@@ -4,7 +4,9 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 import path from "path";
-import { stat, readFile } from "fs/promises";
+import { stat } from "fs/promises";
+import { createReadStream } from "fs";
+import { Readable } from "stream";
 
 export async function GET(request: NextRequest) {
   try {
@@ -69,14 +71,15 @@ export async function GET(request: NextRequest) {
       contentType = contentTypeMap[ext];
     }
 
-    // Read file
-    const fileBuffer = await readFile(absolutePath);
-
     // Set filename for download
     const filename = path.basename(absolutePath);
 
-    // Return file as a stream
-    return new NextResponse(fileBuffer as BodyInit, {
+    // Stream the file to the response instead of buffering it fully in
+    // memory first.
+    const nodeStream = createReadStream(absolutePath);
+    const webStream = Readable.toWeb(nodeStream) as ReadableStream;
+
+    return new NextResponse(webStream as BodyInit, {
       headers: {
         "Content-Type": contentType,
         "Content-Disposition": `attachment; filename="${filename}"`,

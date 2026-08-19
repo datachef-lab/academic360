@@ -4,7 +4,8 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 import path from "path";
-import { scanDocs, getFile } from "@/lib/services/docs.service";
+import { Readable } from "stream";
+import { scanDocs, getFileStream } from "@/lib/services/docs.service";
 // import { verifyAccessToken } from '@/lib/services/auth.service';
 
 // Utility function to verify if a path is within allowed directories
@@ -41,9 +42,6 @@ const contentTypeMap: Record<string, string> = {
 export async function GET(request: NextRequest) {
   try {
     console.log("Document API request received:", request.nextUrl.toString());
-
-    // Small delay to prevent rapid successive calls
-    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Get the authorization header or cookie
     const authHeader = request.headers.get("Authorization");
@@ -102,10 +100,10 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "Invalid file path" }, { status: 403 });
       }
 
-      // Get the file
-      const fileBuffer = await getFile(decodedPath);
+      // Get the file as a stream (avoids buffering the whole file in memory)
+      const fileStream = await getFileStream(decodedPath);
 
-      if (!fileBuffer) {
+      if (!fileStream) {
         console.log("File not found:", decodedPath);
         return NextResponse.json({ error: "File not found" }, { status: 404 });
       }
@@ -170,7 +168,8 @@ export async function GET(request: NextRequest) {
       }
 
       // Return file as a stream
-      return new NextResponse(fileBuffer as BodyInit, { headers });
+      const webStream = Readable.toWeb(fileStream.stream) as ReadableStream;
+      return new NextResponse(webStream as BodyInit, { headers });
     }
 
     // List available documents if no filePath is provided

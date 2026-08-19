@@ -30,14 +30,25 @@ export const sendWhatsAppMessage = async (
       },
     };
     //
-    const response = await fetch(INTERAKT_BASE_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${INTERAKT_API_KEY}`,
-      },
-      body: JSON.stringify(requestBody),
-    });
+    // Bound how long we wait on the Interakt WhatsApp API so a hung
+    // upstream call can't hang this request indefinitely.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
+
+    let response;
+    try {
+      response = await fetch(INTERAKT_BASE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Basic ${INTERAKT_API_KEY}`,
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     console.log("Response Status:", response.status);
     console.log("Response Headers:", [...response.headers.entries()]);
