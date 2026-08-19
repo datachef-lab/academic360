@@ -154,6 +154,9 @@ async function processBatch() {
       // Extract templateData and subject from notification message if present
       let extractedTemplateData: Record<string, any> = {};
       let extractedSubject: string | undefined;
+      let extractedSelectionRows:
+        | Array<{ label: string; value: string }>
+        | undefined;
       try {
         if (notif?.message) {
           console.log(
@@ -189,6 +192,11 @@ async function processBatch() {
           } else {
             console.log("[email.worker] ❌ No subject found in parsed message");
           }
+          // Subject-selection rows carrying the meta labels verbatim
+          if (Array.isArray(parsedMessage?.notificationEvent?.selectionRows)) {
+            extractedSelectionRows =
+              parsedMessage.notificationEvent.selectionRows;
+          }
         } else {
           console.log("[email.worker] ⚠️ No message field in notification");
         }
@@ -200,6 +208,7 @@ async function processBatch() {
       const dto: NotificationEventDto = {
         templateData: extractedTemplateData,
         subject: extractedSubject,
+        selectionRows: extractedSelectionRows,
         meta: { devOnly: true },
         emailAttachments: await prepareEmailAttachments(notif.emailAttachments),
       } as NotificationEventDto;
