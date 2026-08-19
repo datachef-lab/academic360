@@ -87,6 +87,23 @@ export async function getCachedSnapshot<T>(
  * lands meanwhile) sees the new epoch. The ~1ms INCR round-trip window is
  * covered by the follow-up `*_refresh` push, same as any read racing a commit.
  */
+/**
+ * Read the current epoch for a scope (the same counter bumpSnapshotEpoch INCRs).
+ * Lets a caller fold the fleet-wide epoch into its OWN per-process cache key so
+ * that per-process cache is invalidated the moment any instance bumps — closing
+ * the gap where a process-local Map would otherwise stay warm after another
+ * instance's mutation. Returns "0" if the epoch is unset or Redis is unavailable.
+ */
+export async function getSnapshotEpoch(scope: string): Promise<string> {
+  const redis = getRedisCommandClient();
+  if (!redis) return "0";
+  try {
+    return (await redis.get(epochKey(scope))) ?? "0";
+  } catch {
+    return "0";
+  }
+}
+
 export function bumpSnapshotEpoch(scope: string): void {
   const prefix = `a360:cache:${scope}:`;
   for (const key of [...inflight.keys()]) {

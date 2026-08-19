@@ -2,6 +2,7 @@ import { db } from "@/db/index.js";
 import {
   getCachedSnapshot,
   bumpSnapshotEpoch,
+  getSnapshotEpoch,
 } from "@/services/snapshot-cache.js";
 import {
   academicYearModel,
@@ -780,9 +781,15 @@ const canonicalScopeCache = new Map<
 
 function canonicalScopeCacheKey(
   filters: FeesDashboardFilters,
-  options?: MappingWhereOptions,
+  options: MappingWhereOptions | undefined,
+  epoch: string,
 ): string {
   return JSON.stringify({
+    // Fold the fleet-wide fees:dashboard epoch into this per-process key. Any
+    // instance's fee mutation bumps that epoch (Redis INCR), so the key changes
+    // fleet-wide and this Map's stale scope (mapping-id set) is never reused —
+    // it self-invalidates across instances, not just on the mutating one.
+    epoch,
     filters,
     forTodayLive: options?.forTodayLive ?? false,
     includeClosedPromotions: options?.includeClosedPromotions ?? false,
@@ -798,7 +805,8 @@ export async function resolveDashboardScope(
   options?: MappingWhereOptions,
 ): Promise<DashboardScope> {
   const filters = resolveDashboardFilters(filtersInput);
-  const cacheKey = canonicalScopeCacheKey(filters, options);
+  const epoch = await getSnapshotEpoch("fees:dashboard");
+  const cacheKey = canonicalScopeCacheKey(filters, options, epoch);
   const cached = canonicalScopeCache.get(cacheKey);
   if (cached && Date.now() - cached.cachedAt < CANONICAL_SCOPE_CACHE_TTL_MS) {
     return { canonicalMappingIds: cached.canonicalMappingIds, filters };
@@ -815,6 +823,15 @@ export async function resolveDashboardScope(
         .filter((id): id is number => id != null),
     ),
   ];
+  // Now that the epoch is part of the key, keys under superseded epochs are
+  // dead weight. Prune expired entries when the map grows so it stays bounded
+  // as the fleet-wide epoch advances.
+  if (canonicalScopeCache.size > 200) {
+    const cutoff = Date.now() - CANONICAL_SCOPE_CACHE_TTL_MS;
+    for (const [k, v] of canonicalScopeCache) {
+      if (v.cachedAt < cutoff) canonicalScopeCache.delete(k);
+    }
+  }
   canonicalScopeCache.set(cacheKey, {
     canonicalMappingIds,
     cachedAt: Date.now(),
