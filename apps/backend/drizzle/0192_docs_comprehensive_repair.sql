@@ -1,15 +1,17 @@
 -- MANUAL REPAIR SCRIPT — run against any DB where docs-module migrations
 -- 0175/0176/0177/0178 were silently skipped. Fully idempotent: every
 -- statement guards on existence (to_regclass / IF NOT EXISTS / DO EXCEPTION
--- duplicate_object). Safe to run repeatedly. Not committed to migrations —
--- run manually via:
+-- duplicate_object). Safe to run repeatedly.
 --
---   psql "$DATABASE_URL" -f apps/backend/drizzle/manual-repair-docs-module.sql
---
--- After running, backend queries against document_types etc. will work.
--- __drizzle_migrations table is NOT touched — drizzle-kit migrate on the
--- next boot will still think these need applying (fine — they'll all be
--- no-ops thanks to the guards).
+-- Re-stamped 2026-08-19 (`when` 1786622700000 -> 1786800000000, above prod's
+-- ledger watermark but below the present so freshly generated migrations are
+-- never leapfrogged.
+-- Prod watermark 1786701133486: drizzle applies a migration only when its
+-- journal `when` is NEWER than the newest applied row, so after restoring a
+-- prod backup into develop/staging every pending docs migration (0175/0176/
+-- 0187-0191, all older-stamped) was silently skipped and the docs module
+-- broke. This file supersedes all of them, so bumping just this one makes a
+-- restore self-heal; on already-migrated DBs the re-run is a guarded no-op.
 
 -- =========================================================================
 -- ENUMS (0175 introduced these; some code paths reference them)
