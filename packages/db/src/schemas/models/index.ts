@@ -16,3 +16,4 @@ export * from "./exams/index.js"
 export * from "./administration/index.js"
 export * from "./fees/index.js";
 export * from "./idcard/index.js";
+export * from "./service-requests/index.js";

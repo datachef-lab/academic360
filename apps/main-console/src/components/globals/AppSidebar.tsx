@@ -116,6 +116,7 @@ const data = {
     { title: "Library*", url: "/dashboard/library", icon: BookOpen },
     { title: "Fees Module*", url: "/dashboard/fees", icon: IndianRupee },
     { title: "Document Issuance*", url: "/dashboard/document-issuance", icon: FileText },
+    { title: "Service Requests*", url: "/dashboard/service-requests/queue", icon: ClipboardList },
     { title: "Bulk Data Upload", url: "/dashboard/bulk-upload", icon: Layers },
     // { title: "Admissions & Fees", url: "/dashboard/admissions-fees", icon: BadgeIndianRupee },
     // { title: "Batches", url: "/dashboard/batches", icon: Layers3 },
@@ -412,6 +413,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       "Fees Module",
                       "Exam Management",
                       "Document Issuance",
+                      "Service Requests",
                       "Library",
                       "Reports",
                     ];
