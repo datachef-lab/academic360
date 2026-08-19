@@ -4,9 +4,9 @@ import { handleError } from "@/utils/handleError.js";
 import { parseRealtimeTrackerFilters } from "@/utils/realtime-tracker-filters.js";
 import {
   getAffiliationDisplayLabel,
-  getAffiliationRegistrationData,
-  getExamFormDeclarationData,
-  getFeeMisData,
+  getAffiliationRegistrationDataCached,
+  getExamFormDeclarationDataCached,
+  getFeeMisDataCached,
 } from "../services/realtime-tracker.service.js";
 
 export async function getAffiliationRegistrationHandler(
@@ -17,7 +17,7 @@ export async function getAffiliationRegistrationHandler(
     const filters = parseRealtimeTrackerFilters(
       (req.query ?? {}) as Record<string, unknown>,
     );
-    const payload = await getAffiliationRegistrationData(filters);
+    const payload = await getAffiliationRegistrationDataCached(filters);
     return res
       .status(200)
       .json(
@@ -41,7 +41,7 @@ export async function getExamFormDeclarationHandler(
     const filters = parseRealtimeTrackerFilters(
       (req.query ?? {}) as Record<string, unknown>,
     );
-    const payload = await getExamFormDeclarationData(filters);
+    const payload = await getExamFormDeclarationDataCached(filters);
     return res
       .status(200)
       .json(
@@ -62,7 +62,7 @@ export async function getFeeMisHandler(req: Request, res: Response) {
     const filters = parseRealtimeTrackerFilters(
       (req.query ?? {}) as Record<string, unknown>,
     );
-    const payload = await getFeeMisData(filters);
+    const payload = await getFeeMisDataCached(filters);
     return res
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", payload, "Fee MIS loaded"));

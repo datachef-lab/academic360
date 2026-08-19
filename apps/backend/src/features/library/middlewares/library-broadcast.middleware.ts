@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { bumpSnapshotEpoch } from "@/services/snapshot-cache.js";
 import { emitLibraryEvent } from "@/features/library/services/library-realtime.service.js";
 import { createLogger } from "@/config/logger.js";
 
@@ -33,6 +34,9 @@ export function libraryBroadcastMiddleware(
     // client can use for finer refetches; the dashboard's default handler
     // just invalidates every `library-*` React Query key.
     const resource = req.path.replace(/^\/+/, "").split("/")[0] ?? "unknown";
+    // Invalidate the cached dashboard snapshot BEFORE the socket event lands
+    // on clients — their refetch must recompute, never replay pre-write stats.
+    bumpSnapshotEpoch("library:dashboard");
     emitLibraryEvent("library:master:updated", {
       detail: { resource, method },
     });
