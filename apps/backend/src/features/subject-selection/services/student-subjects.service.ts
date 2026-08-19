@@ -149,14 +149,23 @@ export async function getRegistrationAcademicYearId(
 
 export async function findSubjectsSelections(studentId: number) {
   try {
-    const { foundProgramCourse, foundClass, foundSession } =
-      await findPromotionByStudentId(studentId);
+    // findPromotionByStudentId and findHierarchy both take only studentId and
+    // are fully independent, but each is an internally-sequential chain of
+    // reads. Run the two chains concurrently (same functions, identical results)
+    // so they overlap instead of adding up. The academic-year read stays after,
+    // since it depends on foundSession.
+    const [
+      { foundProgramCourse, foundClass, foundSession },
+      { foundAdmAcademicInfo },
+    ] = await Promise.all([
+      findPromotionByStudentId(studentId),
+      findHierarchy(studentId),
+    ]);
     const [foundAcademicYear] = await db
       .select()
       .from(academicYearModel)
       .where(eq(academicYearModel.id, foundSession?.academicYearId!));
     // console.log("foundAcademicYear:", foundAcademicYear);
-    const { foundAdmAcademicInfo } = await findHierarchy(studentId);
 
     // Resolve keys used for lookups and guard early to avoid 500s
     const resolvedAcademicYearId =

@@ -1009,11 +1009,13 @@ async function mapPersonalDetailsToDtoWithAddresses(
     .select()
     .from(addressModel)
     .where(eq(addressModel.personalDetailsId, p.id!));
-  const addressDtos: AddressDto[] = [];
-  for (const a of addresses) {
-    const dto = await fetchAddressDto(a.id!);
-    if (dto) addressDtos.push(dto);
-  }
+  // Resolve each address's DTO concurrently (positional — index stays aligned
+  // with `addresses` for the sort below). fetchAddressDto for these ids always
+  // resolves (they were just selected from the same table), so output matches
+  // the previous sequential push.
+  const addressDtos: (AddressDto | undefined)[] = await Promise.all(
+    addresses.map((a) => fetchAddressDto(a.id!)),
+  );
   // Order addresses: [RESIDENTIAL, MAILING, ...others]
   const orderWeight = (a: any) =>
     a?.type === "RESIDENTIAL" ? 0 : a?.type === "MAILING" ? 1 : 2;
