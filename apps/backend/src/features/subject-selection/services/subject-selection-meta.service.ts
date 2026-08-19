@@ -552,12 +552,185 @@ export async function findById(
 }
 
 export async function findAll(): Promise<SubjectSelectionMetaDto[]> {
-  const metas = await db.select().from(subjectSelectionMetaModel);
-  const results: SubjectSelectionMetaDto[] = [];
-  for (const m of metas) {
-    results.push(await toDto(m as SubjectSelectionMetaRow));
+  const metas = (await db
+    .select()
+    .from(subjectSelectionMetaModel)) as SubjectSelectionMetaRow[];
+  if (metas.length === 0) return [];
+
+  const metaIds = metas.map((m) => m.id!);
+  const subjectTypeIds = [...new Set(metas.map((m) => m.subjectTypeId))];
+  const academicYearIds = [...new Set(metas.map((m) => m.academicYearId))];
+
+  const [
+    subjectTypeRows,
+    academicYearRows,
+    metaStreamRows,
+    metaClassRows,
+    metaSourceRows,
+  ] = await Promise.all([
+    db
+      .select()
+      .from(subjectTypeModel)
+      .where(inArray(subjectTypeModel.id, subjectTypeIds)),
+    db
+      .select()
+      .from(academicYearModel)
+      .where(inArray(academicYearModel.id, academicYearIds)),
+    db
+      .select({
+        id: subjectSelectionMetaStreamModel.id,
+        subjectSelectionMetaId:
+          subjectSelectionMetaStreamModel.subjectSelectionMetaId,
+        streamId: subjectSelectionMetaStreamModel.streamId,
+        createdAt: subjectSelectionMetaStreamModel.createdAt,
+        updatedAt: subjectSelectionMetaStreamModel.updatedAt,
+        stream: streamModel,
+      })
+      .from(subjectSelectionMetaStreamModel)
+      .innerJoin(
+        streamModel,
+        eq(subjectSelectionMetaStreamModel.streamId, streamModel.id),
+      )
+      .where(
+        inArray(
+          subjectSelectionMetaStreamModel.subjectSelectionMetaId,
+          metaIds,
+        ),
+      )
+      .orderBy(subjectSelectionMetaStreamModel.id),
+    db
+      .select({
+        id: subjectSelectionMetaClassModel.id,
+        subjectSelectionMetaId:
+          subjectSelectionMetaClassModel.subjectSelectionMetaId,
+        classId: subjectSelectionMetaClassModel.classId,
+        createdAt: subjectSelectionMetaClassModel.createdAt,
+        updatedAt: subjectSelectionMetaClassModel.updatedAt,
+        class: classModel,
+      })
+      .from(subjectSelectionMetaClassModel)
+      .innerJoin(
+        classModel,
+        eq(subjectSelectionMetaClassModel.classId, classModel.id),
+      )
+      .where(
+        inArray(subjectSelectionMetaClassModel.subjectSelectionMetaId, metaIds),
+      )
+      .orderBy(subjectSelectionMetaClassModel.id),
+    db
+      .select({
+        id: subjectSelectionMetaSourceModel.id,
+        subjectSelectionMetaId:
+          subjectSelectionMetaSourceModel.subjectSelectionMetaId,
+        createdAt: subjectSelectionMetaSourceModel.createdAt,
+        updatedAt: subjectSelectionMetaSourceModel.updatedAt,
+        sourceMetaId:
+          subjectSelectionMetaSourceModel.sourceSubjectSelectionMetaId,
+      })
+      .from(subjectSelectionMetaSourceModel)
+      .where(
+        inArray(
+          subjectSelectionMetaSourceModel.subjectSelectionMetaId,
+          metaIds,
+        ),
+      )
+      .orderBy(subjectSelectionMetaSourceModel.id),
+  ]);
+
+  const subjectTypeById = new Map(subjectTypeRows.map((r) => [r.id, r]));
+  const academicYearById = new Map(academicYearRows.map((r) => [r.id, r]));
+
+  // For the source rows we still need the *source* meta's label/sequence/subjectType,
+  // mirroring the self-join `sourceMetaAlias` used by toDto().
+  const sourceMetaIds = [...new Set(metaSourceRows.map((r) => r.sourceMetaId))];
+  const sourceMetaRowsById = new Map(
+    metas.filter((m) => sourceMetaIds.includes(m.id!)).map((m) => [m.id!, m]),
+  );
+  // Some source metas may not be in the current `metas` result set (shouldn't
+  // normally happen, but toDto() uses an innerJoin so guard the same way: only
+  // fetch what's missing).
+  const missingSourceMetaIds = sourceMetaIds.filter(
+    (id) => !sourceMetaRowsById.has(id),
+  );
+  if (missingSourceMetaIds.length > 0) {
+    const extra = (await db
+      .select()
+      .from(subjectSelectionMetaModel)
+      .where(
+        inArray(subjectSelectionMetaModel.id, missingSourceMetaIds),
+      )) as SubjectSelectionMetaRow[];
+    for (const row of extra) sourceMetaRowsById.set(row.id!, row);
   }
-  return results;
+
+  const streamsByMetaId = new Map<number, SubjectSelectionMetaStreamDto[]>();
+  for (const row of metaStreamRows) {
+    const list = streamsByMetaId.get(row.subjectSelectionMetaId) ?? [];
+    list.push({
+      id: row.id,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      stream: row.stream as unknown as SubjectSelectionMetaStreamDto["stream"],
+    });
+    streamsByMetaId.set(row.subjectSelectionMetaId, list);
+  }
+
+  const classesByMetaId = new Map<number, SubjectSelectionMetaClassDto[]>();
+  for (const row of metaClassRows) {
+    const list = classesByMetaId.get(row.subjectSelectionMetaId) ?? [];
+    list.push({
+      id: row.id,
+      subjectSelectionMetaId: row.subjectSelectionMetaId,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      class: row.class as unknown as SubjectSelectionMetaClassDto["class"],
+    });
+    classesByMetaId.set(row.subjectSelectionMetaId, list);
+  }
+
+  const sourcesByMetaId = new Map<number, SubjectSelectionMetaSourceDto[]>();
+  for (const row of metaSourceRows) {
+    // toDto() uses innerJoins on sourceMetaAlias and subjectTypeModel, so a
+    // source row whose source-meta (or its subjectType) can't be resolved is
+    // silently dropped there too — mirror that by skipping instead of
+    // emitting nulls.
+    const sourceMeta = sourceMetaRowsById.get(row.sourceMetaId);
+    if (!sourceMeta) continue;
+    const sourceSubjectType = subjectTypeById.get(sourceMeta.subjectTypeId);
+    if (!sourceSubjectType) continue;
+    const list = sourcesByMetaId.get(row.subjectSelectionMetaId) ?? [];
+    list.push({
+      id: row.id,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      sourceMeta: {
+        id: sourceMeta.id,
+        label: sourceMeta.label,
+        sequence: sourceMeta.sequence,
+        subjectType:
+          sourceSubjectType as unknown as SubjectSelectionMetaDto["subjectType"],
+      },
+    });
+    sourcesByMetaId.set(row.subjectSelectionMetaId, list);
+  }
+
+  return metas.map(
+    (meta): SubjectSelectionMetaDto => ({
+      id: meta.id,
+      label: meta.label,
+      sequence: meta.sequence,
+      optionSource: meta.optionSource,
+      isActive: meta.isActive,
+      createdAt: meta.createdAt,
+      updatedAt: meta.updatedAt,
+      streams: streamsByMetaId.get(meta.id!) ?? [],
+      subjectType: (subjectTypeById.get(meta.subjectTypeId) ??
+        null) as unknown as SubjectSelectionMetaDto["subjectType"],
+      academicYear: (academicYearById.get(meta.academicYearId) ??
+        null) as unknown as SubjectSelectionMetaDto["academicYear"],
+      forClasses: classesByMetaId.get(meta.id!) ?? [],
+      sources: sourcesByMetaId.get(meta.id!) ?? [],
+    }),
+  );
 }
 
 // Function to create or update meta with streams and classes

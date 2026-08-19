@@ -37,6 +37,7 @@ export function libraryBroadcastMiddleware(
     // Invalidate the cached dashboard snapshot BEFORE the socket event lands
     // on clients — their refetch must recompute, never replay pre-write stats.
     bumpSnapshotEpoch("library:dashboard");
+    bumpSnapshotEpoch("library:reports");
     emitLibraryEvent("library:master:updated", {
       detail: { resource, method },
     });
