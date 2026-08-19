@@ -13,6 +13,7 @@ import {
   UserPlus,
   FileText,
   UploadCloud,
+  ClipboardList,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -403,6 +404,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           isActive: pathname === "/dashboard/library",
         }
       : null,
+    {
+      title: "Service Requests",
+      url: "/dashboard/service-requests",
+      icon: ClipboardList,
+      isActive: pathname === "/dashboard/service-requests",
+    },
     {
       title: "Profile",
       url: "/dashboard/profile",

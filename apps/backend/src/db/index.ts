@@ -6,6 +6,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { createLogger } from "@/config/logger.js";
 import { loadLibrary } from "@/features/library/old-irp-data";
 import { initializeAcademicActivities } from "@/features/academics/default-academic-activity";
+import { seedServiceTypeRouting } from "@/features/service-requests/services/service-type-routing.seed";
 import { runBootMigrations } from "./boot-migrations.js";
 
 const log = createLogger("db");
@@ -40,6 +41,9 @@ export const connectToDatabase = async () => {
     // createDefaultExamComponents();
     // initializeClasses();
     initializeAcademicActivities();
+    seedServiceTypeRouting().catch((e) => {
+      log.warn("Service type routing seed failed", { error: e });
+    });
     // loadDefaultSettings();
     // loadDegree();
     // loadShifts()

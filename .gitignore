@@ -78,3 +78,6 @@ a360-assets
 apps/backend/notification-templates
 
 ONLINE_STUDENTS_REALTIME_CHANGES.md
+
+# Runtime-uploaded service-request ID proofs (local S3 fallback)
+apps/backend/public/service-requests/

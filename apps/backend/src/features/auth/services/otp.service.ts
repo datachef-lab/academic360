@@ -180,7 +180,7 @@ export const createOtp = async (
   type: "FOR_EMAIL" | "FOR_PHONE",
   expiryMinutes: number = 5,
 ) => {
-  expiryMinutes = 5;
+  // NOTE: expiryMinutes is honored — do NOT override it here.
   const otpCode = generateOtpCode();
   const now = new Date();
   const expiresAt = new Date(now.getTime() + expiryMinutes * 60 * 1000);
@@ -314,14 +314,15 @@ export const checkOtpStatus = async (recipient: string) => {
     otp.expiresAt.getTime() - now.getTime(),
   );
 
-  // Cap the remaining time to maximum 300 seconds (5 minutes) as a safety measure
-  if (remainingTime > 300) {
+  // Cap the remaining time to maximum 600 seconds (10 minutes) as a safety measure.
+  // Service-request OTPs use a 10-minute window; do not cap below that.
+  if (remainingTime > 600) {
     console.warn(
-      "⚠️ Backend: Calculated time > 300s, capping to 300s. Raw time:",
+      "⚠️ Backend: Calculated time > 600s, capping to 600s. Raw time:",
       remainingTime,
     );
     console.warn("⚠️ This suggests a timezone or calculation issue!");
-    remainingTime = 300;
+    remainingTime = 600;
   }
 
   console.log("⏱️ Final remaining time:", remainingTime, "seconds");

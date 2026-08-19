@@ -113,6 +113,7 @@ import {
   institutionalRoleRouter,
   userTypeRouter,
   userRouter,
+  serviceRequestsRouter,
   // userStatusMasterDomainRouter,
   // userStatusMasterFrequencyRouter,
   // userStatusMasterLevelRouter,
@@ -825,6 +826,9 @@ app.use("/api/admissions/cu-registration-pdf", cuRegistrationPdfRouter);
 app.use("/api/admissions", admissionRouter);
 
 app.use("/api/payments", paymentRouter);
+
+// Service-requests feature
+app.use("/api/service-requests", serviceRequestsRouter);
 
 // Every non-GET on /api/library/* fires `library:master:updated` on the socket
 // bus so every dashboard on every EC2 instance refetches — no per-service

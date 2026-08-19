@@ -96,7 +96,9 @@ import {
   userTypeRouter,
 } from "./administration/routes/index.js";
 import paymentRouter from "./payments/routes/payment.route.js";
+import serviceRequestsRouter from "./service-requests/routes/service-requests.route.js";
 export {
+  serviceRequestsRouter,
   documentRouter,
   marksheetRouter,
   authRouter,

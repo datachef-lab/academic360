@@ -567,3 +567,79 @@ export const subjectSelectionOptionSourceEnum = pgEnum(
         "SUBJECT_GROUP",
     ],
 );
+
+// ── Service Request System ──────────────────────────────────────────
+
+export const serviceRequestorTypeEnum = pgEnum("service_requestor_type", [
+    "STUDENT",
+    "ALUMNI",
+]);
+
+export const serviceTicketStatusEnum = pgEnum("service_ticket_status", [
+    "DRAFT",
+    "SUBMITTED",
+    "ROUTED",
+    "UNDER_REVIEW",
+    "APPROVED",
+    "PENDING_SLOT_BOOKING",
+    "SLOT_BOOKED",
+    "CHECKED_IN",
+    "FULFILLED",
+    "CLOSED",
+    "REJECTED",
+    "EXPIRED",
+    "CANCELLED",
+]);
+
+export const ticketEventTypeEnum = pgEnum("ticket_event_type", [
+    "CREATED",
+    "OTP_VERIFIED",
+    "SUBMITTED",
+    "ROUTED",
+    "REVIEW_STARTED",
+    "APPROVED",
+    "REJECTED",
+    "FULFILLMENT_SET",
+    "SLOT_BOOKED",
+    "SLOT_RESCHEDULED",
+    "GATE_PASS_ISSUED",
+    "CHECKED_IN",
+    "BYPASS_ISSUED",
+    "FULFILLED",
+    "CLOSED",
+    "CANCELLED",
+    "EXPIRED",
+]);
+
+export const slotBookingStatusEnum = pgEnum("slot_booking_status", [
+    "BOOKED",
+    "CHECKED_IN",
+    "CANCELLED",
+    "NO_SHOW",
+    "RESCHEDULED",
+]);
+
+export const gatePassStatusEnum = pgEnum("gate_pass_status", [
+    "ACTIVE",
+    "USED",
+    "EXPIRED",
+    "REVOKED",
+    "BYPASS",
+]);
+
+export const idProofTypeEnum = pgEnum("id_proof_type", [
+    "OLD_ID_CARD",
+    "AADHAAR",
+    "PASSPORT",
+    "OTHER",
+]);
+
+export const weekdayEnum = pgEnum("weekday", [
+    "MON",
+    "TUE",
+    "WED",
+    "THU",
+    "FRI",
+    "SAT",
+    "SUN",
+]);
