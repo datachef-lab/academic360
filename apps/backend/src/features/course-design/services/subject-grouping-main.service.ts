@@ -10,7 +10,7 @@ import {
 } from "@repo/db/schemas/models";
 import type { SubjectGroupingMainDto } from "@repo/db/dtos/course-design";
 import type { SubjectGroupingMainT } from "@repo/db/schemas/models/course-design/subject-grouping-main.model";
-import { and, eq, notInArray } from "drizzle-orm";
+import { and, eq, inArray, notInArray } from "drizzle-orm";
 
 // DTO-shaped input used by frontend
 export type CreateSubjectGroupingMainDtoInput = {
@@ -177,10 +177,113 @@ export async function getAllSubjectGroupingMains(): Promise<
   SubjectGroupingMainDto[]
 > {
   const mains = await db.select().from(subjectGroupingMainModel);
+  if (mains.length === 0) return [];
+
+  // Batched equivalent of mapping each main through mapMainToDto (which fired
+  // 4 queries per row — ~1,900 sequential round trips for ~470 groupings).
+  // Same output shape and same null-drop rule (main dropped if its academic
+  // year or subject type is missing), assembled from bulk lookups.
+  const uniq = (vals: Array<number | null | undefined>): number[] =>
+    Array.from(new Set(vals.filter((v): v is number => v != null)));
+  const mainIds = mains.map((m) => m.id!).filter((id) => id != null);
+
+  const [ayRows, stRows, pcRows, subRows] = await Promise.all([
+    db
+      .select()
+      .from(academicYearModel)
+      .where(inArray(academicYearModel.id, uniq(mains.map((m) => m.academicYearId)))),
+    db
+      .select()
+      .from(subjectTypeModel)
+      .where(inArray(subjectTypeModel.id, uniq(mains.map((m) => m.subjectTypeId)))),
+    db
+      .select({
+        id: subjectGroupingProgramCourseModel.id,
+        subjectGroupingMainId:
+          subjectGroupingProgramCourseModel.subjectGroupingMainId,
+        programCourseId: subjectGroupingProgramCourseModel.programCourseId,
+        programCourse: {
+          id: programCourseModel.id,
+          name: programCourseModel.name,
+          shortName: programCourseModel.shortName,
+          streamId: programCourseModel.streamId,
+          courseId: programCourseModel.courseId,
+          courseTypeId: programCourseModel.courseTypeId,
+          courseLevelId: programCourseModel.courseLevelId,
+          duration: programCourseModel.duration,
+          totalSemesters: programCourseModel.totalSemesters,
+          affiliationId: programCourseModel.affiliationId,
+          regulationTypeId: programCourseModel.regulationTypeId,
+          isActive: programCourseModel.isActive,
+          createdAt: programCourseModel.createdAt,
+          updatedAt: programCourseModel.updatedAt,
+        },
+      })
+      .from(subjectGroupingProgramCourseModel)
+      .leftJoin(
+        programCourseModel,
+        eq(
+          subjectGroupingProgramCourseModel.programCourseId,
+          programCourseModel.id,
+        ),
+      )
+      .where(
+        inArray(
+          subjectGroupingProgramCourseModel.subjectGroupingMainId,
+          mainIds,
+        ),
+      ),
+    db
+      .select({
+        id: subjectGroupingSubjectModel.id,
+        subjectGroupingMainId: subjectGroupingSubjectModel.subjectGroupingMainId,
+        subjectId: subjectGroupingSubjectModel.subjectId,
+        subject: {
+          id: subjectModel.id,
+          name: subjectModel.name,
+          code: subjectModel.code,
+          isActive: subjectModel.isActive,
+          createdAt: subjectModel.createdAt,
+          updatedAt: subjectModel.updatedAt,
+        },
+      })
+      .from(subjectGroupingSubjectModel)
+      .leftJoin(
+        subjectModel,
+        eq(subjectGroupingSubjectModel.subjectId, subjectModel.id),
+      )
+      .where(
+        inArray(subjectGroupingSubjectModel.subjectGroupingMainId, mainIds),
+      ),
+  ]);
+
+  const ayById = new Map(ayRows.map((r) => [r.id, r]));
+  const stById = new Map(stRows.map((r) => [r.id, r]));
+  const pcByMain = new Map<number, typeof pcRows>();
+  for (const r of pcRows) {
+    const arr = pcByMain.get(r.subjectGroupingMainId) ?? [];
+    arr.push(r);
+    pcByMain.set(r.subjectGroupingMainId, arr);
+  }
+  const subByMain = new Map<number, typeof subRows>();
+  for (const r of subRows) {
+    const arr = subByMain.get(r.subjectGroupingMainId) ?? [];
+    arr.push(r);
+    subByMain.set(r.subjectGroupingMainId, arr);
+  }
+
   const dtos: SubjectGroupingMainDto[] = [];
-  for (const m of mains) {
-    const dto = await mapMainToDto(m as SubjectGroupingMainT);
-    if (dto) dtos.push(dto);
+  for (const main of mains) {
+    const ay = ayById.get(main.academicYearId);
+    const st = main.subjectTypeId != null ? stById.get(main.subjectTypeId) : undefined;
+    if (!ay || !st || !main.id) continue;
+    dtos.push({
+      ...main,
+      academicYear: ay,
+      subjectType: st,
+      subjectGroupingProgramCourses: pcByMain.get(main.id) ?? [],
+      subjectGroupingSubjects: subByMain.get(main.id) ?? [],
+    } as unknown as SubjectGroupingMainDto);
   }
   return dtos;
 }
