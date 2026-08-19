@@ -1,0 +1,6237 @@
+[
+ {
+  "method": "POST",
+  "full": "/api/academics/batch-student-mappings",
+  "file": "features/academics/routes/batch-student-mapping.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/batch-student-mappings",
+  "file": "features/academics/routes/batch-student-mapping.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/batch-student-mappings/:id",
+  "file": "features/academics/routes/batch-student-mapping.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/academics/batch-student-mappings/:id",
+  "file": "features/academics/routes/batch-student-mapping.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/academics/batch-student-mappings/:id",
+  "file": "features/academics/routes/batch-student-mapping.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/batch-student-mappings/batch/:batchId",
+  "file": "features/academics/routes/batch-student-mapping.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/batch-student-mappings/student/:studentId",
+  "file": "features/academics/routes/batch-student-mapping.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/academics/marksheet-paper-mappings",
+  "file": "features/academics/routes/marksheet-paper-mapping.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/marksheet-paper-mappings",
+  "file": "features/academics/routes/marksheet-paper-mapping.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/marksheet-paper-mappings/:id",
+  "file": "features/academics/routes/marksheet-paper-mapping.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/academics/marksheet-paper-mappings/:id",
+  "file": "features/academics/routes/marksheet-paper-mapping.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/academics/marksheet-paper-mappings/:id",
+  "file": "features/academics/routes/marksheet-paper-mapping.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/marksheet-paper-mappings/marksheet/:marksheetId",
+  "file": "features/academics/routes/marksheet-paper-mapping.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/academics/marksheet-paper-component-mappings",
+  "file": "features/academics/routes/marksheet-paper-component-mapping.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/marksheet-paper-component-mappings",
+  "file": "features/academics/routes/marksheet-paper-component-mapping.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/marksheet-paper-component-mappings/:id",
+  "file": "features/academics/routes/marksheet-paper-component-mapping.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/academics/marksheet-paper-component-mappings/:id",
+  "file": "features/academics/routes/marksheet-paper-component-mapping.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/academics/marksheet-paper-component-mappings/:id",
+  "file": "features/academics/routes/marksheet-paper-component-mapping.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/marksheet-paper-component-mappings/marksheet-paper/:marksheetPaperMappingId",
+  "file": "features/academics/routes/marksheet-paper-component-mapping.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/users/:userId/profile",
+  "file": "features/user/routes/user.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/users/export/students",
+  "file": "features/user/routes/user.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/users/stats",
+  "file": "features/user/routes/user.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/users/password-reset/request",
+  "file": "features/user/routes/user.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/users/password-reset/reset",
+  "file": "features/user/routes/user.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/users/password-reset/validate/:token",
+  "file": "features/user/routes/user.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/users/password-reset/reset-with-otp",
+  "file": "features/user/routes/user.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/users",
+  "file": "features/user/routes/user.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/users/student-picker",
+  "file": "features/user/routes/user.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/users/search",
+  "file": "features/user/routes/user.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/users/query",
+  "file": "features/user/routes/user.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/users/:id",
+  "file": "features/user/routes/user.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/user-statuses/masters",
+  "file": "features/user/routes/user-status-overview.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/user-statuses/student/:studentId/promotions",
+  "file": "features/user/routes/user-status-overview.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/user-statuses",
+  "file": "features/user/routes/user-status-overview.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/user-statuses/:id",
+  "file": "features/user/routes/user-status-overview.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/user-statuses/student/:studentId",
+  "file": "features/user/routes/user-status-overview.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/administration/user-status-masters",
+  "file": "features/administration/routes/user-status-master.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/user-status-masters",
+  "file": "features/administration/routes/user-status-master.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/user-status-masters/:id",
+  "file": "features/administration/routes/user-status-master.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/administration/user-status-masters/:id",
+  "file": "features/administration/routes/user-status-master.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/administration/user-status-masters/:id",
+  "file": "features/administration/routes/user-status-master.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/administration/app-modules",
+  "file": "features/administration/routes/app-module.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/app-modules",
+  "file": "features/administration/routes/app-module.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/app-modules/:id",
+  "file": "features/administration/routes/app-module.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/administration/app-modules/:id",
+  "file": "features/administration/routes/app-module.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/administration/app-modules/:id",
+  "file": "features/administration/routes/app-module.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/sessions",
+  "file": "features/academics/routes/session.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/sessions/academic-year/:academicYearId",
+  "file": "features/academics/routes/session.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/sessions",
+  "file": "features/academics/routes/session.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/career-progression-form-fields",
+  "file": "features/academics/routes/career-progression-form-field.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/career-progression-form-fields/:id",
+  "file": "features/academics/routes/career-progression-form-field.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/academics/career-progression-form-fields",
+  "file": "features/academics/routes/career-progression-form-field.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/academics/career-progression-form-fields/:id",
+  "file": "features/academics/routes/career-progression-form-field.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/academics/career-progression-form-fields/:id",
+  "file": "features/academics/routes/career-progression-form-field.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/career-progression-forms",
+  "file": "features/academics/routes/career-progression-form.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/career-progression-forms/export",
+  "file": "features/academics/routes/career-progression-form.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/career-progression-forms/student/:studentId/current",
+  "file": "features/academics/routes/career-progression-form.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/academics/career-progression-forms/student/:studentId/current/submit",
+  "file": "features/academics/routes/career-progression-form.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/career-progression-forms/:id",
+  "file": "features/academics/routes/career-progression-form.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/academics/career-progression-forms",
+  "file": "features/academics/routes/career-progression-form.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/academics/career-progression-forms/:id",
+  "file": "features/academics/routes/career-progression-form.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/academics/career-progression-forms/:id",
+  "file": "features/academics/routes/career-progression-form.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/academic-activities",
+  "file": "features/academics/routes/academic-activity.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/academic-activities/:id",
+  "file": "features/academics/routes/academic-activity.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/academics/academic-activities",
+  "file": "features/academics/routes/academic-activity.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/academics/academic-activities/:id",
+  "file": "features/academics/routes/academic-activity.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/academics/academic-activities/:id",
+  "file": "features/academics/routes/academic-activity.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/academic-activity-masters",
+  "file": "features/academics/routes/academic-activity-master.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/academic-activity-masters/:id",
+  "file": "features/academics/routes/academic-activity-master.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/academics/academic-activity-masters",
+  "file": "features/academics/routes/academic-activity-master.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/academics/academic-activity-masters/:id",
+  "file": "features/academics/routes/academic-activity-master.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/academics/academic-activity-masters/:id",
+  "file": "features/academics/routes/academic-activity-master.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/certificate-masters",
+  "file": "features/academics/routes/certificate-master.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/certificate-masters/:id",
+  "file": "features/academics/routes/certificate-master.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/academics/certificate-masters",
+  "file": "features/academics/routes/certificate-master.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/academics/certificate-masters/:id",
+  "file": "features/academics/routes/certificate-master.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/academics/certificate-masters/:id",
+  "file": "features/academics/routes/certificate-master.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/declaration-masters/statements",
+  "file": "features/academics/routes/declaration-master.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/academics/declaration-masters/statements",
+  "file": "features/academics/routes/declaration-master.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/academics/declaration-masters/statements/:id",
+  "file": "features/academics/routes/declaration-master.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/academics/declaration-masters/statements/:id",
+  "file": "features/academics/routes/declaration-master.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/declaration-masters/statement-fields",
+  "file": "features/academics/routes/declaration-master.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/academics/declaration-masters/statement-fields",
+  "file": "features/academics/routes/declaration-master.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/academics/declaration-masters/statement-fields/:id",
+  "file": "features/academics/routes/declaration-master.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/academics/declaration-masters/statement-fields/:id",
+  "file": "features/academics/routes/declaration-master.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/declaration-masters/statement-field-options",
+  "file": "features/academics/routes/declaration-master.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/academics/declaration-masters/statement-field-options",
+  "file": "features/academics/routes/declaration-master.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/academics/declaration-masters/statement-field-options/:id",
+  "file": "features/academics/routes/declaration-master.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/academics/declaration-masters/statement-field-options/:id",
+  "file": "features/academics/routes/declaration-master.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/academics/declaration-masters/preview",
+  "file": "features/academics/routes/declaration-master.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/declaration-masters",
+  "file": "features/academics/routes/declaration-master.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/declaration-masters/:id/preview",
+  "file": "features/academics/routes/declaration-master.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/declaration-masters/:id",
+  "file": "features/academics/routes/declaration-master.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/academics/declaration-masters",
+  "file": "features/academics/routes/declaration-master.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/academics/declaration-masters/:id",
+  "file": "features/academics/routes/declaration-master.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/academics/declaration-masters/:id",
+  "file": "features/academics/routes/declaration-master.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/declarations/promotion/:promotionId",
+  "file": "features/academics/routes/declaration.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/academics/declarations",
+  "file": "features/academics/routes/declaration.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/certificate-field-masters",
+  "file": "features/academics/routes/certificate-field-master.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/certificate-field-masters/:id",
+  "file": "features/academics/routes/certificate-field-master.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/academics/certificate-field-masters",
+  "file": "features/academics/routes/certificate-field-master.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/academics/certificate-field-masters/:id",
+  "file": "features/academics/routes/certificate-field-master.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/academics/certificate-field-masters/:id",
+  "file": "features/academics/routes/certificate-field-master.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/certificate-field-option-masters",
+  "file": "features/academics/routes/certificate-field-option-master.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/academics/certificate-field-option-masters/:id",
+  "file": "features/academics/routes/certificate-field-option-master.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/academics/certificate-field-option-masters",
+  "file": "features/academics/routes/certificate-field-option-master.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/academics/certificate-field-option-masters/:id",
+  "file": "features/academics/routes/certificate-field-option-master.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/academics/certificate-field-option-masters/:id",
+  "file": "features/academics/routes/certificate-field-option-master.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/personal-details",
+  "file": "features/user/routes/personalDetails.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/personal-details",
+  "file": "features/user/routes/personalDetails.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/personal-details/student/:studentId",
+  "file": "features/user/routes/personalDetails.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/personal-details/student/:studentId",
+  "file": "features/user/routes/personalDetails.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/personal-details/student/:studentId",
+  "file": "features/user/routes/personalDetails.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/personal-details/:id",
+  "file": "features/user/routes/personalDetails.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/personal-details/:id",
+  "file": "features/user/routes/personalDetails.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/personal-details/:id",
+  "file": "features/user/routes/personalDetails.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/persons",
+  "file": "features/user/routes/person.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/persons",
+  "file": "features/user/routes/person.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/persons/:id",
+  "file": "features/user/routes/person.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/persons/:id",
+  "file": "features/user/routes/person.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/persons/:id",
+  "file": "features/user/routes/person.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/persons/student/:uid/family-titles",
+  "file": "features/user/routes/person.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/students/uid/:uid/avatar",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/students/search",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/students/search-rollno",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/students/filtered",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/students/uid/:uid",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/students/online",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/students/query",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/students",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/students/:id/status",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/students/:id/shift-change/preview",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/students/:id/shift-change",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "PATCH",
+  "full": "/api/students/:id/active-promotion-fields",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/students/update-apaar-ids",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/students/update-cu-roll-reg",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/students/bulk-update-family-titles",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/students/import-legacy-students/precheck",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/students/import-legacy-students",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/students/import-legacy-students/error-report/:jobId",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/students/import-legacy-students/status/:jobId",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/students/backfill-quota-types",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/students/:uid/family-titles",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/students/export/detailed-report",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/students/export/academic-subjects",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/students/export/enrolment-master",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/students",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/students/export/images",
+  "file": "features/user/routes/student.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/nationality",
+  "file": "features/resources/routes/nationality.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/nationality",
+  "file": "features/resources/routes/nationality.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/nationality/:id",
+  "file": "features/resources/routes/nationality.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/nationality/:id",
+  "file": "features/resources/routes/nationality.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/nationality/:id",
+  "file": "features/resources/routes/nationality.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/religions",
+  "file": "features/resources/routes/religion.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/religions",
+  "file": "features/resources/routes/religion.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/religions/:id",
+  "file": "features/resources/routes/religion.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/religions/:id",
+  "file": "features/resources/routes/religion.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/religions/:id",
+  "file": "features/resources/routes/religion.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/state",
+  "file": "features/resources/routes/state.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/state",
+  "file": "features/resources/routes/state.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/state/:id",
+  "file": "features/resources/routes/state.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/state/country/:countryId",
+  "file": "features/resources/routes/state.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/state/:id",
+  "file": "features/resources/routes/state.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/state/:id",
+  "file": "features/resources/routes/state.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/family",
+  "file": "features/user/routes/family.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/family",
+  "file": "features/user/routes/family.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/family/:id",
+  "file": "features/user/routes/family.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/family/student/:studentId",
+  "file": "features/user/routes/family.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/family/:id",
+  "file": "features/user/routes/family.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/family/:id",
+  "file": "features/user/routes/family.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/family/student/:studentId",
+  "file": "features/user/routes/family.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/nationalities",
+  "file": "features/resources/routes/nationality.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/nationalities",
+  "file": "features/resources/routes/nationality.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/nationalities/:id",
+  "file": "features/resources/routes/nationality.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/nationalities/:id",
+  "file": "features/resources/routes/nationality.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/nationalities/:id",
+  "file": "features/resources/routes/nationality.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/countries",
+  "file": "features/resources/routes/country.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/countries",
+  "file": "features/resources/routes/country.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/countries/:id",
+  "file": "features/resources/routes/country.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/countries/:id",
+  "file": "features/resources/routes/country.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/countries/:id",
+  "file": "features/resources/routes/country.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/states",
+  "file": "features/resources/routes/state.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/states",
+  "file": "features/resources/routes/state.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/states/:id",
+  "file": "features/resources/routes/state.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/states/country/:countryId",
+  "file": "features/resources/routes/state.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/states/:id",
+  "file": "features/resources/routes/state.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/states/:id",
+  "file": "features/resources/routes/state.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/cities",
+  "file": "features/resources/routes/city.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/cities",
+  "file": "features/resources/routes/city.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/cities/:id",
+  "file": "features/resources/routes/city.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/cities/:id",
+  "file": "features/resources/routes/city.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/cities/:id",
+  "file": "features/resources/routes/city.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/documents",
+  "file": "features/academics/routes/document.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/documents",
+  "file": "features/academics/routes/document.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/documents/:id",
+  "file": "features/academics/routes/document.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/documents/:id",
+  "file": "features/academics/routes/document.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/documents/get",
+  "file": "features/academics/routes/document.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/documents/scan-marksheet",
+  "file": "features/academics/routes/document.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/documents/upload",
+  "file": "features/academics/routes/document.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/blood-groups",
+  "file": "features/resources/routes/bloodGroup.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/blood-groups",
+  "file": "features/resources/routes/bloodGroup.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/blood-groups/:id",
+  "file": "features/resources/routes/bloodGroup.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/blood-groups/:id",
+  "file": "features/resources/routes/bloodGroup.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/blood-groups/:id",
+  "file": "features/resources/routes/bloodGroup.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/categories",
+  "file": "features/resources/routes/category.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/categories",
+  "file": "features/resources/routes/category.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/categories/:id",
+  "file": "features/resources/routes/category.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/categories/:id",
+  "file": "features/resources/routes/category.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/categories/:id",
+  "file": "features/resources/routes/category.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/specializations",
+  "file": "features/course-design/routes/specialization.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/specializations",
+  "file": "features/course-design/routes/specialization.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/specializations/query",
+  "file": "features/course-design/routes/specialization.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/specializations/query",
+  "file": "features/course-design/routes/specialization.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/specializations/query",
+  "file": "features/course-design/routes/specialization.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/languages",
+  "file": "features/resources/routes/languageMedium.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/languages",
+  "file": "features/resources/routes/languageMedium.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/languages/:id",
+  "file": "features/resources/routes/languageMedium.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/languages/:id",
+  "file": "features/resources/routes/languageMedium.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/languages/:id",
+  "file": "features/resources/routes/languageMedium.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/board-result-statuses",
+  "file": "features/resources/routes/boardResultStatus.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/board-result-statuses",
+  "file": "features/resources/routes/boardResultStatus.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/board-result-statuses/:id",
+  "file": "features/resources/routes/boardResultStatus.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/board-result-statuses/:id",
+  "file": "features/resources/routes/boardResultStatus.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/board-result-statuses/:id",
+  "file": "features/resources/routes/boardResultStatus.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/board-universities",
+  "file": "features/resources/routes/boardUniversity.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/board-universities",
+  "file": "features/resources/routes/boardUniversity.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/board-universities/:id",
+  "file": "features/resources/routes/boardUniversity.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/board-universities/:id",
+  "file": "features/resources/routes/boardUniversity.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/board-universities/:id",
+  "file": "features/resources/routes/boardUniversity.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/institutions",
+  "file": "features/resources/routes/institution.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/institutions",
+  "file": "features/resources/routes/institution.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/institutions/:id",
+  "file": "features/resources/routes/institution.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/institutions/:id",
+  "file": "features/resources/routes/institution.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/institutions/:id",
+  "file": "features/resources/routes/institution.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/qualifications",
+  "file": "features/resources/routes/qualification.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/qualifications",
+  "file": "features/resources/routes/qualification.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/qualifications/:id",
+  "file": "features/resources/routes/qualification.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/qualifications/:id",
+  "file": "features/resources/routes/qualification.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/qualifications/:id",
+  "file": "features/resources/routes/qualification.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/administration/departments",
+  "file": "features/administration/routes/department.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/departments",
+  "file": "features/administration/routes/department.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/departments/:id",
+  "file": "features/administration/routes/department.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/administration/departments/:id",
+  "file": "features/administration/routes/department.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/administration/departments/:id",
+  "file": "features/administration/routes/department.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/administration/identity-masters",
+  "file": "features/administration/routes/identity-master.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/identity-masters",
+  "file": "features/administration/routes/identity-master.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/identity-masters/:id",
+  "file": "features/administration/routes/identity-master.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/administration/identity-masters/:id",
+  "file": "features/administration/routes/identity-master.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/administration/identity-masters/:id",
+  "file": "features/administration/routes/identity-master.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/administration/institutional-roles",
+  "file": "features/administration/routes/institutional-role.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/institutional-roles",
+  "file": "features/administration/routes/institutional-role.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/institutional-roles/:id",
+  "file": "features/administration/routes/institutional-role.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/administration/institutional-roles/:id",
+  "file": "features/administration/routes/institutional-role.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/administration/institutional-roles/:id",
+  "file": "features/administration/routes/institutional-role.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/administration/designations",
+  "file": "features/administration/routes/designation.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/designations",
+  "file": "features/administration/routes/designation.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/designations/:id",
+  "file": "features/administration/routes/designation.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/administration/designations/:id",
+  "file": "features/administration/routes/designation.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/administration/designations/:id",
+  "file": "features/administration/routes/designation.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/administration/session-statuses",
+  "file": "features/administration/routes/session-status.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/session-statuses",
+  "file": "features/administration/routes/session-status.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/session-statuses/:id",
+  "file": "features/administration/routes/session-status.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/administration/session-statuses/:id",
+  "file": "features/administration/routes/session-status.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/administration/session-statuses/:id",
+  "file": "features/administration/routes/session-status.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/administration/user-types",
+  "file": "features/administration/routes/user-type.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/user-types",
+  "file": "features/administration/routes/user-type.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/user-types/:id",
+  "file": "features/administration/routes/user-type.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/administration/user-types/:id",
+  "file": "features/administration/routes/user-type.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/administration/user-types/:id",
+  "file": "features/administration/routes/user-type.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/administration/access-groups",
+  "file": "features/administration/routes/access-group.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/access-groups",
+  "file": "features/administration/routes/access-group.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/access-groups/:id",
+  "file": "features/administration/routes/access-group.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/administration/access-groups/:id",
+  "file": "features/administration/routes/access-group.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/administration/access-groups/:id",
+  "file": "features/administration/routes/access-group.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/administration/access-group-applications",
+  "file": "features/administration/routes/access-group-application.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/access-group-applications",
+  "file": "features/administration/routes/access-group-application.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/access-group-applications/:id",
+  "file": "features/administration/routes/access-group-application.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/administration/access-group-applications/:id",
+  "file": "features/administration/routes/access-group-application.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/administration/access-group-applications/:id",
+  "file": "features/administration/routes/access-group-application.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/administration/access-group-designations",
+  "file": "features/administration/routes/access-group-designation.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/access-group-designations",
+  "file": "features/administration/routes/access-group-designation.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/access-group-designations/:id",
+  "file": "features/administration/routes/access-group-designation.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/administration/access-group-designations/:id",
+  "file": "features/administration/routes/access-group-designation.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/administration/access-group-designations/:id",
+  "file": "features/administration/routes/access-group-designation.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/administration/access-group-modules",
+  "file": "features/administration/routes/access-group-module.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/access-group-modules",
+  "file": "features/administration/routes/access-group-module.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/access-group-modules/:id",
+  "file": "features/administration/routes/access-group-module.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/administration/access-group-modules/:id",
+  "file": "features/administration/routes/access-group-module.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/administration/access-group-modules/:id",
+  "file": "features/administration/routes/access-group-module.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/administration/access-group-module-permissions",
+  "file": "features/administration/routes/access-group-module-permission.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/access-group-module-permissions",
+  "file": "features/administration/routes/access-group-module-permission.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/access-group-module-permissions/:id",
+  "file": "features/administration/routes/access-group-module-permission.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/administration/access-group-module-permissions/:id",
+  "file": "features/administration/routes/access-group-module-permission.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/administration/access-group-module-permissions/:id",
+  "file": "features/administration/routes/access-group-module-permission.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/administration/access-group-module-program-courses",
+  "file": "features/administration/routes/access-group-module-program-course.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/access-group-module-program-courses",
+  "file": "features/administration/routes/access-group-module-program-course.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/access-group-module-program-courses/:id",
+  "file": "features/administration/routes/access-group-module-program-course.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/administration/access-group-module-program-courses/:id",
+  "file": "features/administration/routes/access-group-module-program-course.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/administration/access-group-module-program-courses/:id",
+  "file": "features/administration/routes/access-group-module-program-course.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/administration/access-group-user-types",
+  "file": "features/administration/routes/access-group-user-type.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/access-group-user-types",
+  "file": "features/administration/routes/access-group-user-type.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/administration/access-group-user-types/:id",
+  "file": "features/administration/routes/access-group-user-type.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/administration/access-group-user-types/:id",
+  "file": "features/administration/routes/access-group-user-type.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/administration/access-group-user-types/:id",
+  "file": "features/administration/routes/access-group-user-type.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/address",
+  "file": "features/user/routes/address.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/address",
+  "file": "features/user/routes/address.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/address/:id",
+  "file": "features/user/routes/address.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/address/:id",
+  "file": "features/user/routes/address.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/address/:id",
+  "file": "features/user/routes/address.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/transports",
+  "file": "features/resources/routes/transport.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/transports",
+  "file": "features/resources/routes/transport.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/transports/:id",
+  "file": "features/resources/routes/transport.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/transports/mode/:mode",
+  "file": "features/resources/routes/transport.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/transports/:id",
+  "file": "features/resources/routes/transport.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/transports/:id",
+  "file": "features/resources/routes/transport.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/degree",
+  "file": "features/resources/routes/degree.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/degree",
+  "file": "features/resources/routes/degree.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/degree/:id",
+  "file": "features/resources/routes/degree.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/degree/:id",
+  "file": "features/resources/routes/degree.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/degree/:id",
+  "file": "features/resources/routes/degree.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/emergency-contact",
+  "file": "features/user/routes/emergencyContact.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/emergency-contact",
+  "file": "features/user/routes/emergencyContact.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/emergency-contact/:id",
+  "file": "features/user/routes/emergencyContact.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/emergency-contact/student/:studentId",
+  "file": "features/user/routes/emergencyContact.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/emergency-contact/:id",
+  "file": "features/user/routes/emergencyContact.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/emergency-contact/:id",
+  "file": "features/user/routes/emergencyContact.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/emergency-contact/student/:studentId",
+  "file": "features/user/routes/emergencyContact.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/occupations",
+  "file": "features/resources/routes/occupation.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/occupations",
+  "file": "features/resources/routes/occupation.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/occupations/:id",
+  "file": "features/resources/routes/occupation.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/occupations/:id",
+  "file": "features/resources/routes/occupation.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/occupations/:id",
+  "file": "features/resources/routes/occupation.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/annual-incomes",
+  "file": "features/resources/routes/annualIncome.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/annual-incomes",
+  "file": "features/resources/routes/annualIncome.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/annual-incomes/:id",
+  "file": "features/resources/routes/annualIncome.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/annual-incomes/:id",
+  "file": "features/resources/routes/annualIncome.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/annual-incomes/:id",
+  "file": "features/resources/routes/annualIncome.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/districts",
+  "file": "features/resources/routes/district.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/districts",
+  "file": "features/resources/routes/district.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/districts/:id",
+  "file": "features/resources/routes/district.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/districts/:id",
+  "file": "features/resources/routes/district.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/districts/:id",
+  "file": "features/resources/routes/district.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/police-stations",
+  "file": "features/resources/routes/policeStation.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/police-stations",
+  "file": "features/resources/routes/policeStation.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/police-stations/:id",
+  "file": "features/resources/routes/policeStation.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/police-stations/:id",
+  "file": "features/resources/routes/policeStation.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/police-stations/:id",
+  "file": "features/resources/routes/policeStation.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/post-offices",
+  "file": "features/resources/routes/postOffice.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/post-offices",
+  "file": "features/resources/routes/postOffice.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/post-offices/:id",
+  "file": "features/resources/routes/postOffice.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/post-offices/:id",
+  "file": "features/resources/routes/postOffice.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/post-offices/:id",
+  "file": "features/resources/routes/postOffice.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/pickup-points",
+  "file": "features/resources/routes/pickupPoint.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/pickup-points",
+  "file": "features/resources/routes/pickupPoint.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/pickup-points/:id",
+  "file": "features/resources/routes/pickupPoint.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/pickup-points/:id",
+  "file": "features/resources/routes/pickupPoint.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/pickup-points/:id",
+  "file": "features/resources/routes/pickupPoint.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/disability-codes",
+  "file": "features/user/routes/disabilityCode.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/disability-codes",
+  "file": "features/user/routes/disabilityCode.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/disability-codes/:id",
+  "file": "features/user/routes/disabilityCode.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/disability-codes/:id",
+  "file": "features/user/routes/disabilityCode.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/disability-codes/:id",
+  "file": "features/user/routes/disabilityCode.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/resource-usage/:table",
+  "file": "features/resources/routes/resource-usage.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admission-quota-types",
+  "file": "features/admissions/routes/admission-quota-type.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admission-quota-types",
+  "file": "features/admissions/routes/admission-quota-type.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/admission-quota-types/:id",
+  "file": "features/admissions/routes/admission-quota-type.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/admission-quota-types/:id",
+  "file": "features/admissions/routes/admission-quota-type.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/cancel-sources",
+  "file": "features/admissions/routes/cancel-source.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/cancel-sources",
+  "file": "features/admissions/routes/cancel-source.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/cancel-sources/:id",
+  "file": "features/admissions/routes/cancel-source.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/cancel-sources/:id",
+  "file": "features/admissions/routes/cancel-source.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/grades",
+  "file": "features/admissions/routes/grade.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/grades",
+  "file": "features/admissions/routes/grade.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/grades/:id",
+  "file": "features/admissions/routes/grade.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/grades/:id",
+  "file": "features/admissions/routes/grade.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admission-cycles",
+  "file": "features/admissions/routes/admission-cycle.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admission-cycles",
+  "file": "features/admissions/routes/admission-cycle.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/sports-categories",
+  "file": "features/admissions/routes/admission-sports-category.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/sports-categories",
+  "file": "features/admissions/routes/admission-sports-category.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/sports-categories/:id",
+  "file": "features/admissions/routes/admission-sports-category.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/sports-categories/:id",
+  "file": "features/admissions/routes/admission-sports-category.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/accommodations",
+  "file": "features/user/routes/accomodation.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/accommodations",
+  "file": "features/user/routes/accomodation.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/accommodations/:id",
+  "file": "features/user/routes/accomodation.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/accommodations/student/:studentId",
+  "file": "features/user/routes/accomodation.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/accommodations/:id",
+  "file": "features/user/routes/accomodation.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/accommodations/:id",
+  "file": "features/user/routes/accomodation.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/accommodations/student/:studentId",
+  "file": "features/user/routes/accomodation.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/health",
+  "file": "features/user/routes/health.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/health",
+  "file": "features/user/routes/health.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/health/:id",
+  "file": "features/user/routes/health.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/health/student/:studentId",
+  "file": "features/user/routes/health.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/health/:id",
+  "file": "features/user/routes/health.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/health/:id",
+  "file": "features/user/routes/health.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/health/student/:studentId",
+  "file": "features/user/routes/health.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/reports/query",
+  "file": "features/user/routes/report.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/reports/:report/start",
+  "file": "features/reports/reports-jobs.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/reports/jobs/:jobId",
+  "file": "features/reports/reports-jobs.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/reports/jobs/:jobId/download",
+  "file": "features/reports/reports-jobs.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/classes",
+  "file": "features/academics/routes/class.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/classes",
+  "file": "features/academics/routes/class.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/classes/:id",
+  "file": "features/academics/routes/class.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/classes/:id",
+  "file": "features/academics/routes/class.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/classes/:id",
+  "file": "features/academics/routes/class.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/shifts",
+  "file": "features/academics/routes/shift.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/shifts/:id",
+  "file": "features/academics/routes/shift.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/shifts",
+  "file": "features/academics/routes/shift.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/shifts/:id",
+  "file": "features/academics/routes/shift.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/shifts/:id",
+  "file": "features/academics/routes/shift.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/academics/test-auth",
+  "file": "features/academics/routes/academic-year.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/academics/current",
+  "file": "features/academics/routes/academic-year.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/academics/search",
+  "file": "features/academics/routes/academic-year.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/academics/copy-preview",
+  "file": "features/academics/routes/academic-year.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/academics/all",
+  "file": "features/academics/routes/academic-year.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/academics/:id",
+  "file": "features/academics/routes/academic-year.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/academics/:id",
+  "file": "features/academics/routes/academic-year.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/academics/:id",
+  "file": "features/academics/routes/academic-year.route.ts"
+ },
+ {
+  "method": "PATCH",
+  "full": "/api/v1/academics/:id/set-current",
+  "file": "features/academics/routes/academic-year.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/academics/with-copy",
+  "file": "features/academics/routes/academic-year.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/academics",
+  "file": "features/academics/routes/academic-year.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/dashboard",
+  "file": "features/fees/routes/fees-dashboard.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/realtime-tracker/affiliation-registration",
+  "file": "features/realtime-tracker/routes/realtime-tracker.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/realtime-tracker/exam-form-declaration",
+  "file": "features/realtime-tracker/routes/realtime-tracker.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/realtime-tracker/fee-mis",
+  "file": "features/realtime-tracker/routes/realtime-tracker.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/realtime-tracker/affiliation-tab-label",
+  "file": "features/realtime-tracker/routes/realtime-tracker.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/fees/structure",
+  "file": "features/fees/routes/fees-structure.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/fees/structure/by-dto",
+  "file": "features/fees/routes/fees-structure.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/fees/structure/by-dto/:id",
+  "file": "features/fees/routes/fees-structure.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/fees/structure/check-unique-amounts",
+  "file": "features/fees/routes/fees-structure.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/structure/academic-years/all",
+  "file": "features/fees/routes/fees-structure.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/structure/download/fee-structures",
+  "file": "features/fees/routes/fees-structure.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/structure/download/fee-student-mappings",
+  "file": "features/fees/routes/fees-structure.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/structure",
+  "file": "features/fees/routes/fees-structure.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/structure/:id",
+  "file": "features/fees/routes/fees-structure.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/structure/:id/locked-slabs",
+  "file": "features/fees/routes/fees-structure.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/fees/structure/:id",
+  "file": "features/fees/routes/fees-structure.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/fees/structure/:id",
+  "file": "features/fees/routes/fees-structure.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/fees/structure-instalments",
+  "file": "features/fees/routes/instalment.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/structure-instalments",
+  "file": "features/fees/routes/instalment.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/structure-instalments/fee-structure/:feesStructureId",
+  "file": "features/fees/routes/instalment.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/structure-instalments/:id",
+  "file": "features/fees/routes/instalment.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/fees/structure-instalments/:id",
+  "file": "features/fees/routes/instalment.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/fees/structure-instalments/:id",
+  "file": "features/fees/routes/instalment.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/student-mappings",
+  "file": "features/fees/routes/fee-student-mapping.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/student-mappings/download-receipt",
+  "file": "features/fees/routes/fee-student-mapping.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/student-mappings/student/:studentId",
+  "file": "features/fees/routes/fee-student-mapping.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/student-mappings/:id",
+  "file": "features/fees/routes/fee-student-mapping.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/fees/student-mappings",
+  "file": "features/fees/routes/fee-student-mapping.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/fees/student-mappings/:id",
+  "file": "features/fees/routes/fee-student-mapping.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/fees/student-mappings/:id",
+  "file": "features/fees/routes/fee-student-mapping.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/fees/receipts",
+  "file": "features/fees/routes/fee-receipt.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/receipts",
+  "file": "features/fees/routes/fee-receipt.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/batches/promotion-clauses",
+  "file": "features/batches/routes/promotion-clause.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/batches/promotion-clauses/:id",
+  "file": "features/batches/routes/promotion-clause.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/batches/promotion-clauses",
+  "file": "features/batches/routes/promotion-clause.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/batches/promotion-clauses/:id",
+  "file": "features/batches/routes/promotion-clause.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/batches/promotion-clauses/:id/class-mappings",
+  "file": "features/batches/routes/promotion-clause.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/batches/promotion-clauses/:id",
+  "file": "features/batches/routes/promotion-clause.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/batches/promotion-builders",
+  "file": "features/batches/routes/promotion-builder.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/batches/promotion-builders/by-target",
+  "file": "features/batches/routes/promotion-builder.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/batches/promotion-builders/:id",
+  "file": "features/batches/routes/promotion-builder.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/batches/promotion-builders",
+  "file": "features/batches/routes/promotion-builder.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/batches/promotion-builders/:id/rules",
+  "file": "features/batches/routes/promotion-builder.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/batches/promotion-builders/:id",
+  "file": "features/batches/routes/promotion-builder.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/batches/promotion-builders/:id",
+  "file": "features/batches/routes/promotion-builder.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/batches/promotion-roster",
+  "file": "features/batches/routes/promotion-roster.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/batches/promotion-roster/bucket-counts",
+  "file": "features/batches/routes/promotion-roster.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/batches/promotion-roster/selectable-student-ids",
+  "file": "features/batches/routes/promotion-roster.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/batches/promotion-roster/selectable-shift-breakdown",
+  "file": "features/batches/routes/promotion-roster.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/batches/promotion-roster/shift-breakdown-for-selection",
+  "file": "features/batches/routes/promotion-roster.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/batches/promotion-roster/promote",
+  "file": "features/batches/routes/promotion-roster.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/batches/promotion-roster/fee-structure-check",
+  "file": "features/batches/routes/promotion-roster.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/batches/promotion-roster/course-design-check",
+  "file": "features/batches/routes/promotion-roster.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/batches/promotion-statuses",
+  "file": "features/batches/routes/promotion-status.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/batches/promotion-statuses/:id",
+  "file": "features/batches/routes/promotion-status.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/batches/promotion-statuses",
+  "file": "features/batches/routes/promotion-status.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/batches/promotion-statuses/:id",
+  "file": "features/batches/routes/promotion-status.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/batches/promotion-statuses/:id",
+  "file": "features/batches/routes/promotion-status.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/fees/receipt-types",
+  "file": "features/fees/routes/receipt-type.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/receipt-types",
+  "file": "features/fees/routes/receipt-type.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/receipt-types/:id",
+  "file": "features/fees/routes/receipt-type.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/fees/receipt-types/:id",
+  "file": "features/fees/routes/receipt-type.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/fees/receipt-types/:id",
+  "file": "features/fees/routes/receipt-type.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/addons",
+  "file": "features/fees/routes/addon.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/addons/:id",
+  "file": "features/fees/routes/addon.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/fees/addons",
+  "file": "features/fees/routes/addon.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/fees/addons/:id",
+  "file": "features/fees/routes/addon.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/fees/addons/:id",
+  "file": "features/fees/routes/addon.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/slabs",
+  "file": "features/fees/routes/fee-slab.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/slabs/:id",
+  "file": "features/fees/routes/fee-slab.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/fees/slabs",
+  "file": "features/fees/routes/fee-slab.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/fees/slabs/:id",
+  "file": "features/fees/routes/fee-slab.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/fees/slabs/:id",
+  "file": "features/fees/routes/fee-slab.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/heads",
+  "file": "features/fees/routes/fee-head.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/heads/:id",
+  "file": "features/fees/routes/fee-head.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/fees/heads",
+  "file": "features/fees/routes/fee-head.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/fees/heads/:id",
+  "file": "features/fees/routes/fee-head.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/fees/heads/:id",
+  "file": "features/fees/routes/fee-head.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/components",
+  "file": "features/fees/routes/fee-structure-component.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/components/:id",
+  "file": "features/fees/routes/fee-structure-component.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/fees/components",
+  "file": "features/fees/routes/fee-structure-component.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/fees/components/:id",
+  "file": "features/fees/routes/fee-structure-component.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/fees/components/:id",
+  "file": "features/fees/routes/fee-structure-component.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/categories",
+  "file": "features/fees/routes/fee-category.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/categories/:id",
+  "file": "features/fees/routes/fee-category.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/fees/categories",
+  "file": "features/fees/routes/fee-category.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/fees/categories/:id",
+  "file": "features/fees/routes/fee-category.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/fees/categories/:id",
+  "file": "features/fees/routes/fee-category.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/group-promotion-mappings",
+  "file": "features/fees/routes/fee-group-promotion-mapping.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/group-promotion-mappings/filtered",
+  "file": "features/fees/routes/fee-group-promotion-mapping.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/group-promotion-mappings/fee-group/:feeGroupId",
+  "file": "features/fees/routes/fee-group-promotion-mapping.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/group-promotion-mappings/promotion/:promotionId",
+  "file": "features/fees/routes/fee-group-promotion-mapping.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/group-promotion-mappings/:id",
+  "file": "features/fees/routes/fee-group-promotion-mapping.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/fees/group-promotion-mappings",
+  "file": "features/fees/routes/fee-group-promotion-mapping.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/fees/group-promotion-mappings/bulk-upload",
+  "file": "features/fees/routes/fee-group-promotion-mapping.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/fees/group-promotion-mappings/:id",
+  "file": "features/fees/routes/fee-group-promotion-mapping.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/fees/group-promotion-mappings/:id",
+  "file": "features/fees/routes/fee-group-promotion-mapping.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/groups",
+  "file": "features/fees/routes/fee-group.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/groups/promotion/:promotionId/totals",
+  "file": "features/fees/routes/fee-group.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/groups/:id",
+  "file": "features/fees/routes/fee-group.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/fees/groups",
+  "file": "features/fees/routes/fee-group.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/fees/groups/:id",
+  "file": "features/fees/routes/fee-group.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/fees/groups/:id",
+  "file": "features/fees/routes/fee-group.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/structure-components",
+  "file": "features/fees/routes/fee-structure-component.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/structure-components/:id",
+  "file": "features/fees/routes/fee-structure-component.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/fees/structure-components",
+  "file": "features/fees/routes/fee-structure-component.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/fees/structure-components/:id",
+  "file": "features/fees/routes/fee-structure-component.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/fees/structure-components/:id",
+  "file": "features/fees/routes/fee-structure-component.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/fees/structure-installments",
+  "file": "features/fees/routes/instalment.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/structure-installments",
+  "file": "features/fees/routes/instalment.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/structure-installments/fee-structure/:feesStructureId",
+  "file": "features/fees/routes/instalment.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/fees/structure-installments/:id",
+  "file": "features/fees/routes/instalment.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/fees/structure-installments/:id",
+  "file": "features/fees/routes/instalment.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/fees/structure-installments/:id",
+  "file": "features/fees/routes/instalment.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/bulk-data-uploads/template",
+  "file": "features/bulk-data-uploads/routes/bulk-data-upload.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/bulk-data-uploads/export",
+  "file": "features/bulk-data-uploads/routes/bulk-data-upload.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/bulk-data-uploads",
+  "file": "features/bulk-data-uploads/routes/bulk-data-upload.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/courses",
+  "file": "features/course-design/routes/course.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/courses/bulk-upload",
+  "file": "features/course-design/routes/course.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/courses",
+  "file": "features/course-design/routes/course.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/courses/:id",
+  "file": "features/course-design/routes/course.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/courses/:id",
+  "file": "features/course-design/routes/course.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/courses/:id",
+  "file": "features/course-design/routes/course.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/exams/floors",
+  "file": "features/exams/routes/floor.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exams/floors",
+  "file": "features/exams/routes/floor.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exams/floors/:id",
+  "file": "features/exams/routes/floor.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/exams/floors/:id",
+  "file": "features/exams/routes/floor.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/exams/floors/:id",
+  "file": "features/exams/routes/floor.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/exams/rooms",
+  "file": "features/exams/routes/room.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exams/rooms",
+  "file": "features/exams/routes/room.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exams/rooms/:id",
+  "file": "features/exams/routes/room.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/exams/rooms/:id",
+  "file": "features/exams/routes/room.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/exams/rooms/:id",
+  "file": "features/exams/routes/room.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/exams/exam-types",
+  "file": "features/exams/routes/exam-type.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exams/exam-types",
+  "file": "features/exams/routes/exam-type.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exams/exam-types/:id",
+  "file": "features/exams/routes/exam-type.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/exams/exam-types/:id",
+  "file": "features/exams/routes/exam-type.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/exams/exam-types/:id",
+  "file": "features/exams/routes/exam-type.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/exams/schedule/count-students",
+  "file": "features/exams/routes/exam-schedule.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/exams/schedule/count-students-breakdown",
+  "file": "features/exams/routes/exam-schedule.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/exams/schedule/get-students",
+  "file": "features/exams/routes/exam-schedule.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/exams/schedule/exam-subject",
+  "file": "features/exams/routes/exam-schedule.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/exams/schedule/:examGroupId/admit-card-dates",
+  "file": "features/exams/routes/exam-schedule.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exams/schedule/download-admit-cards",
+  "file": "features/exams/routes/exam-schedule.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exams/schedule/admit-card-tracking/download",
+  "file": "features/exams/routes/exam-schedule.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exams/schedule/download-attendance-sheets",
+  "file": "features/exams/routes/exam-schedule.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exams/schedule/send-admit-cards",
+  "file": "features/exams/routes/exam-schedule.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/exams/schedule",
+  "file": "features/exams/routes/exam-schedule.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exams/schedule/exam-candidates/download",
+  "file": "features/exams/routes/exam-schedule.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exams/schedule",
+  "file": "features/exams/routes/exam-schedule.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exams/schedule/admit-card/download/single",
+  "file": "features/exams/routes/exam-schedule.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exams/schedule/candidates",
+  "file": "features/exams/routes/exam-schedule.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exams/schedule/exam-papers/:id",
+  "file": "features/exams/routes/exam-schedule.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exams/schedule/student/:studentId/exams",
+  "file": "features/exams/routes/exam-schedule.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/exams/schedule/check-duplicate",
+  "file": "features/exams/routes/exam-schedule.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/exams/schedule/eligible-rooms",
+  "file": "features/exams/routes/exam-schedule.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/exams/schedule/:examId/allot",
+  "file": "features/exams/routes/exam-schedule.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exams/schedule/:id",
+  "file": "features/exams/routes/exam-schedule.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/exams/schedule/:id",
+  "file": "features/exams/routes/exam-schedule.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exam-groups",
+  "file": "features/exams/routes/exam-group.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exam-groups/candidates",
+  "file": "features/exams/routes/exam-group.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exam-groups/paper-stats/:id",
+  "file": "features/exams/routes/exam-group.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exam-groups/:id",
+  "file": "features/exams/routes/exam-group.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/exam-groups/student/:studentId",
+  "file": "features/exams/routes/exam-group.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/exam-groups/:id",
+  "file": "features/exams/routes/exam-group.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admit-card/search",
+  "file": "features/exams/routes/admit-card.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admit-card/distribute",
+  "file": "features/exams/routes/admit-card.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admit-card/distributions",
+  "file": "features/exams/routes/admit-card.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admit-card/distributions/download",
+  "file": "features/exams/routes/admit-card.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/dashboard",
+  "file": "features/admissions/routes/admission-dashboard.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/notifications-console",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/notifications-console/dashboard",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/notifications-console/export",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/notifications-console/masters/export",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/notifications-console/masters",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/notifications-console/masters",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/notifications-console/masters/:id/preview",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/notifications-console/masters/:id/preview-image",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/notifications-console/masters/:id/fields",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "PATCH",
+  "full": "/api/notifications-console/masters/:id",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/notifications-console/events",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/notifications-console/events/template",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/notifications-console/events/parse",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/notifications-console/events/resolve",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/notifications-console/events/send/preview",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/notifications-console/events/send/otp",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/notifications-console/events/send/verify",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/notifications-console/events",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/notifications-console/events/:id",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "PATCH",
+  "full": "/api/notifications-console/events/:id",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/notifications-console/events/:id",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/notifications-console/events/:id/recipients/resolve",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/notifications-console/events/:id/recipients/template",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/notifications-console/events/:id/recipients/upload",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/notifications-console/events/:id/trigger",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/notifications-console/events/:id/resend",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/notifications-console/events/:id/failed.xlsx",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/notifications-console/events/:id/recipients",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/notifications-console/events/:id/status",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/notifications-console/stats",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/notifications-console/:id/resend/verifiers",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/notifications-console/:id/resend/otp",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/notifications-console/:id/resend/verify",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/notifications-console/:id/resend/confirm",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/notifications-console/:id/resend/status",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/notifications-console/:id/preview",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/notifications-console/:id/contents",
+  "file": "features/notifications-console/routes/notifications-console.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/application-forms",
+  "file": "features/admissions/routes/application-form.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/application-forms/:id",
+  "file": "features/admissions/routes/application-form.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/application-forms/admission/:admissionId",
+  "file": "features/admissions/routes/application-form.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/admissions/application-forms/:id",
+  "file": "features/admissions/routes/application-form.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/admissions/application-forms/:id",
+  "file": "features/admissions/routes/application-form.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/general-info",
+  "file": "features/admissions/routes/admission-general-info.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/general-info/:id",
+  "file": "features/admissions/routes/admission-general-info.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/general-info/application-form/:applicationFormId",
+  "file": "features/admissions/routes/admission-general-info.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/admissions/general-info/:id",
+  "file": "features/admissions/routes/admission-general-info.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/admissions/general-info/:id",
+  "file": "features/admissions/routes/admission-general-info.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/academic-info",
+  "file": "features/admissions/routes/admission-academic-info.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/academic-info/:id",
+  "file": "features/admissions/routes/admission-academic-info.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/academic-info/application-form/:applicationFormId",
+  "file": "features/admissions/routes/admission-academic-info.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/admissions/academic-info/:id",
+  "file": "features/admissions/routes/admission-academic-info.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/admissions/academic-info/:id",
+  "file": "features/admissions/routes/admission-academic-info.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/additional-info",
+  "file": "features/admissions/routes/admission-additional-info.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/additional-info/:id",
+  "file": "features/admissions/routes/admission-additional-info.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/additional-info/application-form/:applicationFormId",
+  "file": "features/admissions/routes/admission-additional-info.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/admissions/additional-info/:id",
+  "file": "features/admissions/routes/admission-additional-info.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/admissions/additional-info/:id",
+  "file": "features/admissions/routes/admission-additional-info.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/courses",
+  "file": "features/admissions/routes/admission-course.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/courses/:id",
+  "file": "features/admissions/routes/admission-course.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/courses/admission/:admissionId",
+  "file": "features/admissions/routes/admission-course.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/admissions/courses/:id",
+  "file": "features/admissions/routes/admission-course.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/admissions/courses/:id",
+  "file": "features/admissions/routes/admission-course.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/course-applications",
+  "file": "features/admissions/routes/admission-course-application.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/course-applications/:id",
+  "file": "features/admissions/routes/admission-course-application.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/course-applications/application-form/:applicationFormId",
+  "file": "features/admissions/routes/admission-course-application.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/admissions/course-applications/:id",
+  "file": "features/admissions/routes/admission-course-application.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/admissions/course-applications/:id",
+  "file": "features/admissions/routes/admission-course-application.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/sports-category",
+  "file": "features/admissions/routes/sports-category.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/sports-category/:id",
+  "file": "features/admissions/routes/sports-category.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/sports-category",
+  "file": "features/admissions/routes/sports-category.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/admissions/sports-category/:id",
+  "file": "features/admissions/routes/sports-category.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/admissions/sports-category/:id",
+  "file": "features/admissions/routes/sports-category.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/sports-info",
+  "file": "features/admissions/routes/sports-info.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/sports-info/:id",
+  "file": "features/admissions/routes/sports-info.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/sports-info/additional-info/:additionalInfoId",
+  "file": "features/admissions/routes/sports-info.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/admissions/sports-info/:id",
+  "file": "features/admissions/routes/sports-info.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/admissions/sports-info/:id",
+  "file": "features/admissions/routes/sports-info.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/student-academic-subject",
+  "file": "features/admissions/routes/student-academic-subject.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/student-academic-subject/:id",
+  "file": "features/admissions/routes/student-academic-subject.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/student-academic-subject/academic-info/:academicInfoId",
+  "file": "features/admissions/routes/student-academic-subject.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/admissions/student-academic-subject/:id",
+  "file": "features/admissions/routes/student-academic-subject.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/admissions/student-academic-subject/:id",
+  "file": "features/admissions/routes/student-academic-subject.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/academic-subject",
+  "file": "features/admissions/routes/academic-subject.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/academic-subject/:id",
+  "file": "features/admissions/routes/academic-subject.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/academic-subject",
+  "file": "features/admissions/routes/academic-subject.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/admissions/academic-subject/:id",
+  "file": "features/admissions/routes/academic-subject.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/admissions/academic-subject/:id",
+  "file": "features/admissions/routes/academic-subject.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/boards",
+  "file": "features/admissions/routes/board.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/boards",
+  "file": "features/admissions/routes/board.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/boards/:id",
+  "file": "features/admissions/routes/board.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/admissions/boards/:id",
+  "file": "features/admissions/routes/board.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/admissions/boards/:id",
+  "file": "features/admissions/routes/board.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/boards/bulk-upload",
+  "file": "features/admissions/routes/board.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/board-subject-names",
+  "file": "features/admissions/routes/board-subject-name.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/board-subject-names",
+  "file": "features/admissions/routes/board-subject-name.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/board-subject-names/active",
+  "file": "features/admissions/routes/board-subject-name.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/board-subject-names/:id",
+  "file": "features/admissions/routes/board-subject-name.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/admissions/board-subject-names/:id",
+  "file": "features/admissions/routes/board-subject-name.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/admissions/board-subject-names/:id",
+  "file": "features/admissions/routes/board-subject-name.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/board-subject-names/bulk-upload",
+  "file": "features/admissions/routes/board-subject-name.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/board-subjects",
+  "file": "features/admissions/routes/board-subject.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/board-subjects",
+  "file": "features/admissions/routes/board-subject.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/board-subjects/:id",
+  "file": "features/admissions/routes/board-subject.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/board-subjects/board/:boardId",
+  "file": "features/admissions/routes/board-subject.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/admissions/board-subjects/:id",
+  "file": "features/admissions/routes/board-subject.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/admissions/board-subjects/:id",
+  "file": "features/admissions/routes/board-subject.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/board-subjects/bulk-upload",
+  "file": "features/admissions/routes/board-subject.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/board-subject-univ-subject-mappings",
+  "file": "features/admissions/controllers/board-subject-univ-subject-mapping.controller.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/board-subject-univ-subject-mappings/:id",
+  "file": "features/admissions/controllers/board-subject-univ-subject-mapping.controller.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/board-subject-univ-subject-mappings",
+  "file": "features/admissions/controllers/board-subject-univ-subject-mapping.controller.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/admissions/board-subject-univ-subject-mappings/:id",
+  "file": "features/admissions/controllers/board-subject-univ-subject-mapping.controller.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/admissions/board-subject-univ-subject-mappings/:id",
+  "file": "features/admissions/controllers/board-subject-univ-subject-mapping.controller.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/cu-registration-correction-requests",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/cu-registration-correction-requests/submit-with-documents",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/cu-registration-correction-requests/personal-declaration",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/cu-registration-correction-requests/address-declaration",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/cu-registration-correction-requests/subjects-declaration",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/cu-registration-correction-requests/documents-declaration",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/cu-registration-correction-requests",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/cu-registration-correction-requests/export",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/cu-registration-correction-requests/:id",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/cu-registration-correction-requests/student/:studentId",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/cu-registration-correction-requests/student-uid/:studentUid",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/cu-registration-correction-requests/status/:status",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/admissions/cu-registration-correction-requests/:id",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/cu-registration-correction-requests/:id/personal-info",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/cu-registration-correction-requests/:id/address-info",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "PATCH",
+  "full": "/api/admissions/cu-registration-correction-requests/:id/mark-physical-done",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/admissions/cu-registration-correction-requests/:id",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/cu-registration-correction-requests/next-application-number",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/cu-registration-correction-requests/validate-application-number",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/cu-registration-correction-requests/application-number-stats",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/cu-registration-correction-requests/pdf/:encodedApplicationNumber",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/cu-registration-correction-requests/download/:year/:regulationType",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/cu-registration-correction-requests/download-pdfs/:year/:regulationType",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/cu-registration-correction-requests/download-documents/:year/:regulationType",
+  "file": "features/admissions/routes/cu-registration-correction-request.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/admissions/cu-registration-document-uploads",
+  "file": "features/admissions/routes/cu-registration-document-upload.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/cu-registration-document-uploads",
+  "file": "features/admissions/routes/cu-registration-document-upload.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/cu-registration-document-uploads/:id",
+  "file": "features/admissions/routes/cu-registration-document-upload.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/cu-registration-document-uploads/:id/signed-url",
+  "file": "features/admissions/routes/cu-registration-document-upload.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/cu-registration-document-uploads/request/:requestId",
+  "file": "features/admissions/routes/cu-registration-document-upload.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/admissions/cu-registration-document-uploads/:id",
+  "file": "features/admissions/routes/cu-registration-document-upload.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/admissions/cu-registration-document-uploads/:id",
+  "file": "features/admissions/routes/cu-registration-document-upload.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/admissions/cu-registration-document-uploads/request/:requestId",
+  "file": "features/admissions/routes/cu-registration-document-upload.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/cu-registration-document-uploads/student/:studentUid/files",
+  "file": "features/admissions/routes/cu-registration-document-upload.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/cu-registration-document-uploads/student/:studentUid/stats",
+  "file": "features/admissions/routes/cu-registration-document-upload.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/admissions/cu-registration-document-uploads/student/:studentUid/files",
+  "file": "features/admissions/routes/cu-registration-document-upload.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/cu-registration-pdf/proxy/request/:correctionRequestId",
+  "file": "features/admissions/routes/cu-registration-pdf.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/cu-registration-pdf/url/request/:correctionRequestId",
+  "file": "features/admissions/routes/cu-registration-pdf.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/admissions/cu-registration-pdf/url/:studentId/:applicationNumber",
+  "file": "features/admissions/routes/cu-registration-pdf.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/payments/config",
+  "file": "features/payments/routes/payment.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/payments/availability",
+  "file": "features/payments/routes/payment.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/payments/initiate",
+  "file": "features/payments/routes/payment.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/payments/initiate-fee",
+  "file": "features/payments/routes/payment.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/payments/status/:orderId",
+  "file": "features/payments/routes/payment.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/payments/confirm",
+  "file": "features/payments/routes/payment.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/payments/callback",
+  "file": "features/payments/routes/payment.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/payments/downtime/webhook",
+  "file": "features/payments/routes/payment.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/payments/marking/cash",
+  "file": "features/payments/routes/payment.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/payments/marking/cash/receive",
+  "file": "features/payments/routes/payment.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/payments/marking/online",
+  "file": "features/payments/routes/payment.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/payments/marking/online/mark-success",
+  "file": "features/payments/routes/payment.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/entry-exit",
+  "file": "features/library/routes/library-entry-exit.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/entry-exit",
+  "file": "features/library/routes/library-entry-exit.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/entry-exit/download",
+  "file": "features/library/routes/library-entry-exit.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/entry-exit/search-users",
+  "file": "features/library/routes/library-entry-exit.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/entry-exit/preview/:userId",
+  "file": "features/library/routes/library-entry-exit.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/entry-exit/:id",
+  "file": "features/library/routes/library-entry-exit.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/entry-exit/:id",
+  "file": "features/library/routes/library-entry-exit.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/entry-exit/:id",
+  "file": "features/library/routes/library-entry-exit.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/book-circulation",
+  "file": "features/library/routes/book-circulation.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/book-circulation/meta",
+  "file": "features/library/routes/book-circulation.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/book-circulation/policy",
+  "file": "features/library/routes/book-circulation.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/book-circulation/book-options",
+  "file": "features/library/routes/book-circulation.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/book-circulation/download",
+  "file": "features/library/routes/book-circulation.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/book-circulation/preview/:userId",
+  "file": "features/library/routes/book-circulation.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/book-circulation/upsert/:userId",
+  "file": "features/library/routes/book-circulation.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/book-circulation/:id/action",
+  "file": "features/library/routes/book-circulation.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/journals/meta",
+  "file": "features/library/routes/journal.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/journals/download",
+  "file": "features/library/routes/journal.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/journals",
+  "file": "features/library/routes/journal.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/journals/:id/linked-books",
+  "file": "features/library/routes/journal.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/journals/:id",
+  "file": "features/library/routes/journal.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/journals",
+  "file": "features/library/routes/journal.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/journals/:id",
+  "file": "features/library/routes/journal.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/journals/:id",
+  "file": "features/library/routes/journal.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/copy-details/meta",
+  "file": "features/library/routes/copy-details.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/copy-details/template",
+  "file": "features/library/routes/copy-details.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/copy-details/download",
+  "file": "features/library/routes/copy-details.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/copy-details/bulk-upload",
+  "file": "features/library/routes/copy-details.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/copy-details",
+  "file": "features/library/routes/copy-details.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/copy-details/:id/address",
+  "file": "features/library/routes/copy-details.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/copy-details/:id/address",
+  "file": "features/library/routes/copy-details.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/copy-details/:id",
+  "file": "features/library/routes/copy-details.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/copy-details",
+  "file": "features/library/routes/copy-details.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/copy-details/:id",
+  "file": "features/library/routes/copy-details.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/copy-details/:id",
+  "file": "features/library/routes/copy-details.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/books/meta",
+  "file": "features/library/routes/book.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/books/download",
+  "file": "features/library/routes/book.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/books/import-marc",
+  "file": "features/library/routes/book.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/books/federated-search",
+  "file": "features/library/routes/book.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/books/:id/dublin-core",
+  "file": "features/library/routes/book.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/books",
+  "file": "features/library/routes/book.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/books/:id",
+  "file": "features/library/routes/book.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/books",
+  "file": "features/library/routes/book.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/books/:id",
+  "file": "features/library/routes/book.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/books/:id",
+  "file": "features/library/routes/book.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/shelves",
+  "file": "features/library/routes/shelf.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/shelves/:id",
+  "file": "features/library/routes/shelf.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/shelves",
+  "file": "features/library/routes/shelf.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/shelves/:id",
+  "file": "features/library/routes/shelf.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/shelves/:id",
+  "file": "features/library/routes/shelf.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/racks",
+  "file": "features/library/routes/rack.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/racks/:id",
+  "file": "features/library/routes/rack.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/racks",
+  "file": "features/library/routes/rack.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/racks/:id",
+  "file": "features/library/routes/rack.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/racks/:id",
+  "file": "features/library/routes/rack.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/statuses",
+  "file": "features/library/routes/status.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/statuses/:id",
+  "file": "features/library/routes/status.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/statuses",
+  "file": "features/library/routes/status.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/statuses/:id",
+  "file": "features/library/routes/status.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/statuses/:id",
+  "file": "features/library/routes/status.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/journal-types",
+  "file": "features/library/routes/journal-type.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/journal-types/:id",
+  "file": "features/library/routes/journal-type.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/journal-types",
+  "file": "features/library/routes/journal-type.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/journal-types/:id",
+  "file": "features/library/routes/journal-type.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/journal-types/:id",
+  "file": "features/library/routes/journal-type.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/articles",
+  "file": "features/library/routes/library-article.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/articles/:id",
+  "file": "features/library/routes/library-article.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/articles",
+  "file": "features/library/routes/library-article.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/articles/:id",
+  "file": "features/library/routes/library-article.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/articles/:id",
+  "file": "features/library/routes/library-article.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/document-types",
+  "file": "features/library/routes/library-document-type.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/document-types/:id",
+  "file": "features/library/routes/library-document-type.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/document-types",
+  "file": "features/library/routes/library-document-type.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/document-types/:id",
+  "file": "features/library/routes/library-document-type.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/document-types/:id",
+  "file": "features/library/routes/library-document-type.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/bindings",
+  "file": "features/library/routes/binding.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/bindings",
+  "file": "features/library/routes/binding.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/bindings/:id",
+  "file": "features/library/routes/binding.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/bindings/:id",
+  "file": "features/library/routes/binding.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/bindings/:id",
+  "file": "features/library/routes/binding.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/borrowing-types",
+  "file": "features/library/routes/borrowing-type.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/borrowing-types",
+  "file": "features/library/routes/borrowing-type.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/borrowing-types/:id",
+  "file": "features/library/routes/borrowing-type.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/borrowing-types/:id",
+  "file": "features/library/routes/borrowing-type.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/borrowing-types/:id",
+  "file": "features/library/routes/borrowing-type.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/enclosures",
+  "file": "features/library/routes/enclosure.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/enclosures",
+  "file": "features/library/routes/enclosure.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/enclosures/:id",
+  "file": "features/library/routes/enclosure.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/enclosures/:id",
+  "file": "features/library/routes/enclosure.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/enclosures/:id",
+  "file": "features/library/routes/enclosure.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/entry-modes",
+  "file": "features/library/routes/entry-mode.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/entry-modes",
+  "file": "features/library/routes/entry-mode.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/entry-modes/:id",
+  "file": "features/library/routes/entry-mode.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/entry-modes/:id",
+  "file": "features/library/routes/entry-mode.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/entry-modes/:id",
+  "file": "features/library/routes/entry-mode.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/periods",
+  "file": "features/library/routes/library-period.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/periods",
+  "file": "features/library/routes/library-period.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/periods/:id",
+  "file": "features/library/routes/library-period.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/periods/:id",
+  "file": "features/library/routes/library-period.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/periods/:id",
+  "file": "features/library/routes/library-period.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/series",
+  "file": "features/library/routes/series.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/series",
+  "file": "features/library/routes/series.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/series/:id",
+  "file": "features/library/routes/series.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/series/:id",
+  "file": "features/library/routes/series.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/series/:id",
+  "file": "features/library/routes/series.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/publishers",
+  "file": "features/library/routes/publisher.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/publishers",
+  "file": "features/library/routes/publisher.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/publishers/:id/address",
+  "file": "features/library/routes/publisher.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/publishers/:id/address",
+  "file": "features/library/routes/publisher.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/publishers/:id",
+  "file": "features/library/routes/publisher.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/publishers/:id",
+  "file": "features/library/routes/publisher.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/publishers/:id",
+  "file": "features/library/routes/publisher.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/author-types",
+  "file": "features/library/routes/author-type.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/author-types/:id",
+  "file": "features/library/routes/author-type.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/author-types",
+  "file": "features/library/routes/author-type.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/author-types/:id",
+  "file": "features/library/routes/author-type.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/author-types/:id",
+  "file": "features/library/routes/author-type.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/authors",
+  "file": "features/library/routes/author.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/authors/:id",
+  "file": "features/library/routes/author.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/authors",
+  "file": "features/library/routes/author.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/authors/:id",
+  "file": "features/library/routes/author.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/authors/:id",
+  "file": "features/library/routes/author.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/vendors",
+  "file": "features/library/routes/vendor.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/vendors/:id",
+  "file": "features/library/routes/vendor.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/vendors",
+  "file": "features/library/routes/vendor.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/vendors/:id",
+  "file": "features/library/routes/vendor.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/vendors/:id",
+  "file": "features/library/routes/vendor.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/holidays",
+  "file": "features/library/routes/holiday.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/holidays/:id",
+  "file": "features/library/routes/holiday.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/holidays",
+  "file": "features/library/routes/holiday.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/holidays/:id",
+  "file": "features/library/routes/holiday.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/holidays/:id",
+  "file": "features/library/routes/holiday.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/class-holidays",
+  "file": "features/library/routes/class-holiday.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/class-holidays/:id",
+  "file": "features/library/routes/class-holiday.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/class-holidays",
+  "file": "features/library/routes/class-holiday.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/class-holidays/:id",
+  "file": "features/library/routes/class-holiday.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/class-holidays/:id",
+  "file": "features/library/routes/class-holiday.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/branches",
+  "file": "features/library/routes/branch.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/branches/:id",
+  "file": "features/library/routes/branch.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/branches",
+  "file": "features/library/routes/branch.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/branches/:id",
+  "file": "features/library/routes/branch.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/branches/:id",
+  "file": "features/library/routes/branch.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/patron-categories",
+  "file": "features/library/routes/patron-category.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/patron-categories/:id",
+  "file": "features/library/routes/patron-category.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/patron-categories",
+  "file": "features/library/routes/patron-category.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/patron-categories/:id",
+  "file": "features/library/routes/patron-category.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/patron-categories/:id",
+  "file": "features/library/routes/patron-category.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/item-categories",
+  "file": "features/library/routes/item-category.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/item-categories/:id",
+  "file": "features/library/routes/item-category.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/item-categories",
+  "file": "features/library/routes/item-category.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/item-categories/:id",
+  "file": "features/library/routes/item-category.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/item-categories/:id",
+  "file": "features/library/routes/item-category.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/circulation-policies/resolve",
+  "file": "features/library/routes/circulation-policy.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/circulation-policies",
+  "file": "features/library/routes/circulation-policy.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/circulation-policies/:id",
+  "file": "features/library/routes/circulation-policy.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/circulation-policies",
+  "file": "features/library/routes/circulation-policy.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/circulation-policies/:id",
+  "file": "features/library/routes/circulation-policy.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/circulation-policies/:id",
+  "file": "features/library/routes/circulation-policy.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/journal-subscriptions/missing-issues",
+  "file": "features/library/routes/journal-subscription.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/journal-subscriptions/run-predictor",
+  "file": "features/library/routes/journal-subscription.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/journal-subscriptions",
+  "file": "features/library/routes/journal-subscription.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/journal-subscriptions/:id",
+  "file": "features/library/routes/journal-subscription.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/journal-subscriptions",
+  "file": "features/library/routes/journal-subscription.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/journal-subscriptions/:id",
+  "file": "features/library/routes/journal-subscription.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/journal-subscriptions/:id",
+  "file": "features/library/routes/journal-subscription.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/journal-subscriptions/:subscriptionId/issues",
+  "file": "features/library/routes/journal-subscription.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/journal-subscriptions/:subscriptionId/issues",
+  "file": "features/library/routes/journal-subscription.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/journal-subscriptions/issues/:id",
+  "file": "features/library/routes/journal-subscription.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/journal-subscriptions/issues/:id",
+  "file": "features/library/routes/journal-subscription.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/zones",
+  "file": "features/library/routes/library-zone.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/zones/gate-events",
+  "file": "features/library/routes/library-zone.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/zones/gate-events",
+  "file": "features/library/routes/library-zone.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/zones/occupancy",
+  "file": "features/library/routes/library-zone.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/zones/:id/occupancy",
+  "file": "features/library/routes/library-zone.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/zones/:id",
+  "file": "features/library/routes/library-zone.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/zones",
+  "file": "features/library/routes/library-zone.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/zones/:id",
+  "file": "features/library/routes/library-zone.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/zones/:id",
+  "file": "features/library/routes/library-zone.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/reading-lists",
+  "file": "features/library/routes/reading-list.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/reading-lists/:id",
+  "file": "features/library/routes/reading-list.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/reading-lists",
+  "file": "features/library/routes/reading-list.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/reading-lists/:id",
+  "file": "features/library/routes/reading-list.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/reading-lists/:id",
+  "file": "features/library/routes/reading-list.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/reading-lists/:readingListId/items",
+  "file": "features/library/routes/reading-list.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/reading-lists/:readingListId/items",
+  "file": "features/library/routes/reading-list.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/reading-lists/items/:id",
+  "file": "features/library/routes/reading-list.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/dashboard/stats",
+  "file": "features/library/routes/library-dashboard.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/dashboard/seed-status",
+  "file": "features/library/routes/library-dashboard.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/dashboard/consistency-check",
+  "file": "features/library/routes/library-dashboard.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/dashboard/load-status",
+  "file": "features/library/routes/library-dashboard.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/dashboard/sync-status",
+  "file": "features/library/routes/library-dashboard.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/dashboard/patrons",
+  "file": "features/library/routes/library-dashboard.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/dashboard/item-categories",
+  "file": "features/library/routes/library-dashboard.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/dashboard/branches",
+  "file": "features/library/routes/library-dashboard.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/dashboard/policies",
+  "file": "features/library/routes/library-dashboard.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/dashboard/catalogue-counts",
+  "file": "features/library/routes/library-dashboard.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/dashboard/holidays-report",
+  "file": "features/library/routes/library-dashboard.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/clearance/:userId",
+  "file": "features/library/routes/library-clearance.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/fines/:circulationId/initiate",
+  "file": "features/library/routes/library-fine-payment.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/fines/:circulationId/cash",
+  "file": "features/library/routes/library-fine-payment.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/fines/:circulationId/waive",
+  "file": "features/library/routes/library-fine-payment.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/fines/payments/:paymentId/settle",
+  "file": "features/library/routes/library-fine-payment.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/floor-plans",
+  "file": "features/library/routes/library-floor-plan.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/floor-plans/:id",
+  "file": "features/library/routes/library-floor-plan.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/floor-plans",
+  "file": "features/library/routes/library-floor-plan.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/floor-plans/:id",
+  "file": "features/library/routes/library-floor-plan.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/floor-plans/:id",
+  "file": "features/library/routes/library-floor-plan.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/search/copies",
+  "file": "features/library/routes/library-search.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/search",
+  "file": "features/library/routes/library-search.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/academic-archives",
+  "file": "features/library/routes/academic-archive.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/academic-archives/:id/url",
+  "file": "features/library/routes/academic-archive.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/academic-archives/:id",
+  "file": "features/library/routes/academic-archive.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/academic-archives",
+  "file": "features/library/routes/academic-archive.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/academic-archives/:id",
+  "file": "features/library/routes/academic-archive.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/academic-archives/:id",
+  "file": "features/library/routes/academic-archive.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/cdl/:bookId/sessions",
+  "file": "features/library/routes/cdl.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/cdl/sessions/:sessionId/close",
+  "file": "features/library/routes/cdl.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/cdl/:bookId/access",
+  "file": "features/library/routes/cdl.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/evidence-docs",
+  "file": "features/library/routes/evidence-doc.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/evidence-docs/:id/url",
+  "file": "features/library/routes/evidence-doc.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/evidence-docs/:id",
+  "file": "features/library/routes/evidence-doc.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/evidence-docs",
+  "file": "features/library/routes/evidence-doc.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/evidence-docs/:id",
+  "file": "features/library/routes/evidence-doc.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/evidence-docs/:id",
+  "file": "features/library/routes/evidence-doc.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/student-analytics",
+  "file": "features/library/routes/student-library-analytics.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/student-analytics/recompute",
+  "file": "features/library/routes/student-library-analytics.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/reports/naac",
+  "file": "features/library/routes/library-reports.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/reports/nirf",
+  "file": "features/library/routes/library-reports.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/reports/aishe",
+  "file": "features/library/routes/library-reports.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/reports/overdue",
+  "file": "features/library/routes/library-reports.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/reports/fines-outstanding",
+  "file": "features/library/routes/library-reports.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/reports/fines-collected",
+  "file": "features/library/routes/library-reports.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/reports/stock-summary",
+  "file": "features/library/routes/library-reports.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/reports/high-demand-titles",
+  "file": "features/library/routes/library-reports.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/reports/footfall",
+  "file": "features/library/routes/library-reports.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/reports/holdings",
+  "file": "features/library/routes/library-reports.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/reports/accession-growth",
+  "file": "features/library/routes/library-reports.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/reports/copies-distribution",
+  "file": "features/library/routes/library-reports.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/reports/popular-books",
+  "file": "features/library/routes/library-reports.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/reports/publication-usage",
+  "file": "features/library/routes/library-reports.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/reports/batch-usage",
+  "file": "features/library/routes/library-reports.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/reports/predict/book-demand",
+  "file": "features/library/routes/library-reports.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/reports/predict/footfall",
+  "file": "features/library/routes/library-reports.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/notifications/seed",
+  "file": "features/library/routes/library-notification-seed.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/library/books/:bookId/authors",
+  "file": "features/library/routes/author-detail.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/library/books/:bookId/authors",
+  "file": "features/library/routes/author-detail.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/books/:bookId/authors/bulk",
+  "file": "features/library/routes/author-detail.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/library/author-details/:id",
+  "file": "features/library/routes/author-detail.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/library/author-details/:id",
+  "file": "features/library/routes/author-detail.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/sections",
+  "file": "features/academics/routes/section.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/sections",
+  "file": "features/academics/routes/section.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/sections/:id",
+  "file": "features/academics/routes/section.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/sections/:id",
+  "file": "features/academics/routes/section.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/settings",
+  "file": "features/apps/routes/settings.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/settings/branding",
+  "file": "features/apps/routes/settings.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/settings/:id",
+  "file": "features/apps/routes/settings.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/settings/:id",
+  "file": "features/apps/routes/settings.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/settings/file/:idOrName",
+  "file": "features/apps/routes/settings.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/course-design/streams",
+  "file": "features/course-design/routes/stream.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/course-design/streams/bulk-upload",
+  "file": "features/course-design/routes/stream.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/course-design/streams",
+  "file": "features/course-design/routes/stream.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/course-design/streams/:id",
+  "file": "features/course-design/routes/stream.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/course-design/streams/:id",
+  "file": "features/course-design/routes/stream.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/course-design/streams/:id",
+  "file": "features/course-design/routes/stream.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/course-design/course-types",
+  "file": "features/course-design/routes/course-type.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/course-design/course-types/bulk-upload",
+  "file": "features/course-design/routes/course-type.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/course-design/course-types",
+  "file": "features/course-design/routes/course-type.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/course-design/course-types/:id",
+  "file": "features/course-design/routes/course-type.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/course-design/course-types/:id",
+  "file": "features/course-design/routes/course-type.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/course-design/course-types/:id",
+  "file": "features/course-design/routes/course-type.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/course-design/course-types/query",
+  "file": "features/course-design/routes/course-type.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/course-design/course-types/query",
+  "file": "features/course-design/routes/course-type.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/course-design/course-types/query",
+  "file": "features/course-design/routes/course-type.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/course-design/course-levels",
+  "file": "features/course-design/routes/course-level.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/course-design/course-levels/bulk-upload",
+  "file": "features/course-design/routes/course-level.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/course-design/course-levels",
+  "file": "features/course-design/routes/course-level.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/course-design/course-levels/:id",
+  "file": "features/course-design/routes/course-level.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/course-design/course-levels/:id",
+  "file": "features/course-design/routes/course-level.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/course-design/course-levels/:id",
+  "file": "features/course-design/routes/course-level.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/course-design/regulation-types",
+  "file": "features/course-design/routes/regulation-type.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/course-design/regulation-types/bulk-upload",
+  "file": "features/course-design/routes/regulation-type.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/course-design/regulation-types",
+  "file": "features/course-design/routes/regulation-type.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/course-design/regulation-types/:id",
+  "file": "features/course-design/routes/regulation-type.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/course-design/regulation-types/:id",
+  "file": "features/course-design/routes/regulation-type.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/course-design/regulation-types/:id",
+  "file": "features/course-design/routes/regulation-type.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/course-design/program-courses",
+  "file": "features/course-design/routes/program-course.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/v1/course-design/program-courses/bulk-upload",
+  "file": "features/course-design/routes/program-course.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/course-design/program-courses",
+  "file": "features/course-design/routes/program-course.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/course-design/program-courses/dtos",
+  "file": "features/course-design/routes/program-course.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/v1/course-design/program-courses/:id",
+  "file": "features/course-design/routes/program-course.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/v1/course-design/program-courses/:id",
+  "file": "features/course-design/routes/program-course.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/v1/course-design/program-courses/:id",
+  "file": "features/course-design/routes/program-course.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/courses",
+  "file": "features/course-design/routes/course.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/courses/bulk-upload",
+  "file": "features/course-design/routes/course.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/courses",
+  "file": "features/course-design/routes/course.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/courses/:id",
+  "file": "features/course-design/routes/course.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/course-design/courses/:id",
+  "file": "features/course-design/routes/course.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/course-design/courses/:id",
+  "file": "features/course-design/routes/course.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/subjects",
+  "file": "features/course-design/routes/subject.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/subjects/bulk-upload",
+  "file": "features/course-design/routes/subject.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/subjects",
+  "file": "features/course-design/routes/subject.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/subjects/:id",
+  "file": "features/course-design/routes/subject.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/course-design/subjects/:id",
+  "file": "features/course-design/routes/subject.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/course-design/subjects/:id",
+  "file": "features/course-design/routes/subject.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/subject-types",
+  "file": "features/course-design/routes/subject-type.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/subject-types/bulk-upload",
+  "file": "features/course-design/routes/subject-type.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/subject-types",
+  "file": "features/course-design/routes/subject-type.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/subject-types/:id",
+  "file": "features/course-design/routes/subject-type.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/course-design/subject-types/:id",
+  "file": "features/course-design/routes/subject-type.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/course-design/subject-types/:id",
+  "file": "features/course-design/routes/subject-type.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/papers/download",
+  "file": "features/course-design/routes/paper.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/papers",
+  "file": "features/course-design/routes/paper.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/papers",
+  "file": "features/course-design/routes/paper.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/papers/query",
+  "file": "features/course-design/routes/paper.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/course-design/papers/query",
+  "file": "features/course-design/routes/paper.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/course-design/papers/:id/with-components",
+  "file": "features/course-design/routes/paper.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/course-design/papers/query",
+  "file": "features/course-design/routes/paper.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/topics",
+  "file": "features/course-design/routes/topic.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/topics",
+  "file": "features/course-design/routes/topic.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/topics/query",
+  "file": "features/course-design/routes/topic.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/course-design/topics/query",
+  "file": "features/course-design/routes/topic.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/course-design/topics/query",
+  "file": "features/course-design/routes/topic.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/streams",
+  "file": "features/course-design/routes/stream.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/streams/bulk-upload",
+  "file": "features/course-design/routes/stream.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/streams",
+  "file": "features/course-design/routes/stream.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/streams/:id",
+  "file": "features/course-design/routes/stream.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/course-design/streams/:id",
+  "file": "features/course-design/routes/stream.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/course-design/streams/:id",
+  "file": "features/course-design/routes/stream.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/affiliations",
+  "file": "features/course-design/routes/affiliation.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/affiliations/bulk-upload",
+  "file": "features/course-design/routes/affiliation.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/affiliations",
+  "file": "features/course-design/routes/affiliation.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/affiliations/:id",
+  "file": "features/course-design/routes/affiliation.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/course-design/affiliations/:id",
+  "file": "features/course-design/routes/affiliation.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/course-design/affiliations/:id",
+  "file": "features/course-design/routes/affiliation.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/regulation-types",
+  "file": "features/course-design/routes/regulation-type.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/regulation-types/bulk-upload",
+  "file": "features/course-design/routes/regulation-type.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/regulation-types",
+  "file": "features/course-design/routes/regulation-type.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/regulation-types/:id",
+  "file": "features/course-design/routes/regulation-type.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/course-design/regulation-types/:id",
+  "file": "features/course-design/routes/regulation-type.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/course-design/regulation-types/:id",
+  "file": "features/course-design/routes/regulation-type.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/program-courses",
+  "file": "features/course-design/routes/program-course.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/program-courses/bulk-upload",
+  "file": "features/course-design/routes/program-course.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/program-courses",
+  "file": "features/course-design/routes/program-course.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/program-courses/dtos",
+  "file": "features/course-design/routes/program-course.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/program-courses/:id",
+  "file": "features/course-design/routes/program-course.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/course-design/program-courses/:id",
+  "file": "features/course-design/routes/program-course.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/course-design/program-courses/:id",
+  "file": "features/course-design/routes/program-course.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/course-types",
+  "file": "features/course-design/routes/course-type.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/course-types/bulk-upload",
+  "file": "features/course-design/routes/course-type.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/course-types",
+  "file": "features/course-design/routes/course-type.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/course-types/:id",
+  "file": "features/course-design/routes/course-type.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/course-design/course-types/:id",
+  "file": "features/course-design/routes/course-type.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/course-design/course-types/:id",
+  "file": "features/course-design/routes/course-type.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/course-types/query",
+  "file": "features/course-design/routes/course-type.route.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/course-design/course-types/query",
+  "file": "features/course-design/routes/course-type.route.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/course-design/course-types/query",
+  "file": "features/course-design/routes/course-type.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/course-levels",
+  "file": "features/course-design/routes/course-level.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/course-levels/bulk-upload",
+  "file": "features/course-design/routes/course-level.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/course-levels",
+  "file": "features/course-design/routes/course-level.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/course-levels/:id",
+  "file": "features/course-design/routes/course-level.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/course-design/course-levels/:id",
+  "file": "features/course-design/routes/course-level.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/course-design/course-levels/:id",
+  "file": "features/course-design/routes/course-level.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/exam-components",
+  "file": "features/course-design/routes/exam-component.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/exam-components",
+  "file": "features/course-design/routes/exam-component.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/exam-components/:id",
+  "file": "features/course-design/routes/exam-component.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/course-design/exam-components/:id",
+  "file": "features/course-design/routes/exam-component.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/course-design/exam-components/:id",
+  "file": "features/course-design/routes/exam-component.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/specializations",
+  "file": "features/course-design/routes/specialization.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/specializations",
+  "file": "features/course-design/routes/specialization.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/specializations/query",
+  "file": "features/course-design/routes/specialization.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/course-design/specializations/query",
+  "file": "features/course-design/routes/specialization.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/course-design/specializations/query",
+  "file": "features/course-design/routes/specialization.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/cascading-dropdowns/affiliations",
+  "file": "features/course-design/routes/cascading-dropdowns.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/cascading-dropdowns/academic-years/:affiliationId",
+  "file": "features/course-design/routes/cascading-dropdowns.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/cascading-dropdowns/regulation-types/:affiliationId/:academicYearId",
+  "file": "features/course-design/routes/cascading-dropdowns.route.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/cascading-dropdowns/subjects/:affiliationId/:academicYearId/:regulationTypeId",
+  "file": "features/course-design/routes/cascading-dropdowns.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/subject-grouping-mains",
+  "file": "features/course-design/routes/subject-grouping-main.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/subject-grouping-mains",
+  "file": "features/course-design/routes/subject-grouping-main.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/subject-grouping-mains/:id",
+  "file": "features/course-design/routes/subject-grouping-main.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/course-design/subject-grouping-mains/:id",
+  "file": "features/course-design/routes/subject-grouping-main.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/course-design/subject-grouping-mains/:id",
+  "file": "features/course-design/routes/subject-grouping-main.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/subject-grouping-program-courses",
+  "file": "features/course-design/routes/subject-grouping-program-course.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/subject-grouping-program-courses",
+  "file": "features/course-design/routes/subject-grouping-program-course.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/subject-grouping-program-courses/:id",
+  "file": "features/course-design/routes/subject-grouping-program-course.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/course-design/subject-grouping-program-courses/:id",
+  "file": "features/course-design/routes/subject-grouping-program-course.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/course-design/subject-grouping-program-courses/:id",
+  "file": "features/course-design/routes/subject-grouping-program-course.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/course-design/subject-grouping-subjects",
+  "file": "features/course-design/routes/subject-grouping-sub.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/subject-grouping-subjects",
+  "file": "features/course-design/routes/subject-grouping-sub.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/course-design/subject-grouping-subjects/:id",
+  "file": "features/course-design/routes/subject-grouping-sub.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/course-design/subject-grouping-subjects/:id",
+  "file": "features/course-design/routes/subject-grouping-sub.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/course-design/subject-grouping-subjects/:id",
+  "file": "features/course-design/routes/subject-grouping-sub.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/subject-selection/related-subject-mains",
+  "file": "features/subject-selection/routes/related-subject-main.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/subject-selection/related-subject-mains/bulk-upload",
+  "file": "features/subject-selection/routes/related-subject-main.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/related-subject-mains",
+  "file": "features/subject-selection/routes/related-subject-main.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/related-subject-mains/:id",
+  "file": "features/subject-selection/routes/related-subject-main.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/subject-selection/related-subject-mains/:id",
+  "file": "features/subject-selection/routes/related-subject-main.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/subject-selection/related-subject-mains/:id",
+  "file": "features/subject-selection/routes/related-subject-main.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/subject-selection/related-subject-subs",
+  "file": "features/subject-selection/routes/related-subject-sub.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/subject-selection/related-subject-subs/bulk-upload",
+  "file": "features/subject-selection/routes/related-subject-sub.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/related-subject-subs",
+  "file": "features/subject-selection/routes/related-subject-sub.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/related-subject-subs/main/:mainId",
+  "file": "features/subject-selection/routes/related-subject-sub.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/related-subject-subs/:id",
+  "file": "features/subject-selection/routes/related-subject-sub.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/subject-selection/related-subject-subs/:id",
+  "file": "features/subject-selection/routes/related-subject-sub.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/subject-selection/related-subject-subs/:id",
+  "file": "features/subject-selection/routes/related-subject-sub.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/subject-selection/restricted-grouping-mains",
+  "file": "features/subject-selection/routes/restricted-grouping-main.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/subject-selection/restricted-grouping-mains/bulk-upload",
+  "file": "features/subject-selection/routes/restricted-grouping-main.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/restricted-grouping-mains",
+  "file": "features/subject-selection/routes/restricted-grouping-main.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/restricted-grouping-mains/:id",
+  "file": "features/subject-selection/routes/restricted-grouping-main.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/subject-selection/restricted-grouping-mains/:id",
+  "file": "features/subject-selection/routes/restricted-grouping-main.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/subject-selection/restricted-grouping-mains/:id",
+  "file": "features/subject-selection/routes/restricted-grouping-main.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/subject-selection/restricted-grouping-classes",
+  "file": "features/subject-selection/routes/restricted-grouping-class.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/subject-selection/restricted-grouping-classes/bulk-upload",
+  "file": "features/subject-selection/routes/restricted-grouping-class.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/restricted-grouping-classes",
+  "file": "features/subject-selection/routes/restricted-grouping-class.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/restricted-grouping-classes/main/:mainId",
+  "file": "features/subject-selection/routes/restricted-grouping-class.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/restricted-grouping-classes/:id",
+  "file": "features/subject-selection/routes/restricted-grouping-class.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/subject-selection/restricted-grouping-classes/:id",
+  "file": "features/subject-selection/routes/restricted-grouping-class.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/subject-selection/restricted-grouping-classes/:id",
+  "file": "features/subject-selection/routes/restricted-grouping-class.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/subject-selection/restricted-grouping-subjects",
+  "file": "features/subject-selection/routes/restricted-grouping-subject.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/subject-selection/restricted-grouping-subjects/bulk-upload",
+  "file": "features/subject-selection/routes/restricted-grouping-subject.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/restricted-grouping-subjects",
+  "file": "features/subject-selection/routes/restricted-grouping-subject.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/restricted-grouping-subjects/main/:mainId",
+  "file": "features/subject-selection/routes/restricted-grouping-subject.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/restricted-grouping-subjects/:id",
+  "file": "features/subject-selection/routes/restricted-grouping-subject.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/subject-selection/restricted-grouping-subjects/:id",
+  "file": "features/subject-selection/routes/restricted-grouping-subject.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/subject-selection/restricted-grouping-subjects/:id",
+  "file": "features/subject-selection/routes/restricted-grouping-subject.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/subject-selection/restricted-grouping-program-courses",
+  "file": "features/subject-selection/routes/restricted-grouping-program-course.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/subject-selection/restricted-grouping-program-courses/bulk-upload",
+  "file": "features/subject-selection/routes/restricted-grouping-program-course.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/restricted-grouping-program-courses",
+  "file": "features/subject-selection/routes/restricted-grouping-program-course.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/restricted-grouping-program-courses/main/:mainId",
+  "file": "features/subject-selection/routes/restricted-grouping-program-course.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/restricted-grouping-program-courses/:id",
+  "file": "features/subject-selection/routes/restricted-grouping-program-course.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/subject-selection/restricted-grouping-program-courses/:id",
+  "file": "features/subject-selection/routes/restricted-grouping-program-course.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/subject-selection/restricted-grouping-program-courses/:id",
+  "file": "features/subject-selection/routes/restricted-grouping-program-course.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/subject-selection/subject-specific-passings",
+  "file": "features/subject-selection/routes/subject-specific-passing.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/subject-selection/subject-specific-passings/bulk-upload",
+  "file": "features/subject-selection/routes/subject-specific-passing.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/subject-specific-passings",
+  "file": "features/subject-selection/routes/subject-specific-passing.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/subject-specific-passings/subject/:subjectId",
+  "file": "features/subject-selection/routes/subject-specific-passing.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/subject-specific-passings/:id",
+  "file": "features/subject-selection/routes/subject-specific-passing.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/subject-selection/subject-specific-passings/:id",
+  "file": "features/subject-selection/routes/subject-specific-passing.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/subject-selection/subject-specific-passings/:id",
+  "file": "features/subject-selection/routes/subject-specific-passing.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/subject-selection/metas",
+  "file": "features/subject-selection/routes/subject-selection-meta.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/metas",
+  "file": "features/subject-selection/routes/subject-selection-meta.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/metas/:id",
+  "file": "features/subject-selection/routes/subject-selection-meta.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/subject-selection/metas/:id",
+  "file": "features/subject-selection/routes/subject-selection-meta.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/subject-selection/metas/:id",
+  "file": "features/subject-selection/routes/subject-selection-meta.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/subject-selection/meta-classes",
+  "file": "features/subject-selection/routes/subject-selection-meta-class.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/meta-classes",
+  "file": "features/subject-selection/routes/subject-selection-meta-class.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/meta-classes/:id",
+  "file": "features/subject-selection/routes/subject-selection-meta-class.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/subject-selection/meta-classes/:id",
+  "file": "features/subject-selection/routes/subject-selection-meta-class.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/subject-selection/meta-classes/:id",
+  "file": "features/subject-selection/routes/subject-selection-meta-class.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/subject-selection/meta-streams",
+  "file": "features/subject-selection/routes/subject-selection-meta-stream.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/meta-streams",
+  "file": "features/subject-selection/routes/subject-selection-meta-stream.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/meta-streams/:id",
+  "file": "features/subject-selection/routes/subject-selection-meta-stream.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/subject-selection/meta-streams/:id",
+  "file": "features/subject-selection/routes/subject-selection-meta-stream.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/subject-selection/meta-streams/:id",
+  "file": "features/subject-selection/routes/subject-selection-meta-stream.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/students/:studentId/selections",
+  "file": "features/subject-selection/routes/student-subjects.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/students/:studentId/mandatory-papers",
+  "file": "features/subject-selection/routes/student-subjects.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/student-subject-selection/meta/:studentId",
+  "file": "features/subject-selection/routes/student-subject-selection.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/subject-selection/student-subject-selection",
+  "file": "features/subject-selection/routes/student-subject-selection.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/subject-selection/student-subject-selection/admin",
+  "file": "features/subject-selection/routes/student-subject-selection.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/subject-selection/student-subject-selection/:studentId/:sessionId",
+  "file": "features/subject-selection/routes/student-subject-selection.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/student-subject-selection",
+  "file": "features/subject-selection/routes/student-subject-selection.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/student-subject-selection/exports/subjects",
+  "file": "features/subject-selection/routes/student-subject-selection.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/student-subject-selection/:id",
+  "file": "features/subject-selection/routes/student-subject-selection.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/subject-selection/student-subject-selection/:id",
+  "file": "features/subject-selection/routes/student-subject-selection.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/student-subject-selection/history/:studentId",
+  "file": "features/subject-selection/routes/student-subject-selection.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/student-subject-selection/active/:studentId",
+  "file": "features/subject-selection/routes/student-subject-selection.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/student-subject-selection/audit/:studentId/:subjectSelectionMetaId",
+  "file": "features/subject-selection/routes/student-subject-selection.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/student-subject-selection/can-create/:studentId/:sessionId",
+  "file": "features/subject-selection/routes/student-subject-selection.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/student-subject-selection/statistics/:studentId",
+  "file": "features/subject-selection/routes/student-subject-selection.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/student-subject-selection/metrics/live",
+  "file": "features/subject-selection/routes/student-subject-selection.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/student-subject-selection/metrics/table",
+  "file": "features/subject-selection/routes/student-subject-selection.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/student-subject-selection/export/:subjectSelectionMetaId",
+  "file": "features/subject-selection/routes/student-subject-selection.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/student-subject-selection/debug/minor3-conditions",
+  "file": "features/subject-selection/routes/student-subject-selection.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/subject-selection/dynamic-subjects/:studentId",
+  "file": "features/subject-selection/routes/dynamic-subjects.route.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/bulk-upload",
+  "file": "features/common/routes/bulkUpload.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/idcard/templates",
+  "file": "features/idcard/routes/id-card.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/idcard/templates",
+  "file": "features/idcard/routes/id-card.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/idcard/templates/:id",
+  "file": "features/idcard/routes/id-card.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/idcard/templates/:id/image",
+  "file": "features/idcard/routes/id-card.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/idcard/templates/:id/backside",
+  "file": "features/idcard/routes/id-card.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/idcard/templates/:id",
+  "file": "features/idcard/routes/id-card.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/idcard/templates/:id",
+  "file": "features/idcard/routes/id-card.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/idcard/templates/:id/fields",
+  "file": "features/idcard/routes/id-card.routes.ts"
+ },
+ {
+  "method": "PUT",
+  "full": "/api/idcard/templates/:id/fields",
+  "file": "features/idcard/routes/id-card.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/idcard/issues",
+  "file": "features/idcard/routes/id-card.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/idcard/issues",
+  "file": "features/idcard/routes/id-card.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/idcard/issues/:id",
+  "file": "features/idcard/routes/id-card.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/idcard/issues/:id/front",
+  "file": "features/idcard/routes/id-card.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/idcard/issues/:id/photo",
+  "file": "features/idcard/routes/id-card.routes.ts"
+ },
+ {
+  "method": "DELETE",
+  "full": "/api/idcard/issues/:id",
+  "file": "features/idcard/routes/id-card.routes.ts"
+ },
+ {
+  "method": "POST",
+  "full": "/api/idcard/legacy-sync",
+  "file": "features/idcard/routes/id-card.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/idcard/students/:studentId/most-recent-issue",
+  "file": "features/idcard/routes/id-card.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/idcard/students/:studentId/validity",
+  "file": "features/idcard/routes/id-card.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/idcard/reports/dates",
+  "file": "features/idcard/routes/id-card.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/idcard/reports/excel",
+  "file": "features/idcard/routes/id-card.routes.ts"
+ },
+ {
+  "method": "GET",
+  "full": "/api/idcard/reports/zip",
+  "file": "features/idcard/routes/id-card.routes.ts"
+ }
+]
