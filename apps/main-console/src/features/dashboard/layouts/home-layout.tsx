@@ -268,7 +268,7 @@ function LayoutHeader({
           flex-1), then the current user's avatar (NavUser) pushed to the far
           right (`lg:ml-auto` also covers the case where the search bar is
           hidden for library-only staff). */}
-      <div className="flex items-center mr-2 gap-2 flex-shrink-0 lg:mr-0 lg:h-full lg:w-[min(280px,24vw)] xl:w-72 lg:pl-0 lg:pr-4">
+      <div className="flex items-center mr-2 gap-2 flex-shrink-0 lg:mr-0 lg:h-full lg:w-[min(280px,24vw)] xl:w-[330px] lg:pl-0 lg:pr-4">
         <div>
           <ActiveUsersAvatars />
         </div>
@@ -277,7 +277,7 @@ function LayoutHeader({
           <Button
             variant="outline"
             size="icon"
-            className="relative h-9 w-9 sm:h-9 sm:w-full sm:min-w-[8rem] sm:justify-start sm:pl-3 sm:pr-10 md:w-40 lg:w-auto lg:flex-1 lg:min-w-0 rounded-[0.5rem] bg-muted/50 text-sm font-normal text-muted-foreground shadow-none"
+            className="relative h-9 w-9 sm:h-9 sm:w-full sm:min-w-[8rem] sm:justify-start sm:pl-3 sm:pr-10 md:w-36 lg:w-auto lg:flex-1 lg:min-w-0 rounded-[0.5rem] bg-muted/50 text-sm font-normal text-muted-foreground shadow-none"
             onClick={() => setOpen(true)}
           >
             <Search className="h-4 w-4 shrink-0 sm:mr-2" />
