@@ -442,8 +442,8 @@ function getNotificationMasterNameByStream(
 // "Minor 1 (Semester I & II)", PRIOR_SELECTION "Minor 3 (Semester V)" vs field
 // "Minor 3 (Semester III)". Fall back to matching on the subject family plus
 // ordinal where both sides carry one; a label with no ordinal (the group pick)
-// may fill an ordinal field and vice versa. Each label is consumed on first
-// use so one group pick fills exactly one field.
+// fills the Minor 3 field only. Each label is consumed on first use so one
+// group pick fills exactly one field.
 const NOTIFICATION_FIELD_FAMILIES = ["MINOR", "IDC", "AEC", "CVAC"];
 
 function notificationFamilyIndex(
@@ -476,6 +476,11 @@ function resolveByFamilyIndex(
       field.index !== null &&
       label.index !== field.index
     )
+      continue;
+    // An indexless label is the SUBJECT_GROUP continuing pick ("Minor
+    // (Semester III to VI)"), which the college numbers Minor 3 — it must not
+    // land in the Minor 1/2 slots or the email misstates the semesters.
+    if (label.index === null && field.index !== null && field.index !== "3")
       continue;
     consumedLabelKeys.add(labelKey);
     return value;

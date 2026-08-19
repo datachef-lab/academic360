@@ -814,7 +814,7 @@ export function resolveTemplatesDir(): string | null {
 /** Mirrors email.worker.ts's subjectsByCategory mapping (subject-selection templates). */
 function buildSubjectsByCategory(entries: { name: string; value: string }[]) {
   const cat: Record<string, Record<string, string>> = {
-    Minor: { I: "", II: "", III: "", IV: "" },
+    Minor: { I: "", II: "", III: "", IV: "", V: "" },
     IDC: { I: "", II: "", III: "", IV: "" },
     AEC: { I: "", II: "", III: "", IV: "" },
     CVAC: { I: "", II: "", III: "", IV: "" },
@@ -828,7 +828,8 @@ function buildSubjectsByCategory(entries: { name: string; value: string }[]) {
       cat.Minor.III = value;
       cat.Minor.IV = value;
     } else if (name.includes("Minor 3")) {
-      cat.Minor.III = value;
+      // Own slot so it never overwrites Minor 2's Sem III value.
+      cat.Minor.V = value;
     } else if (name.includes("IDC 1")) cat.IDC.I = value;
     else if (name.includes("IDC 2")) cat.IDC.II = value;
     else if (name.includes("IDC 3")) cat.IDC.III = value;
