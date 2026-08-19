@@ -114,7 +114,7 @@ type AdmissionCard = {
   items: string;
   illustrationName: IllustrationName;
   illustration?: string | null;
-  /** Header pill for not-yet-built modules (routes to Under Construction). */
+  /** Marks a not-yet-built module: greys the illustration until hover. */
   badge?: string;
 };
 
@@ -318,11 +318,6 @@ export default function AdmissionsPage() {
                       <CardTitle className="truncate text-base font-semibold text-gray-900 transition-colors group-hover:text-gray-700 sm:text-lg">
                         {card.title}
                       </CardTitle>
-                      {card.badge && (
-                        <span className="shrink-0 rounded-full border border-amber-200 bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
-                          {card.badge}
-                        </span>
-                      )}
                     </div>
                     <p className="truncate text-xs font-medium text-gray-500">{card.items}</p>
                   </div>
