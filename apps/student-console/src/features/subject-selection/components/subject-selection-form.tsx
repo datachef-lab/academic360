@@ -211,7 +211,19 @@ export default function SubjectSelectionForm({
       setLoading(true);
       setLoadError(null);
       try {
-        // Fetch data including meta data in single API call
+        // Kick off both requests together: the restricted-grouping fetch only
+        // needs ids we already have, so serializing it behind the (heavy)
+        // selections call just added its full round-trip to the perceived load.
+        const rgsPromise = fetchRestrictedGroupings({
+          page: 1,
+          pageSize: 200,
+          programCourseId: student?.currentPromotion?.programCourse?.id as number | undefined,
+          studentId: student?.id,
+        });
+        // If the selections call throws first, this pre-attached handler keeps
+        // the in-flight RG promise from surfacing as an unhandled rejection;
+        // the real `await rgsPromise` below still rethrows when reached.
+        rgsPromise.catch(() => undefined);
         const resp = await fetchStudentSubjectSelections(student.id);
 
         // Set meta data from the response
@@ -256,14 +268,9 @@ export default function SubjectSelectionForm({
             (g.subjectType?.code ?? "").toUpperCase() === "MN",
         );
 
-        // Load restricted groupings and build quick lookup by target subject name
-        const programCourseId = student?.currentPromotion?.programCourse?.id as number | undefined;
-        const rgs = await fetchRestrictedGroupings({
-          page: 1,
-          pageSize: 200,
-          programCourseId,
-          studentId: student?.id,
-        });
+        // Restricted groupings were fetched in parallel above; build the quick
+        // lookup by target subject name.
+        const rgs = await rgsPromise;
         const norm = (s: string) =>
           String(s || "")
             .trim()
@@ -439,10 +446,26 @@ export default function SubjectSelectionForm({
     const nonAec = visibleMetas.filter((v) => v.code !== "AEC");
     for (let i = 0; i < nonAec.length; i++) {
       for (let j = i + 1; j < nonAec.length; j++) {
-        const a = selectionsByMeta[nonAec[i].metaId];
-        const b = selectionsByMeta[nonAec[j].metaId];
+        const left = nonAec[i];
+        const right = nonAec[j];
+        if (!left || !right) continue;
+
+        // PRIOR_SELECTION metas (Sem V/VI Minor 3/4) continue an earlier Minor
+        // pick — their dropdown literally offers those prior picks and nothing
+        // else, so sharing a subject with the source meta is the design
+        // (main-console parity). Sibling PRIOR_SELECTION metas (Minor 3 vs
+        // Minor 4) still get the overlap check — their mutual exclusion is the
+        // real invariant.
+        const leftContinuesRight =
+          left.optionSource === "PRIOR_SELECTION" && left.sourceMetaIds.includes(right.metaId);
+        const rightContinuesLeft =
+          right.optionSource === "PRIOR_SELECTION" && right.sourceMetaIds.includes(left.metaId);
+        if (leftContinuesRight || rightContinuesLeft) continue;
+
+        const a = selectionsByMeta[left.metaId];
+        const b = selectionsByMeta[right.metaId];
         if (a && b && a === b) {
-          newErrors.push(`${nonAec[i].label} and ${nonAec[j].label} cannot be the same subject`);
+          newErrors.push(`${left.label} and ${right.label} cannot be the same subject`);
         }
       }
     }
@@ -454,7 +477,8 @@ export default function SubjectSelectionForm({
       const autos = [...new Set(views.flatMap((v) => v.autoAssignSubjects))];
       for (const auto of autos) {
         if (views.some((v) => selectionsByMeta[v.metaId] === auto)) continue;
-        newErrors.push(`${auto} is mandatory and must be selected`);
+        const categoryName = code === "MN" ? "minor" : code;
+        newErrors.push(`It is mandatory to select ${auto} as one of the ${categoryName} subjects`);
       }
     }
 
@@ -804,11 +828,21 @@ export default function SubjectSelectionForm({
   const optionsForMeta = useCallback(
     (v: MetaView) => {
       const current = selectionsByMeta[v.metaId] ?? "";
+      const normVal = (s: string) =>
+        String(s || "")
+          .trim()
+          .toUpperCase();
+      // The dropdown's own current value must never be excluded from its own
+      // list — the CU Minor-continuation pattern intentionally repeats a
+      // subject across metas (Minor 1 & Minor 3 share one subject, Minor 2 &
+      // Minor 4 the other), and excluding it here left the Combobox on the
+      // placeholder even though a value was saved. Mirrors the main-console
+      // CU-registration form's excludesForSlot fix.
+      const excludesForMeta = () =>
+        getGlobalExcludes(v.metaId).filter((s) => normVal(s) !== normVal(current));
 
-      // AEC and CVAC are both shown unfiltered, exactly as before: neither had
-      // a category filter, and the CVAC list itself carried no excludes either
-      // (other categories still exclude the CVAC pick via getGlobalExcludes).
-      if (v.code === "AEC" || v.code === "CVAC") return convertToComboboxData(v.options);
+      // AEC is unfiltered: it may repeat elsewhere and has no peer rules applied.
+      if (v.code === "AEC") return convertToComboboxData(v.options);
       // SUBJECT_GROUP options are already backend-filtered (subject type +
       // meta semesters + has-elective-papers). No client-side category or
       // restricted-grouping check applies — groups aren't papers. But a group
@@ -846,15 +880,15 @@ export default function SubjectSelectionForm({
         const heldBySiblingContinuations = metaViews
           .filter((o) => o.optionSource === "PRIOR_SELECTION" && o.metaId !== v.metaId)
           .map((o) => selectionsByMeta[o.metaId])
-          .filter((x): x is string => Boolean(x) && x !== current);
+          .filter((x): x is string => Boolean(x) && normVal(x) !== normVal(current));
         return convertToComboboxData(base, heldBySiblingContinuations);
       }
 
+      // CVAC takes global uniqueness but no category rules (main-console parity).
+      if (v.code === "CVAC") return convertToComboboxData(v.options, excludesForMeta());
+
       const filtered = getFilteredByCategory(v.options, current, v.code, v.semesters, v.metaId);
-      return convertToComboboxData(
-        preserveAecIfPresent(v.options, filtered),
-        getGlobalExcludes(v.metaId),
-      );
+      return convertToComboboxData(preserveAecIfPresent(v.options, filtered), excludesForMeta());
     },
     [selectionsByMeta, metaViews, getFilteredByCategory, getGlobalExcludes, preserveAecIfPresent],
   );
@@ -1127,7 +1161,11 @@ export default function SubjectSelectionForm({
 
       {/* Form Section */}
       <div className="flex-1 overflow-visible">
-        <div className="shadow-lg rounded-xl bg-white  md:mt-0 p-6 border border-gray-100 min-h-[calc(100%-1rem)]">
+        {/* Card is content-height on purpose: a min-height here stretched the
+            card past the viewport column, which made the form column scrollable
+            even when every dropdown fit on screen — and opening a dropdown then
+            auto-scrolled the column to it. */}
+        <div className="shadow-lg rounded-xl bg-white  md:mt-0 p-6 border border-gray-100">
           {/* Mobile notes banner */}
           <div className="lg:hidden">
             {/* {showTips && (
