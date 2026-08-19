@@ -1210,25 +1210,9 @@ export default function CURegistrationPage() {
 
         console.info(`[CU-REG FRONTEND] PDF URL (final):`, finalPdfUrl);
 
-        // Test if the URL is accessible
-        if (finalPdfUrl) {
-          fetch(finalPdfUrl, {
-            method: "HEAD",
-            credentials: "include",
-          })
-            .then((response) => {
-              console.log("[CU-REG FRONTEND] PDF URL HEAD response:", {
-                status: response.status,
-                statusText: response.statusText,
-                contentType: response.headers.get("content-type"),
-                contentLength: response.headers.get("content-length"),
-                cors: response.headers.get("access-control-allow-origin"),
-              });
-            })
-            .catch((error) => {
-              console.error("[CU-REG FRONTEND] PDF URL HEAD error:", error);
-            });
-        }
+        // (Removed a diagnostic HEAD request that only logged response headers —
+        // it added a round-trip on this waterfall without affecting the URL the
+        // iframe uses, which is set unconditionally below.)
 
         setPdfUrl(finalPdfUrl);
       } catch (error) {
