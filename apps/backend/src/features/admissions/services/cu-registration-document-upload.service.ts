@@ -12,8 +12,44 @@ import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { ApiError } from "@/utils/index.js";
 import JSZip from "jszip";
 
+// Serialize concurrent upserts for the same (requestId, documentId) within this
+// process. The batch-submit controller uploads a batch's files with a bounded
+// concurrency pool; two files sharing a document type would otherwise both
+// SELECT-miss and both INSERT, creating duplicate rows (there is no DB unique
+// constraint on the pair). A batch for one correction request is always handled
+// by a single instance, so a per-process key lock makes the read-modify-write
+// atomic per key with no migration — distinct documents still upsert in parallel.
+const documentUpsertChains = new Map<string, Promise<unknown>>();
+
+function withDocumentUpsertLock<T>(
+  key: string,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const prev = documentUpsertChains.get(key) ?? Promise.resolve();
+  const result = prev.then(fn, fn);
+  const tail = result.then(
+    () => {},
+    () => {},
+  );
+  documentUpsertChains.set(key, tail);
+  void tail.finally(() => {
+    if (documentUpsertChains.get(key) === tail)
+      documentUpsertChains.delete(key);
+  });
+  return result;
+}
+
 // CREATE
 export async function createCuRegistrationDocumentUpload(
+  documentData: cuRegistrationDocumentUploadInsertTypeT,
+): Promise<CuRegistrationDocumentUploadDto | null> {
+  const key = `${documentData.cuRegistrationCorrectionRequestId}:${documentData.documentId}`;
+  return withDocumentUpsertLock(key, () =>
+    upsertCuRegistrationDocumentUpload(documentData),
+  );
+}
+
+async function upsertCuRegistrationDocumentUpload(
   documentData: cuRegistrationDocumentUploadInsertTypeT,
 ): Promise<CuRegistrationDocumentUploadDto | null> {
   // Idempotent upsert: update if a record exists for (requestId, documentId), else insert
