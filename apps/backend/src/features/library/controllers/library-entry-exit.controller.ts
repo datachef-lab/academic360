@@ -349,27 +349,35 @@ export const downloadLibraryEntryExitExcelController = async (
     const date =
       typeof req.query.date === "string" ? req.query.date : undefined;
 
-    const buffer = await exportLibraryEntryExitExcel({
-      search,
-      userType: userType as
-        | "ADMIN"
-        | "STUDENT"
-        | "FACULTY"
-        | "STAFF"
-        | "PARENTS"
-        | undefined,
-      currentStatus: currentStatus as "CHECKED_IN" | "CHECKED_OUT" | undefined,
-      date,
-    });
-
     const filename = `library-entry-exit-${new Date().toISOString().slice(0, 10)}.xlsx`;
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.setHeader("Content-Length", buffer.length);
-    res.status(200).send(buffer);
+
+    // Streams the workbook straight to `res` (see exportLibraryEntryExitExcel)
+    // instead of building it fully in memory first — Content-Length can't be
+    // known up front, so it's intentionally omitted; Express falls back to
+    // chunked transfer encoding.
+    await exportLibraryEntryExitExcel(
+      {
+        search,
+        userType: userType as
+          | "ADMIN"
+          | "STUDENT"
+          | "FACULTY"
+          | "STAFF"
+          | "PARENTS"
+          | undefined,
+        currentStatus: currentStatus as
+          | "CHECKED_IN"
+          | "CHECKED_OUT"
+          | undefined,
+        date,
+      },
+      res,
+    );
   } catch (error) {
     handleError(error, res, next);
   }

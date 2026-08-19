@@ -62,16 +62,24 @@ type Props = {
   image?: string | null;
   alt?: string;
   className?: string;
+  /**
+   * Render greyscale to signal the feature isn't ready yet; the colour returns
+   * when the parent `group` (the card) is hovered. Requires an ancestor `group`.
+   */
+  dimmed?: boolean;
 };
 
-export default function CardIllustration({ name, image, alt, className }: Props) {
+export default function CardIllustration({ name, image, alt, className, dimmed }: Props) {
+  const dimmedCls = dimmed ? "grayscale group-hover:grayscale-0" : "";
+
   if (image) {
     return (
       <img
         src={image}
         alt={alt ?? name}
         className={cn(
-          "h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]",
+          "h-full w-full object-cover transition-[transform,filter] duration-300 group-hover:scale-[1.04]",
+          dimmedCls,
           className,
         )}
       />
@@ -84,8 +92,9 @@ export default function CardIllustration({ name, image, alt, className }: Props)
   return (
     <div
       className={cn(
-        "relative flex h-full w-full items-center justify-center overflow-hidden bg-gradient-to-br",
+        "relative flex h-full w-full items-center justify-center overflow-hidden bg-gradient-to-br transition-[filter] duration-300",
         theme.gradient,
+        dimmedCls,
         className,
       )}
       role="img"

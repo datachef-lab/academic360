@@ -15,8 +15,12 @@ import {
   sql,
   SQL,
 } from "drizzle-orm";
+import type { Response } from "express";
 import { ApiError } from "@/utils/ApiError.js";
-import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
+import {
+  styleStreamedBodyRow,
+  styleStreamedHeaderRow,
+} from "@/utils/excel-report-styling.js";
 import { bookCirculationModel } from "@repo/db/schemas/models/library/book-circulation.model.js";
 import { copyDetailsModel } from "@repo/db/schemas/models/library/copy-details.model.js";
 import { bookModel } from "@repo/db/schemas/models/library/book.model.js";
@@ -319,176 +323,141 @@ export async function findBookCirculationPaginated(
   ].length
     ? and(...[...circulationUserConditions, ...circulationConditions])
     : undefined;
-  const circulationRows = await db
-    .select({
-      circulationId: bookCirculationModel.id,
-      userId: userModel.id,
-      userName: userModel.name,
-      userType: userModel.type,
-      studentUid: studentModel.uid,
-      staffUid: staffModel.uid,
-      attendanceCode: staffModel.attendanceCode,
-      image: userModel.image,
-      isReturned: bookCirculationModel.isReturned,
-      isReIssued: bookCirculationModel.isReIssued,
-      returnTimestamp: bookCirculationModel.returnTimestamp,
-      actualReturnTimestamp: bookCirculationModel.actualReturnTimestamp,
-      fineAmount: bookCirculationModel.fineAmount,
-      fineWaiver: bookCirculationModel.fineWaiver,
-      updatedAt: bookCirculationModel.updatedAt,
-    })
-    .from(bookCirculationModel)
-    .leftJoin(userModel, eq(bookCirculationModel.userId, userModel.id))
-    .leftJoin(studentModel, eq(studentModel.userId, userModel.id))
-    .leftJoin(staffModel, eq(staffModel.userId, userModel.id))
-    .leftJoin(
-      copyDetailsModel,
-      eq(bookCirculationModel.copyDetailsId, copyDetailsModel.id),
-    )
-    .leftJoin(bookModel, eq(copyDetailsModel.bookId, bookModel.id))
-    .where(whereCirculations)
-    .orderBy(desc(bookCirculationModel.id));
+  // One SQL pass: per-user aggregates + (when searching) zero-stats matched
+  // users, ordered and paginated in the database. The previous implementation
+  // fetched EVERY matching circulation row (no LIMIT), aggregated into a JS
+  // Map and sliced in JS — a full join scan per keystroke, and the biggest
+  // single contributor to the 2026-08-19 RDS incident.
+  //
+  // Semantics preserved exactly from the JS aggregation it replaces:
+  // - one row per user; latest_id = max(circulation id) drives the ordering
+  // - returned / issued (open) / overdue (open + past due) counts
+  // - daysLate + fine summed over OPEN rows only (basis = actual return or now)
+  // - lastUpdatedAt = max(updated_at) over all the user's matching rows
+  // - searched users with no matching circulations appended with zero stats
+  //   (latest_id 0 → they sort last, in user.id desc order)
+  const hasSearch = Boolean(search?.trim());
+  const aggFilter = whereCirculations
+    ? sql`(${whereCirculations}) and ${userModel.id} is not null`
+    : sql`${userModel.id} is not null`;
+  const extraFilter = hasSearch
+    ? sql`(${userConditions.length ? and(...userConditions)! : sql`true`})
+        and ${userModel.id} not in (select agg.user_id from agg)`
+    : sql`false`;
 
-  const now = Date.now();
-  const aggregateMap = new Map<
-    number,
-    {
-      latestCirculationId: number;
-      userName: string | null;
-      userType: string | null;
-      studentUid: string | null;
-      staffUid: string | null;
-      attendanceCode: string | null;
-      image: string | null;
-      issued: number;
-      overdue: number;
-      returned: number;
-      daysLate: number;
-      fine: number;
-      lastUpdatedAt: Date | null;
-    }
-  >();
-  for (const row of circulationRows) {
-    if (row.userId === null || row.circulationId === null) continue;
+  const withClause = sql`
+    with agg as (
+      select
+        ${userModel.id} as user_id,
+        max(${bookCirculationModel.id}) as latest_id,
+        max(${userModel.name}) as user_name,
+        max(${userModel.type}) as user_type,
+        max(${studentModel.uid}) as student_uid,
+        max(${staffModel.uid}) as staff_uid,
+        max(${staffModel.attendanceCode}) as attendance_code,
+        max(${userModel.image}) as image,
+        count(*) filter (where ${bookCirculationModel.isReturned}) as returned,
+        count(*) filter (where not ${bookCirculationModel.isReturned}) as issued,
+        count(*) filter (
+          where not ${bookCirculationModel.isReturned}
+            and ${bookCirculationModel.returnTimestamp} is not null
+            and ${bookCirculationModel.returnTimestamp} < now()
+        ) as overdue,
+        coalesce(sum(
+          greatest(0, floor(extract(epoch from (
+            coalesce(${bookCirculationModel.actualReturnTimestamp}, now())
+              - ${bookCirculationModel.returnTimestamp}
+          )) / 86400))
+        ) filter (
+          where not ${bookCirculationModel.isReturned}
+            and ${bookCirculationModel.returnTimestamp} is not null
+        ), 0) as days_late,
+        coalesce(sum(
+          greatest(0, coalesce(${bookCirculationModel.fineAmount}, 0)
+            - coalesce(${bookCirculationModel.fineWaiver}, 0))
+        ) filter (where not ${bookCirculationModel.isReturned}), 0) as fine,
+        max(${bookCirculationModel.updatedAt}) as last_updated_at
+      from ${bookCirculationModel}
+        left join ${userModel} on ${bookCirculationModel.userId} = ${userModel.id}
+        left join ${studentModel} on ${studentModel.userId} = ${userModel.id}
+        left join ${staffModel} on ${staffModel.userId} = ${userModel.id}
+        left join ${copyDetailsModel} on ${bookCirculationModel.copyDetailsId} = ${copyDetailsModel.id}
+        left join ${bookModel} on ${copyDetailsModel.bookId} = ${bookModel.id}
+      where ${aggFilter}
+      group by ${userModel.id}
+    ),
+    extra as (
+      select
+        ${userModel.id} as user_id,
+        0 as latest_id,
+        ${userModel.name} as user_name,
+        ${userModel.type} as user_type,
+        ${studentModel.uid} as student_uid,
+        ${staffModel.uid} as staff_uid,
+        ${staffModel.attendanceCode} as attendance_code,
+        ${userModel.image} as image,
+        0 as returned, 0 as issued, 0 as overdue,
+        0 as days_late, 0 as fine,
+        null::timestamp as last_updated_at
+      from ${userModel}
+        left join ${studentModel} on ${studentModel.userId} = ${userModel.id}
+        left join ${staffModel} on ${staffModel.userId} = ${userModel.id}
+      where ${extraFilter}
+    )`;
 
-    if (!aggregateMap.has(row.userId)) {
-      aggregateMap.set(row.userId, {
-        latestCirculationId: row.circulationId,
-        userName: row.userName,
-        userType: row.userType,
-        studentUid: row.studentUid,
-        staffUid: row.staffUid,
-        attendanceCode: row.attendanceCode,
-        image: row.image,
-        issued: 0,
-        overdue: 0,
-        returned: 0,
-        daysLate: 0,
-        fine: 0,
-        lastUpdatedAt: null,
-      });
-    }
-    const bucket = aggregateMap.get(row.userId)!;
-    const dueMs = new Date(row.returnTimestamp).getTime();
-    const actualMs = row.actualReturnTimestamp
-      ? new Date(row.actualReturnTimestamp).getTime()
-      : null;
-    if (!bucket.lastUpdatedAt || row.updatedAt > bucket.lastUpdatedAt) {
-      bucket.lastUpdatedAt = row.updatedAt;
-    }
+  const pageResult = await db.execute(sql`
+    ${withClause}
+    select * from (
+      select * from agg
+      union all
+      select * from extra
+    ) t
+    order by latest_id desc, user_id desc
+    limit ${limit} offset ${offset}`);
 
-    // "Recent Books" summary:
-    // - returned: completed circulations
-    // - issued: currently with the user (includes overdue)
-    // - overdue: subset of issued whose due date has passed
-    if (row.isReturned) {
-      bucket.returned += 1;
-    } else {
-      bucket.issued += 1;
-      if (!Number.isNaN(dueMs) && dueMs < now) {
-        bucket.overdue += 1;
-      }
-    }
+  const totalResult = await db.execute(sql`
+    ${withClause}
+    select (select count(*) from agg) + (select count(*) from extra) as total`);
 
-    if (!row.isReturned) {
-      const basisMs = actualMs ?? now;
-      if (!Number.isNaN(dueMs) && basisMs > dueMs) {
-        bucket.daysLate += Math.floor(
-          (basisMs - dueMs) / (1000 * 60 * 60 * 24),
-        );
-      }
-      bucket.fine += Math.max(0, (row.fineAmount ?? 0) - (row.fineWaiver ?? 0));
-    }
-  }
+  type PagedRow = {
+    user_id: number;
+    user_name: string | null;
+    user_type: string | null;
+    student_uid: string | null;
+    staff_uid: string | null;
+    attendance_code: string | null;
+    image: string | null;
+    issued: string | number;
+    overdue: string | number;
+    returned: string | number;
+    days_late: string | number;
+    fine: string | number;
+    last_updated_at: Date | string | null;
+  };
 
-  // If searched user has no circulation rows, still show them with zero summary.
-  if (search?.trim()) {
-    const whereUsers = userConditions.length
-      ? and(...userConditions)
-      : undefined;
-    const matchedUsers = await db
-      .select({
-        userId: userModel.id,
-        userName: userModel.name,
-        userType: userModel.type,
-        studentUid: studentModel.uid,
-        staffUid: staffModel.uid,
-        attendanceCode: staffModel.attendanceCode,
-        image: userModel.image,
-      })
-      .from(userModel)
-      .leftJoin(studentModel, eq(studentModel.userId, userModel.id))
-      .leftJoin(staffModel, eq(staffModel.userId, userModel.id))
-      .where(whereUsers)
-      .orderBy(desc(userModel.id));
-
-    for (const user of matchedUsers) {
-      if (aggregateMap.has(user.userId)) continue;
-      aggregateMap.set(user.userId, {
-        latestCirculationId: 0,
-        userName: user.userName,
-        userType: user.userType,
-        studentUid: user.studentUid,
-        staffUid: user.staffUid,
-        attendanceCode: user.attendanceCode,
-        image: user.image,
-        issued: 0,
-        overdue: 0,
-        returned: 0,
-        daysLate: 0,
-        fine: 0,
-        lastUpdatedAt: null,
-      });
-    }
-  }
-
-  const orderedUsers = Array.from(aggregateMap.entries())
-    .sort((a, b) => b[1].latestCirculationId - a[1].latestCirculationId)
-    .slice(offset, offset + limit);
-
-  const resultRows: BookCirculationListRow[] = orderedUsers.map(
-    ([userId, stats]) => {
-      return {
-        userId,
-        userName: stats.userName,
-        userType: stats.userType,
-        studentUid: stats.studentUid,
-        staffUid: stats.staffUid,
-        attendanceCode: stats.attendanceCode,
-        image: stats.image,
-        recentBooks: {
-          issued: stats.issued,
-          overdue: stats.overdue,
-          returned: stats.returned,
-        },
-        daysLate: stats.daysLate,
-        fine: stats.fine,
-        lastUpdatedAt: stats.lastUpdatedAt,
-      };
+  const resultRows: BookCirculationListRow[] = (
+    pageResult.rows as unknown as PagedRow[]
+  ).map((row) => ({
+    userId: Number(row.user_id),
+    userName: row.user_name,
+    userType: row.user_type,
+    studentUid: row.student_uid,
+    staffUid: row.staff_uid,
+    attendanceCode: row.attendance_code,
+    image: row.image,
+    recentBooks: {
+      issued: Number(row.issued),
+      overdue: Number(row.overdue),
+      returned: Number(row.returned),
     },
-  );
+    daysLate: Number(row.days_late),
+    fine: Number(row.fine),
+    lastUpdatedAt: row.last_updated_at ? new Date(row.last_updated_at) : null,
+  }));
 
-  const total = aggregateMap.size;
+  const total = Number(
+    (totalResult.rows[0] as unknown as { total: string | number })?.total ?? 0,
+  );
 
   return {
     rows: resultRows,
@@ -683,19 +652,44 @@ export async function searchBookOptions(
     .leftJoin(publisherModel, eq(bookModel.publisherId, publisherModel.id));
 
   if (trimmed) {
+    // Two-phase: resolve candidate copy ids first through the two trigram
+    // indexes (an OR spanning copy_details AND books can only BitmapOr on one
+    // relation, so it seq-scanned), then annotate only those ≤limit rows —
+    // the correlated borrower/on-loan subqueries used to run per MATCHED row
+    // across the whole table. This was the 48-97s query of the 2026-08-19
+    // incident.
     const term = `%${trimmed}%`;
+    // Candidate ids resolved via the trigram indexes: the access branch matches
+    // the COMPOSED accession identity (prefix||access_number||suffix) verbatim so
+    // the planner uses `copy_details_access_composed_trgm_idx`; the title branch
+    // uses `books_title_trgm_idx`. Skip the access branch when the term has no
+    // alphanumeric core. Then annotate only these ≤limit rows.
     const accessCore = toAccessSearchCore(trimmed);
+    const accessTerm = `%${accessCore}%`;
+    const candidates = await db.execute(sql`
+      ${accessCore
+        ? sql`(select cd.id from ${copyDetailsModel} cd
+        where (case
+          when cd.access_number is null then null
+          else coalesce(nullif(btrim(cd.prefix), '0'), '')
+            || cd.access_number
+            || coalesce(nullif(btrim(cd.suffix), '0'), '')
+        end) ilike ${accessTerm}
+        order by cd.id desc limit ${safeLimit})
+      union`
+        : sql``}
+      (select cd.id from ${copyDetailsModel} cd
+        join ${bookModel} b on b.id = cd.book_id_fk
+        where b.title ilike ${term}
+        order by cd.id desc limit ${safeLimit})
+      order by id desc limit ${safeLimit}`);
+    const ids = (candidates.rows as unknown as { id: number }[]).map((r) =>
+      Number(r.id),
+    );
+    if (ids.length === 0) return [];
     return baseQuery
-      .where(
-        or(
-          ...(accessCore
-            ? [ilike(composedAccessNumber, `%${accessCore}%`)]
-            : []),
-          ilike(bookModel.title, term),
-        )!,
-      )
-      .orderBy(desc(copyDetailsModel.id))
-      .limit(safeLimit);
+      .where(inArray(copyDetailsModel.id, ids))
+      .orderBy(desc(copyDetailsModel.id));
   }
 
   return baseQuery.orderBy(desc(copyDetailsModel.id)).limit(safeLimit);
@@ -1360,14 +1354,21 @@ const formatExcelDate = (value: Date | string | null) => {
   return parsed.toLocaleDateString("en-GB");
 };
 
+/**
+ * Streams the book-circulation export directly to `res` in ID-descending
+ * keyset chunks instead of pulling the full (up to 100k row) result set
+ * into memory. The `.limit(100_000)` cap on total rows is preserved
+ * exactly.
+ */
 export async function exportBookCirculationExcel(
   filters: Omit<BookCirculationFilters, "page" | "limit">,
-): Promise<Buffer> {
-  const whereConditions: SQL[] = [];
+  res: Response,
+): Promise<void> {
+  const baseConditions: SQL[] = [];
   if (filters.search?.trim()) {
     const searchTerm = `%${filters.search.trim()}%`;
     const accessCore = toAccessSearchCore(filters.search.trim());
-    whereConditions.push(
+    baseConditions.push(
       or(
         ilike(userModel.name, searchTerm),
         ilike(studentModel.uid, searchTerm),
@@ -1379,53 +1380,21 @@ export async function exportBookCirculationExcel(
     );
   }
   if (filters.userType) {
-    whereConditions.push(eq(userModel.type, filters.userType));
+    baseConditions.push(eq(userModel.type, filters.userType));
   }
-  whereConditions.push(...buildCirculationFilterConditions(filters));
-  const whereClause = whereConditions.length
-    ? and(...whereConditions)
-    : undefined;
+  baseConditions.push(...buildCirculationFilterConditions(filters));
 
-  const rows = await db
-    .select({
-      circulationId: bookCirculationModel.id,
-      userName: userModel.name,
-      userType: userModel.type,
-      studentUid: studentModel.uid,
-      staffUid: staffModel.uid,
-      attendanceCode: staffModel.attendanceCode,
-      bookTitle: bookModel.title,
-      accessNumber: composedAccessNumber,
-      author: bookModel.alternateTitle,
-      borrowingType: borrowingTypeModel.name,
-      isReturned: bookCirculationModel.isReturned,
-      isReIssued: bookCirculationModel.isReIssued,
-      issueTimestamp: bookCirculationModel.issueTimestamp,
-      returnTimestamp: bookCirculationModel.returnTimestamp,
-      actualReturnTimestamp: bookCirculationModel.actualReturnTimestamp,
-      fineAmount: bookCirculationModel.fineAmount,
-      fineWaiver: bookCirculationModel.fineWaiver,
-      updatedAt: bookCirculationModel.updatedAt,
-    })
-    .from(bookCirculationModel)
-    .leftJoin(userModel, eq(bookCirculationModel.userId, userModel.id))
-    .leftJoin(studentModel, eq(studentModel.userId, userModel.id))
-    .leftJoin(staffModel, eq(staffModel.userId, userModel.id))
-    .leftJoin(
-      copyDetailsModel,
-      eq(bookCirculationModel.copyDetailsId, copyDetailsModel.id),
-    )
-    .leftJoin(bookModel, eq(copyDetailsModel.bookId, bookModel.id))
-    .leftJoin(
-      borrowingTypeModel,
-      eq(bookCirculationModel.borrowingTypeId, borrowingTypeModel.id),
-    )
-    .where(whereClause)
-    .orderBy(desc(bookCirculationModel.id))
-    .limit(100_000);
+  const HARD_CAP = 100_000;
+  const CHUNK_SIZE = 2000;
 
-  const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet("Book Circulation");
+  const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+    stream: res,
+    useStyles: true,
+    useSharedStrings: true,
+  });
+  const sheet = workbook.addWorksheet("Book Circulation", {
+    views: [{ state: "frozen", ySplit: 1 }],
+  });
   sheet.columns = [
     { header: "Circulation ID", key: "id", width: 14 },
     { header: "User", key: "userName", width: 24 },
@@ -1443,35 +1412,98 @@ export async function exportBookCirculationExcel(
     { header: "Fine", key: "fine", width: 12 },
     { header: "Updated at", key: "updatedAt", width: 22 },
   ];
+  styleStreamedHeaderRow(sheet.getRow(1));
+  sheet.getRow(1).commit();
 
-  for (const row of rows) {
-    const state = row.isReturned
-      ? "RETURNED"
-      : row.isReIssued
-        ? "REISSUED"
-        : new Date(row.returnTimestamp).getTime() < Date.now()
-          ? "OVERDUE"
-          : "ISSUED";
-    sheet.addRow({
-      id: row.circulationId,
-      userName: row.userName ?? "",
-      userType: row.userType ?? "",
-      uid: row.studentUid ?? row.staffUid ?? "",
-      attendanceCode: row.attendanceCode ?? "",
-      bookTitle: row.bookTitle ?? "",
-      accessNumber: row.accessNumber ?? "",
-      author: row.author ?? "",
-      borrowingType: row.borrowingType ?? "",
-      state,
-      issuedAt: formatExcelDateTime(row.issueTimestamp),
-      returnDate: formatExcelDate(row.returnTimestamp),
-      returnedOn: formatExcelDateTime(row.actualReturnTimestamp),
-      fine: Math.max(0, (row.fineAmount ?? 0) - (row.fineWaiver ?? 0)),
-      updatedAt: formatExcelDateTime(row.updatedAt),
-    });
+  let lastId: number | null = null;
+  let totalFetched = 0;
+  for (;;) {
+    const remaining = HARD_CAP - totalFetched;
+    if (remaining <= 0) break;
+    const take = Math.min(CHUNK_SIZE, remaining);
+
+    const chunkConditions = [...baseConditions];
+    if (lastId != null) {
+      chunkConditions.push(lt(bookCirculationModel.id, lastId));
+    }
+    const chunkWhere = chunkConditions.length
+      ? and(...chunkConditions)
+      : undefined;
+
+    const chunk = await db
+      .select({
+        circulationId: bookCirculationModel.id,
+        userName: userModel.name,
+        userType: userModel.type,
+        studentUid: studentModel.uid,
+        staffUid: staffModel.uid,
+        attendanceCode: staffModel.attendanceCode,
+        bookTitle: bookModel.title,
+        accessNumber: composedAccessNumber,
+        author: bookModel.alternateTitle,
+        borrowingType: borrowingTypeModel.name,
+        isReturned: bookCirculationModel.isReturned,
+        isReIssued: bookCirculationModel.isReIssued,
+        issueTimestamp: bookCirculationModel.issueTimestamp,
+        returnTimestamp: bookCirculationModel.returnTimestamp,
+        actualReturnTimestamp: bookCirculationModel.actualReturnTimestamp,
+        fineAmount: bookCirculationModel.fineAmount,
+        fineWaiver: bookCirculationModel.fineWaiver,
+        updatedAt: bookCirculationModel.updatedAt,
+      })
+      .from(bookCirculationModel)
+      .leftJoin(userModel, eq(bookCirculationModel.userId, userModel.id))
+      .leftJoin(studentModel, eq(studentModel.userId, userModel.id))
+      .leftJoin(staffModel, eq(staffModel.userId, userModel.id))
+      .leftJoin(
+        copyDetailsModel,
+        eq(bookCirculationModel.copyDetailsId, copyDetailsModel.id),
+      )
+      .leftJoin(bookModel, eq(copyDetailsModel.bookId, bookModel.id))
+      .leftJoin(
+        borrowingTypeModel,
+        eq(bookCirculationModel.borrowingTypeId, borrowingTypeModel.id),
+      )
+      .where(chunkWhere)
+      .orderBy(desc(bookCirculationModel.id))
+      .limit(take);
+
+    if (chunk.length === 0) break;
+
+    for (const row of chunk) {
+      const state = row.isReturned
+        ? "RETURNED"
+        : row.isReIssued
+          ? "REISSUED"
+          : new Date(row.returnTimestamp).getTime() < Date.now()
+            ? "OVERDUE"
+            : "ISSUED";
+      const dataRow = sheet.addRow({
+        id: row.circulationId,
+        userName: row.userName ?? "",
+        userType: row.userType ?? "",
+        uid: row.studentUid ?? row.staffUid ?? "",
+        attendanceCode: row.attendanceCode ?? "",
+        bookTitle: row.bookTitle ?? "",
+        accessNumber: row.accessNumber ?? "",
+        author: row.author ?? "",
+        borrowingType: row.borrowingType ?? "",
+        state,
+        issuedAt: formatExcelDateTime(row.issueTimestamp),
+        returnDate: formatExcelDate(row.returnTimestamp),
+        returnedOn: formatExcelDateTime(row.actualReturnTimestamp),
+        fine: Math.max(0, (row.fineAmount ?? 0) - (row.fineWaiver ?? 0)),
+        updatedAt: formatExcelDateTime(row.updatedAt),
+      });
+      styleStreamedBodyRow(dataRow);
+      dataRow.commit();
+    }
+
+    totalFetched += chunk.length;
+    if (chunk.length < take) break;
+    lastId = chunk[chunk.length - 1].circulationId;
   }
 
-  applyStandardExcelReportTableStyling(sheet);
-  const result = await workbook.xlsx.writeBuffer();
-  return Buffer.isBuffer(result) ? result : Buffer.from(result);
+  sheet.commit();
+  await workbook.commit();
 }

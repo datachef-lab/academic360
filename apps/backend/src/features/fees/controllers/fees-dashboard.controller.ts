@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { ApiResponse } from "@/utils/ApiResonse";
 import { handleError } from "@/utils";
 import {
-  getFeesDashboardData,
+  getFeesDashboardDataCached,
   type FeesDashboardFilters,
   type FeesDashboardSection,
 } from "../services/fees-dashboard.service.js";
@@ -54,7 +54,7 @@ export async function getFeesDashboardHandler(req: Request, res: Response) {
     const section: FeesDashboardSection =
       sectionRaw === "core" || sectionRaw === "reports" ? sectionRaw : "all";
 
-    const payload = await getFeesDashboardData(filters, section);
+    const payload = await getFeesDashboardDataCached(filters, section);
     return res
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", payload, "Fees dashboard loaded"));

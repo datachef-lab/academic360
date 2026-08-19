@@ -10,7 +10,7 @@ import { promotionModel } from "@repo/db/schemas/models/batches/promotions.model
 import { programCourseModel } from "@repo/db/schemas/models/course-design/program-course.model.js";
 import { examFormFillupModel } from "@repo/db/schemas/models/exams/exam-form-fillup.model.js";
 import { studentModel } from "@repo/db/schemas/models/user/student.model.js";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { userStatusMappingOverview } from "../models/user-status-overview.models.js";
 
 /** Maps current `user_statuses_master` rows to the shape expected by main-console OverviewTab. */
@@ -44,14 +44,6 @@ function masterRowToFrontendDto(m: typeof userStatusMasterModel.$inferSelect): {
   };
 }
 
-async function loadMasterDto(masterId: number) {
-  const [m] = await db
-    .select()
-    .from(userStatusMasterModel)
-    .where(eq(userStatusMasterModel.id, masterId));
-  return m ? masterRowToFrontendDto(m) : null;
-}
-
 export async function getUserStatusMastersOverview() {
   const masters = await db.select().from(userStatusMasterModel);
   return masters
@@ -76,41 +68,106 @@ export async function getUserStatusMappingsByStudentIdOverview(
     return [];
   }
 
+  if (mappings.length === 0) return [];
+
+  // Bulk-fetch every FK referenced across all mappings (instead of a
+  // per-mapping sequential await chain), then assemble identical output.
+  const masterIds = [...new Set(mappings.map((m) => m.userStatusMasterId))];
+  const sessionIds = [
+    ...new Set(
+      mappings
+        .map((m) => m.sessionId)
+        .filter((id): id is number => id !== null && id !== undefined),
+    ),
+  ];
+  const promotionIds = [
+    ...new Set(
+      mappings
+        .map((m) => m.promotionId)
+        .filter((id): id is number => id !== null && id !== undefined),
+    ),
+  ];
+
+  const [masterRows, sessionRows, promotionRows] = await Promise.all([
+    masterIds.length > 0
+      ? db
+          .select()
+          .from(userStatusMasterModel)
+          .where(inArray(userStatusMasterModel.id, masterIds))
+      : Promise.resolve([] as (typeof userStatusMasterModel.$inferSelect)[]),
+    sessionIds.length > 0
+      ? db
+          .select()
+          .from(sessionModel)
+          .where(inArray(sessionModel.id, sessionIds))
+      : Promise.resolve([] as (typeof sessionModel.$inferSelect)[]),
+    promotionIds.length > 0
+      ? db
+          .select()
+          .from(promotionModel)
+          .where(inArray(promotionModel.id, promotionIds))
+      : Promise.resolve([] as (typeof promotionModel.$inferSelect)[]),
+  ]);
+
+  const masterMap = new Map(
+    masterRows.map((m) => [m.id, masterRowToFrontendDto(m)]),
+  );
+  const sessionMap = new Map(sessionRows.map((s) => [s.id, s]));
+  const promotionMap = new Map(promotionRows.map((p) => [p.id, p]));
+
+  // Second-hop FKs (session -> academicYear, promotion -> class) depend on
+  // the rows just fetched, so resolve them in a second bulk round.
+  const academicYearIds = [
+    ...new Set(
+      sessionRows
+        .map((s) => s.academicYearId)
+        .filter((id): id is number => id !== null && id !== undefined),
+    ),
+  ];
+  const classIds = [
+    ...new Set(
+      promotionRows
+        .map((p) => p.classId)
+        .filter((id): id is number => id !== null && id !== undefined),
+    ),
+  ];
+
+  const [academicYearRows, classRows] = await Promise.all([
+    academicYearIds.length > 0
+      ? db
+          .select()
+          .from(academicYearModel)
+          .where(inArray(academicYearModel.id, academicYearIds))
+      : Promise.resolve([] as (typeof academicYearModel.$inferSelect)[]),
+    classIds.length > 0
+      ? db.select().from(classModel).where(inArray(classModel.id, classIds))
+      : Promise.resolve([] as (typeof classModel.$inferSelect)[]),
+  ]);
+
+  const academicYearMap = new Map(academicYearRows.map((ay) => [ay.id, ay]));
+  const classMap = new Map(classRows.map((c) => [c.id, c]));
+
   const results: unknown[] = [];
 
   for (const mapping of mappings) {
-    const master = await loadMasterDto(mapping.userStatusMasterId);
+    const master = masterMap.get(mapping.userStatusMasterId) ?? null;
     if (!master) continue;
 
     let sessionData: typeof sessionModel.$inferSelect | null = null;
     let academicYearData: typeof academicYearModel.$inferSelect | null = null;
     if (mapping.sessionId) {
-      const [sess] = await db
-        .select()
-        .from(sessionModel)
-        .where(eq(sessionModel.id, mapping.sessionId));
-      sessionData = sess ?? null;
-      if (sess?.academicYearId) {
-        const [ay] = await db
-          .select()
-          .from(academicYearModel)
-          .where(eq(academicYearModel.id, sess.academicYearId));
-        academicYearData = ay ?? null;
+      sessionData = sessionMap.get(mapping.sessionId) ?? null;
+      if (sessionData?.academicYearId) {
+        academicYearData =
+          academicYearMap.get(sessionData.academicYearId) ?? null;
       }
     }
 
     let classData: typeof classModel.$inferSelect | null = null;
     if (mapping.promotionId) {
-      const [prom] = await db
-        .select()
-        .from(promotionModel)
-        .where(eq(promotionModel.id, mapping.promotionId));
+      const prom = promotionMap.get(mapping.promotionId);
       if (prom?.classId) {
-        const [cls] = await db
-          .select()
-          .from(classModel)
-          .where(eq(classModel.id, prom.classId));
-        classData = cls ?? null;
+        classData = classMap.get(prom.classId) ?? null;
       }
     }
 
@@ -155,16 +212,15 @@ export async function getUserStatusMappingsByStudentIdOverview(
 }
 
 export async function getPromotionsByStudentIdOverview(studentId: number) {
-  const promotions = await db
-    .select()
-    .from(promotionModel)
-    .where(eq(promotionModel.studentId, studentId))
-    .orderBy(asc(promotionModel.id));
-
-  const [student] = await db
-    .select()
-    .from(studentModel)
-    .where(eq(studentModel.id, studentId));
+  // promotions and student are independent lookups - fetch concurrently.
+  const [promotions, [student]] = await Promise.all([
+    db
+      .select()
+      .from(promotionModel)
+      .where(eq(promotionModel.studentId, studentId))
+      .orderBy(asc(promotionModel.id)),
+    db.select().from(studentModel).where(eq(studentModel.id, studentId)),
+  ]);
 
   let programCourse: typeof programCourseModel.$inferSelect | null = null;
   if (student?.programCourseId) {
@@ -191,72 +247,163 @@ export async function getPromotionsByStudentIdOverview(studentId: number) {
       ? previousUid
       : (student?.uid ?? null);
 
+  if (promotions.length === 0) {
+    return {
+      promotions: [],
+      meta: {
+        totalSemesters: programCourse?.totalSemesters ?? null,
+        completedSemesters: 0,
+      },
+    };
+  }
+
+  // Bulk-fetch every FK referenced across all promotions (instead of a
+  // per-promotion sequential await chain).
+  const sessionIds = [...new Set(promotions.map((p) => p.sessionId))];
+  const classIds = [...new Set(promotions.map((p) => p.classId))];
+  const shiftIds = [...new Set(promotions.map((p) => p.shiftId))];
+  const sectionIds = [
+    ...new Set(
+      promotions
+        .map((p) => p.sectionId)
+        .filter((id): id is number => id !== null && id !== undefined),
+    ),
+  ];
+  const examFormFillupIds = [
+    ...new Set(
+      promotions
+        .map((p) => p.examFormFillupId)
+        .filter((id): id is number => id !== null && id !== undefined),
+    ),
+  ];
+
+  const [
+    sessionRows,
+    classRows,
+    shiftRows,
+    sectionRows,
+    fillupByIdRows,
+    studentFillupRows,
+  ] = await Promise.all([
+    sessionIds.length > 0
+      ? db
+          .select()
+          .from(sessionModel)
+          .where(inArray(sessionModel.id, sessionIds))
+      : Promise.resolve([] as (typeof sessionModel.$inferSelect)[]),
+    classIds.length > 0
+      ? db.select().from(classModel).where(inArray(classModel.id, classIds))
+      : Promise.resolve([] as (typeof classModel.$inferSelect)[]),
+    shiftIds.length > 0
+      ? db.select().from(shiftModel).where(inArray(shiftModel.id, shiftIds))
+      : Promise.resolve([] as (typeof shiftModel.$inferSelect)[]),
+    sectionIds.length > 0
+      ? db
+          .select()
+          .from(sectionModel)
+          .where(inArray(sectionModel.id, sectionIds))
+      : Promise.resolve([] as (typeof sectionModel.$inferSelect)[]),
+    // Direct examFormFillupId -> row lookup (matches original eq(id, ...) fetch)
+    examFormFillupIds.length > 0
+      ? db
+          .select()
+          .from(examFormFillupModel)
+          .where(inArray(examFormFillupModel.id, examFormFillupIds))
+      : Promise.resolve([] as (typeof examFormFillupModel.$inferSelect)[]),
+    // All of this student's exam form fillups, used for the by-keys fallback
+    // (matches original eq(studentId, promotion.studentId) fallback filter -
+    // all promotions here already share this same studentId).
+    db
+      .select()
+      .from(examFormFillupModel)
+      .where(eq(examFormFillupModel.studentId, studentId)),
+  ]);
+
+  const sessionMap = new Map(sessionRows.map((s) => [s.id, s]));
+  const classMap = new Map(classRows.map((c) => [c.id, c]));
+  const shiftMap = new Map(shiftRows.map((s) => [s.id, s]));
+  const sectionMap = new Map(sectionRows.map((s) => [s.id, s]));
+  const fillupByIdMap = new Map(fillupByIdRows.map((f) => [f.id, f]));
+
+  // Fallback lookup mirrors: where(studentId, sessionId, programCourseId, classId)
+  // orderBy(desc(id)).limit(1) - keep only the highest-id row per key.
+  const fillupByKeyMap = new Map<
+    string,
+    typeof examFormFillupModel.$inferSelect
+  >();
+  for (const row of studentFillupRows) {
+    const key = `${row.sessionId}|${row.programCourseId}|${row.classId}`;
+    const existing = fillupByKeyMap.get(key);
+    if (!existing || (row.id ?? 0) > (existing.id ?? 0)) {
+      fillupByKeyMap.set(key, row);
+    }
+  }
+
+  // Resolve fillupRow per promotion (in-memory, id-else-by-keys fallback
+  // preserved exactly) and collect appearTypeIds for a bulk lookup.
+  const fillupRowByPromotionId = new Map<
+    number,
+    typeof examFormFillupModel.$inferSelect | undefined
+  >();
+  const appearTypeIds = new Set<number>();
+  for (const promotion of promotions) {
+    let fillupRow = promotion.examFormFillupId
+      ? fillupByIdMap.get(promotion.examFormFillupId)
+      : undefined;
+    if (!fillupRow) {
+      const key = `${promotion.sessionId}|${promotion.programCourseId}|${promotion.classId}`;
+      fillupRow = fillupByKeyMap.get(key);
+    }
+    fillupRowByPromotionId.set(promotion.id!, fillupRow);
+    if (fillupRow?.appearTypeId) {
+      appearTypeIds.add(fillupRow.appearTypeId);
+    }
+  }
+
+  // Second-hop FKs (session -> academicYear, fillup -> promotionStatus).
+  const academicYearIds = [
+    ...new Set(
+      sessionRows
+        .map((s) => s.academicYearId)
+        .filter((id): id is number => id !== null && id !== undefined),
+    ),
+  ];
+
+  const [academicYearRows, promotionStatusRows] = await Promise.all([
+    academicYearIds.length > 0
+      ? db
+          .select()
+          .from(academicYearModel)
+          .where(inArray(academicYearModel.id, academicYearIds))
+      : Promise.resolve([] as (typeof academicYearModel.$inferSelect)[]),
+    appearTypeIds.size > 0
+      ? db
+          .select()
+          .from(promotionStatusModel)
+          .where(inArray(promotionStatusModel.id, [...appearTypeIds]))
+      : Promise.resolve([] as (typeof promotionStatusModel.$inferSelect)[]),
+  ]);
+
+  const academicYearMap = new Map(academicYearRows.map((ay) => [ay.id, ay]));
+  const promotionStatusMap = new Map(promotionStatusRows.map((p) => [p.id, p]));
+
   const results: unknown[] = [];
 
   for (const promotion of promotions) {
-    const [session] = await db
-      .select()
-      .from(sessionModel)
-      .where(eq(sessionModel.id, promotion.sessionId));
+    const session = sessionMap.get(promotion.sessionId);
+    const academicYear = session?.academicYearId
+      ? (academicYearMap.get(session.academicYearId) ?? null)
+      : null;
+    const cls = classMap.get(promotion.classId);
+    const shf = shiftMap.get(promotion.shiftId);
+    const sec = promotion.sectionId
+      ? sectionMap.get(promotion.sectionId)
+      : undefined;
 
-    let academicYear: typeof academicYearModel.$inferSelect | null = null;
-    if (session?.academicYearId) {
-      const [ay] = await db
-        .select()
-        .from(academicYearModel)
-        .where(eq(academicYearModel.id, session.academicYearId));
-      academicYear = ay ?? null;
-    }
-
-    const [cls] = await db
-      .select()
-      .from(classModel)
-      .where(eq(classModel.id, promotion.classId));
-
-    const [shf] = await db
-      .select()
-      .from(shiftModel)
-      .where(eq(shiftModel.id, promotion.shiftId));
-
-    const [sec] = promotion.sectionId
-      ? await db
-          .select()
-          .from(sectionModel)
-          .where(eq(sectionModel.id, promotion.sectionId))
-      : [undefined];
-
-    let appearTypeName: string | null = null;
-    let fillupRow: typeof examFormFillupModel.$inferSelect | undefined;
-    if (promotion.examFormFillupId) {
-      const [fillup] = await db
-        .select()
-        .from(examFormFillupModel)
-        .where(eq(examFormFillupModel.id, promotion.examFormFillupId));
-      fillupRow = fillup;
-    }
-    if (!fillupRow) {
-      const [byKeys] = await db
-        .select()
-        .from(examFormFillupModel)
-        .where(
-          and(
-            eq(examFormFillupModel.studentId, promotion.studentId),
-            eq(examFormFillupModel.sessionId, promotion.sessionId),
-            eq(examFormFillupModel.programCourseId, promotion.programCourseId),
-            eq(examFormFillupModel.classId, promotion.classId),
-          ),
-        )
-        .orderBy(desc(examFormFillupModel.id))
-        .limit(1);
-      fillupRow = byKeys;
-    }
-    if (fillupRow?.appearTypeId) {
-      const [appearStatus] = await db
-        .select()
-        .from(promotionStatusModel)
-        .where(eq(promotionStatusModel.id, fillupRow.appearTypeId));
-      appearTypeName = appearStatus?.name?.trim() ?? null;
-    }
+    const fillupRow = fillupRowByPromotionId.get(promotion.id!);
+    const appearTypeName = fillupRow?.appearTypeId
+      ? (promotionStatusMap.get(fillupRow.appearTypeId)?.name?.trim() ?? null)
+      : null;
 
     results.push({
       id: promotion.id,

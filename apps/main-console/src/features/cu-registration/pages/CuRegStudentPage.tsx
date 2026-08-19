@@ -20,7 +20,6 @@ export default function CuRegStudentPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchUid, setSearchUid] = useState(uid || "");
   const [isSearching, setIsSearching] = useState(false);
-  const [isFormLoading, setIsFormLoading] = useState(false);
   const [userFlags, setUserFlags] = useState<{
     isActive: boolean | null;
     isSuspended: boolean | null;
@@ -42,7 +41,6 @@ export default function CuRegStudentPage() {
       const data = await fetchStudentByUid(uid.trim());
       setStudentData(data);
       setError(null);
-      setIsFormLoading(true); // Set form loading when student is found
 
       // Fetch linked user status to determine access to CU-Reg tabs
       if (data?.userId) {
@@ -93,17 +91,6 @@ export default function CuRegStudentPage() {
 
     return () => clearTimeout(timer);
   }, [searchUid, handleSearch]);
-
-  // Auto-hide form loading after 10 seconds
-  useEffect(() => {
-    if (isFormLoading) {
-      const timer = setTimeout(() => {
-        setIsFormLoading(false);
-      }, 10000); // 10 seconds timeout
-
-      return () => clearTimeout(timer);
-    }
-  }, [isFormLoading]);
 
   const shouldBlockForStatus = (() => {
     if (!studentData) return false;
@@ -243,16 +230,12 @@ export default function CuRegStudentPage() {
 
           {/* CU Registration Tab */}
           <TabsContent value="cu-registration" className="space-y-6">
-            {isSearching || isFormLoading ? (
+            {isSearching ? (
               <div className="flex items-center justify-center p-8">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600 mx-auto mb-4"></div>
                   <p className="text-slate-600">Loading CU registration data...</p>
-                  <p className="text-slate-500 text-sm mt-2">
-                    {isSearching
-                      ? "Searching for student..."
-                      : "Loading form data and documents..."}
-                  </p>
+                  <p className="text-slate-500 text-sm mt-2">Searching for student...</p>
                 </div>
               </div>
             ) : studentData?.id ? (

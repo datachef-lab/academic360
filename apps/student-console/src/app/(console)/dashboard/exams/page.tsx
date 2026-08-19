@@ -313,7 +313,7 @@ export default function ExamsContent() {
         const socket: any = socketModule.io(origin, {
           path: socketPath,
           withCredentials: true,
-          transports: ["websocket", "polling"], // websocket first: long-polling needs ALB sticky sessions across instances
+          transports: ["websocket"], // websocket-only: long-polling breaks under a non-sticky ALB (handshake round-robins across instances), which flaps student presence. Matches main-console.
           reconnection: true,
           reconnectionDelay: 1000,
           reconnectionAttempts: 5,

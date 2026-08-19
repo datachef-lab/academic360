@@ -975,7 +975,7 @@ export async function getMisTableDataLegacy(
   const filters: RealtimeTrackerFilters = {};
   if (sessionId) filters.sessionIds = [sessionId];
   if (classId) filters.classIds = [classId];
-  const payload = await getAffiliationRegistrationData(filters);
+  const payload = await getAffiliationRegistrationDataCached(filters);
   return {
     updatedAt: payload.updatedAt,
     sessionId,
@@ -1005,4 +1005,50 @@ export async function getAffiliationDisplayLabel(
     return "Affiliation Registration";
   }
   return "Affiliation Registration";
+}
+
+// ---------------------------------------------------------------------------
+// Cached wrappers (2026-08-19 incident): the three tab payloads are whole-
+// student-body aggregations that every viewer used to recompute independently
+// on every *_refresh push. These wrappers share one computation per
+// (tab, canonical-filter) fleet-wide via the epoch-keyed snapshot cache; a
+// mutation bumps the epoch (see realtime-tracker.socket.ts) so post-mutation
+// reads always recompute — cached data can never mask an update.
+// ---------------------------------------------------------------------------
+import { getCachedSnapshot } from "@/services/snapshot-cache.js";
+import { stableRealtimeTrackerFilterKey } from "@/utils/realtime-tracker-filters.js";
+
+const TRACKER_SNAPSHOT_TTL_SEC = 60;
+
+export function getAffiliationRegistrationDataCached(
+  filters: RealtimeTrackerFilters,
+): ReturnType<typeof getAffiliationRegistrationData> {
+  return getCachedSnapshot(
+    "rt:affiliation",
+    stableRealtimeTrackerFilterKey(filters),
+    TRACKER_SNAPSHOT_TTL_SEC,
+    () => getAffiliationRegistrationData(filters),
+  );
+}
+
+export function getExamFormDeclarationDataCached(
+  filters: RealtimeTrackerFilters,
+): ReturnType<typeof getExamFormDeclarationData> {
+  return getCachedSnapshot(
+    "rt:exam_form_declaration",
+    stableRealtimeTrackerFilterKey(filters),
+    TRACKER_SNAPSHOT_TTL_SEC,
+    () => getExamFormDeclarationData(filters),
+  );
+}
+
+export function getFeeMisDataCached(
+  filters: RealtimeTrackerFilters,
+): ReturnType<typeof getFeeMisData> {
+  return getCachedSnapshot(
+    "rt:fee_mis",
+    stableRealtimeTrackerFilterKey(filters),
+    TRACKER_SNAPSHOT_TTL_SEC,
+    () => getFeeMisData(filters),
+  );
 }

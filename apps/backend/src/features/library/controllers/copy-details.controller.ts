@@ -153,27 +153,31 @@ export const downloadCopyDetailsExcelController = async (
     const search =
       typeof req.query.search === "string" ? req.query.search : undefined;
 
-    const buffer = await exportCopyDetailsExcel({
-      search,
-      statusId: parseQueryInt(req.query, "statusId"),
-      entryModeId: parseQueryInt(req.query, "entryModeId"),
-      rackId: parseQueryInt(req.query, "rackId"),
-      shelfId: parseQueryInt(req.query, "shelfId"),
-      bindingTypeId: parseQueryInt(req.query, "bindingTypeId"),
-      enclosureId: parseQueryInt(req.query, "enclosureId"),
-      bookId: parseQueryInt(req.query, "bookId"),
-      branchId: parseQueryInt(req.query, "branchId"),
-      itemCategoryId: parseQueryInt(req.query, "itemCategoryId"),
-    });
-
     const filename = `library-copy-details-${new Date().toISOString().slice(0, 10)}.xlsx`;
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.setHeader("Content-Length", buffer.length);
-    res.status(200).send(buffer);
+
+    // Streamed directly to `res` (see exportCopyDetailsExcel) — Content-Length
+    // is unknown up front and intentionally omitted; chunked transfer
+    // encoding is used instead.
+    await exportCopyDetailsExcel(
+      {
+        search,
+        statusId: parseQueryInt(req.query, "statusId"),
+        entryModeId: parseQueryInt(req.query, "entryModeId"),
+        rackId: parseQueryInt(req.query, "rackId"),
+        shelfId: parseQueryInt(req.query, "shelfId"),
+        bindingTypeId: parseQueryInt(req.query, "bindingTypeId"),
+        enclosureId: parseQueryInt(req.query, "enclosureId"),
+        bookId: parseQueryInt(req.query, "bookId"),
+        branchId: parseQueryInt(req.query, "branchId"),
+        itemCategoryId: parseQueryInt(req.query, "itemCategoryId"),
+      },
+      res,
+    );
   } catch (error) {
     handleError(error, res, next);
   }

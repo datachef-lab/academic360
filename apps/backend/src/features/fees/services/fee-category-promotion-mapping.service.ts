@@ -248,6 +248,296 @@ async function modelToDto(
   };
 }
 
+type PromotionRow = typeof promotionModel.$inferSelect;
+
+/**
+ * Batch version of promotionToDto — avoids N×(6–8) DB round-trips when
+ * loading lists. Mirrors the equivalent helper in
+ * fee-group-promotion-mapping.service.ts (same source model → same DTO).
+ */
+async function promotionsToDtoBatch(
+  promotions: PromotionRow[],
+): Promise<Map<number, PromotionDto>> {
+  const map = new Map<number, PromotionDto>();
+  if (promotions.length === 0) return map;
+
+  const boardIds = [
+    ...new Set(
+      promotions
+        .map((p) => p.boardResultStatusId)
+        .filter((id): id is number => id != null),
+    ),
+  ];
+  const sessionIds = [...new Set(promotions.map((p) => p.sessionId))];
+  const classIds = [...new Set(promotions.map((p) => p.classId))];
+  const sectionIds = [
+    ...new Set(
+      promotions
+        .map((p) => p.sectionId)
+        .filter((id): id is number => id != null),
+    ),
+  ];
+  const shiftIds = [...new Set(promotions.map((p) => p.shiftId))];
+  const programCourseIds = [
+    ...new Set(promotions.map((p) => p.programCourseId)),
+  ];
+  const studentIds = [...new Set(promotions.map((p) => p.studentId))];
+
+  const [
+    boardRows,
+    sessionRows,
+    classRows,
+    sectionRows,
+    shiftRows,
+    studentDetailRows,
+  ] = await Promise.all([
+    boardIds.length
+      ? db
+          .select()
+          .from(boardResultStatusModel)
+          .where(inArray(boardResultStatusModel.id, boardIds))
+      : Promise.resolve([]),
+    sessionIds.length
+      ? db
+          .select()
+          .from(sessionModel)
+          .where(inArray(sessionModel.id, sessionIds))
+      : Promise.resolve([]),
+    classIds.length
+      ? db.select().from(classModel).where(inArray(classModel.id, classIds))
+      : Promise.resolve([]),
+    sectionIds.length
+      ? db
+          .select()
+          .from(sectionModel)
+          .where(inArray(sectionModel.id, sectionIds))
+      : Promise.resolve([]),
+    shiftIds.length
+      ? db.select().from(shiftModel).where(inArray(shiftModel.id, shiftIds))
+      : Promise.resolve([]),
+    studentIds.length
+      ? db
+          .select({
+            studentId: studentModel.id,
+            uid: studentModel.uid,
+            community: studentModel.community,
+            firstName: personalDetailsModel.firstName,
+            middleName: personalDetailsModel.middleName,
+            lastName: personalDetailsModel.lastName,
+            religionName: religionModel.name,
+            categoryName: categoryModel.name,
+          })
+          .from(studentModel)
+          .leftJoin(
+            personalDetailsModel,
+            eq(personalDetailsModel.userId, studentModel.userId),
+          )
+          .leftJoin(
+            religionModel,
+            eq(religionModel.id, personalDetailsModel.religionId),
+          )
+          .leftJoin(
+            categoryModel,
+            eq(categoryModel.id, personalDetailsModel.categoryId),
+          )
+          .where(inArray(studentModel.id, studentIds))
+      : Promise.resolve([]),
+  ]);
+
+  const programCourseDtos =
+    programCourseIds.length > 0
+      ? await Promise.all(
+          programCourseIds.map((id) => programCourseService.findById(id)),
+        )
+      : [];
+
+  const ayIds = [
+    ...new Set(
+      sessionRows
+        .map((s) => s.academicYearId)
+        .filter((id): id is number => id != null),
+    ),
+  ];
+  const academicYearRows =
+    ayIds.length > 0
+      ? await db
+          .select()
+          .from(academicYearModel)
+          .where(inArray(academicYearModel.id, ayIds))
+      : [];
+  const ayMap = new Map(academicYearRows.map((ay) => [ay.id, ay]));
+
+  const boardMap = new Map(boardRows.map((b) => [b.id, b]));
+  const sessionMap = new Map(
+    sessionRows.map((s) => {
+      const ay = s.academicYearId
+        ? (ayMap.get(s.academicYearId) ?? null)
+        : null;
+      return [s.id, { ...s, academicYear: ay }] as const;
+    }),
+  );
+  const classMap = new Map(classRows.map((c) => [c.id, c]));
+  const sectionMap = new Map(sectionRows.map((s) => [s.id, s]));
+  const shiftMap = new Map(shiftRows.map((s) => [s.id, s]));
+  const pcMap = new Map(
+    programCourseDtos
+      .filter((pc): pc is NonNullable<typeof pc> => pc != null)
+      .map((pc) => [pc.id, pc] as const),
+  );
+  const studentMap = new Map(
+    studentDetailRows.map((r) => [r.studentId, r] as const),
+  );
+
+  for (const promotion of promotions) {
+    const boardResStatus = promotion.boardResultStatusId
+      ? (boardMap.get(promotion.boardResultStatusId) ?? null)
+      : null;
+    const sess = sessionMap.get(promotion.sessionId) ?? null;
+    const cls = classMap.get(promotion.classId) ?? null;
+    const sec = promotion.sectionId
+      ? (sectionMap.get(promotion.sectionId) ?? null)
+      : null;
+    const shf = shiftMap.get(promotion.shiftId) ?? null;
+    const progCourse = pcMap.get(promotion.programCourseId) ?? null;
+    const studentWithDetails = studentMap.get(promotion.studentId) ?? null;
+
+    if (!sess || !cls || !shf || !progCourse) continue;
+
+    const fullName = studentWithDetails
+      ? [
+          studentWithDetails.firstName,
+          studentWithDetails.middleName,
+          studentWithDetails.lastName,
+        ]
+          .filter(Boolean)
+          .join(" ")
+      : null;
+
+    map.set(promotion.id, {
+      id: promotion.id,
+      legacyHistoricalRecordId: promotion.legacyHistoricalRecordId ?? null,
+      studentId: promotion.studentId,
+      isAlumni: promotion.isAlumni,
+      dateOfJoining: promotion.dateOfJoining,
+      classRollNumber: promotion.classRollNumber,
+      rollNumber: promotion.rollNumber ?? null,
+      rollNumberSI: promotion.rollNumberSI ?? null,
+      examNumber: promotion.examNumber ?? null,
+      examSerialNumber: promotion.examSerialNumber ?? null,
+      startDate: promotion.startDate ?? null,
+      endDate: promotion.endDate ?? null,
+      remarks: promotion.remarks ?? null,
+      createdAt: promotion.createdAt ?? new Date(),
+      updatedAt: promotion.updatedAt ?? new Date(),
+      boardResultStatus: boardResStatus!,
+      session: sess,
+      class: cls,
+      section: sec,
+      shift: shf,
+      programCourse: progCourse,
+      studentName: fullName,
+      uid: studentWithDetails?.uid ?? null,
+      religionName: studentWithDetails?.religionName ?? null,
+      categoryName: studentWithDetails?.categoryName ?? null,
+      communityName: studentWithDetails?.community ?? null,
+      academicYearName:
+        (sess as { academicYear?: { year?: string } | null }).academicYear
+          ?.year ?? null,
+    } as PromotionDto & {
+      studentName?: string | null;
+      uid?: string | null;
+      religionName?: string | null;
+      categoryName?: string | null;
+      communityName?: string | null;
+      academicYearName?: string | null;
+    });
+  }
+
+  return map as Map<number, PromotionDto>;
+}
+
+type FeeGroupPromotionMappingRow =
+  typeof feeGroupPromotionMappingModel.$inferSelect;
+
+/**
+ * Batch-assembles FeeGroupPromotionMappingDto[] for a set of rows using
+ * bulk-fetched lookups (feeGroup/feeCategory/feeSlab/promotion via `inArray`)
+ * instead of N per-row queries. Mirrors `modelToDto`'s logic/fields exactly.
+ */
+async function assembleFeeCategoryPromotionMappingDtos(
+  rows: FeeGroupPromotionMappingRow[],
+): Promise<FeeGroupPromotionMappingDto[]> {
+  if (rows.length === 0) return [];
+
+  const feeGroupIds = [...new Set(rows.map((r) => r.feeGroupId))];
+  const promotionIds = [...new Set(rows.map((r) => r.promotionId))];
+
+  const [feeGroups, promotions] = await Promise.all([
+    feeGroupIds.length > 0
+      ? db
+          .select()
+          .from(feeGroupModel)
+          .where(inArray(feeGroupModel.id, feeGroupIds))
+      : Promise.resolve([]),
+    promotionIds.length > 0
+      ? db
+          .select()
+          .from(promotionModel)
+          .where(inArray(promotionModel.id, promotionIds))
+      : Promise.resolve([]),
+  ]);
+
+  const feeGroupMap = new Map(feeGroups.map((fg) => [fg.id, fg]));
+
+  const feeCategoryIds = [...new Set(feeGroups.map((fg) => fg.feeCategoryId))];
+  const feeSlabIds = [...new Set(feeGroups.map((fg) => fg.feeSlabId))];
+
+  const [feeCategories, feeSlabs] = await Promise.all([
+    feeCategoryIds.length > 0
+      ? db
+          .select()
+          .from(feeCategoryModel)
+          .where(inArray(feeCategoryModel.id, feeCategoryIds))
+      : Promise.resolve([]),
+    feeSlabIds.length > 0
+      ? db
+          .select()
+          .from(feeSlabModel)
+          .where(inArray(feeSlabModel.id, feeSlabIds))
+      : Promise.resolve([]),
+  ]);
+
+  const feeCategoryMap = new Map(feeCategories.map((fc) => [fc.id, fc]));
+  const feeSlabMap = new Map(feeSlabs.map((fs) => [fs.id, fs]));
+
+  const promotionDtoMap = await promotionsToDtoBatch(promotions);
+
+  const dtos: FeeGroupPromotionMappingDto[] = [];
+  for (const row of rows) {
+    const feeGroup = feeGroupMap.get(row.feeGroupId);
+    const promotionDto = promotionDtoMap.get(row.promotionId);
+
+    if (!feeGroup || !promotionDto) continue;
+
+    const feeCategory = feeCategoryMap.get(feeGroup.feeCategoryId);
+    const feeSlab = feeSlabMap.get(feeGroup.feeSlabId);
+
+    if (!feeCategory || !feeSlab) continue;
+
+    dtos.push({
+      ...row,
+      feeGroup: {
+        ...feeGroup,
+        feeCategory,
+        feeSlab,
+      },
+      promotion: promotionDto,
+    });
+  }
+
+  return dtos;
+}
+
 /**
  * Services should accept validated DTOs (controller validates via zod) and
  * return raw rows / arrays / null. Do not catch errors here — controller will handle them.
@@ -284,8 +574,7 @@ export const getAllFeeCategoryPromotionMappings = async (): Promise<
   FeeGroupPromotionMappingDto[]
 > => {
   const rows = await db.select().from(feeGroupPromotionMappingModel);
-  const dtos = await Promise.all(rows.map((row) => modelToDto(row)));
-  return dtos.filter((dto): dto is FeeGroupPromotionMappingDto => dto !== null);
+  return assembleFeeCategoryPromotionMappingDtos(rows);
 };
 
 export const getFeeCategoryPromotionMappingById = async (
@@ -318,8 +607,7 @@ export const getFeeCategoryPromotionMappingsByFeeCategoryId = async (
     .from(feeGroupPromotionMappingModel)
     .where(inArray(feeGroupPromotionMappingModel.feeGroupId, feeGroupIds));
 
-  const dtos = await Promise.all(rows.map((row) => modelToDto(row)));
-  return dtos.filter((dto): dto is FeeGroupPromotionMappingDto => dto !== null);
+  return assembleFeeCategoryPromotionMappingDtos(rows);
 };
 
 export const getFeeCategoryPromotionMappingsByPromotionId = async (
@@ -330,8 +618,7 @@ export const getFeeCategoryPromotionMappingsByPromotionId = async (
     .from(feeGroupPromotionMappingModel)
     .where(eq(feeGroupPromotionMappingModel.promotionId, promotionId));
 
-  const dtos = await Promise.all(rows.map((row) => modelToDto(row)));
-  return dtos.filter((dto): dto is FeeGroupPromotionMappingDto => dto !== null);
+  return assembleFeeCategoryPromotionMappingDtos(rows);
 };
 
 export const updateFeeCategoryPromotionMapping = async (

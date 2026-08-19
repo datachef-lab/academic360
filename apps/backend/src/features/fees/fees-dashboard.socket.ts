@@ -1,4 +1,5 @@
 import { socketService } from "@/services/socketService.js";
+import { bumpSnapshotEpoch } from "@/services/snapshot-cache.js";
 import { clearFeesDashboardScopeCache } from "./services/fees-dashboard.service.js";
 
 export type FeesDashboardSocketPayload = {
@@ -9,6 +10,12 @@ export type FeesDashboardSocketPayload = {
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function scheduleFeesDashboardBroadcast(reason: string): void {
+  // Invalidate the fees-dashboard aggregation cache IMMEDIATELY (not inside the
+  // 400ms debounce below), so even a direct dashboard load in the moment right
+  // after a fee mutation recomputes fresh numbers — never a stale collected/
+  // pending figure. The debounce only batches the socket broadcast.
+  void bumpSnapshotEpoch("fees:dashboard");
+
   if (debounceTimer) {
     clearTimeout(debounceTimer);
   }
@@ -16,6 +23,15 @@ export function scheduleFeesDashboardBroadcast(reason: string): void {
   debounceTimer = setTimeout(() => {
     debounceTimer = null;
     clearFeesDashboardScopeCache();
+    // Invalidate the fee_mis snapshot epoch BEFORE emitting the refresh signal.
+    // `emitFeeMisRefresh` makes every Fee MIS viewer refetch, and that refetch is
+    // served from `getFeeMisDataCached` (getCachedSnapshot("rt:fee_mis", …), 60s
+    // TTL). Unless the epoch is bumped first, the refetch returns the SAME
+    // pre-payment paid/unpaid counts — i.e. a refresh that shows stale numbers.
+    // Nothing else bumps this scope on the fee path (only legacy import does),
+    // so it must be done here. Fire-and-forget INCR, matching the invalidate-
+    // before-broadcast pattern in scheduleRealtimeTrackerBroadcast.
+    void bumpSnapshotEpoch("rt:fee_mis");
     socketService.sendFeesDashboardUpdate({
       updatedAt: new Date().toISOString(),
       reason,
@@ -33,9 +49,11 @@ export function scheduleFeesDashboardBroadcast(reason: string): void {
  *
  * Only the "exam_form_declaration" tab is scheduled here: its "Fee Pending / Due"
  * and "Fee Declarations" columns both derive from the unpaid fee-mapping
- * predicate (`buildFeeDueExistsSql`). The "fee_mis" tab is deliberately NOT
- * scheduled — `emitFeeMisRefresh` above already tells every Fee MIS viewer to
- * refetch, so adding it would double up the work.
+ * predicate (`buildFeeDueExistsSql`). The "fee_mis" tab is not room-broadcast
+ * here — it refreshes through `emitFeeMisRefresh` above instead — but its cached
+ * snapshot epoch IS invalidated in the debounce callback (see the
+ * `bumpSnapshotEpoch("rt:fee_mis")` there), otherwise that refetch would serve a
+ * stale pre-payment snapshot.
  *
  * No academic-year-scoped room is fired: the reason string carries no year and
  * resolving one would mean a DB query on the payment path. The unfiltered room

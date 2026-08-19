@@ -20,6 +20,10 @@ import { db } from "@/db/index.js";
 import { createOtp, verifyOtp } from "@/features/auth/services/otp.service.js";
 import { enqueueNotification } from "@/services/notificationClient.js";
 import {
+  getCachedSnapshot,
+  bumpSnapshotEpoch,
+} from "@/services/snapshot-cache.js";
+import {
   uploadToS3,
   deleteFromS3,
   getSignedUrlForFile,
@@ -737,6 +741,10 @@ export async function confirmResend(
   };
   resendSessions.delete(token);
   if (!result?.id) throw new Error("Failed to enqueue the resend.");
+  // A resend inserts a new notification row the dashboard totals must
+  // reflect immediately — invalidate before any caller reads the stale
+  // pre-enqueue snapshot.
+  bumpSnapshotEpoch("notifications:dashboard");
   return { newNotificationId: result.id };
 }
 
@@ -1486,7 +1494,33 @@ const toDimBuckets = (
     }))
     .sort((a, b) => b.count - a.count);
 
-export async function getDashboard(f: DashboardFilters) {
+/** Stable cache-variant key: sorted arrays so filter-order never fragments the cache. */
+function stableDashboardFilterKey(f: DashboardFilters): string {
+  const sortNums = (arr?: number[]) =>
+    arr?.length ? [...arr].sort((a, b) => a - b) : undefined;
+  const sortStrs = (arr?: string[]) =>
+    arr?.length ? [...arr].sort() : undefined;
+  const canonical = {
+    academicYearIds: sortNums(f.academicYearIds),
+    variants: sortStrs(f.variants),
+    statuses: sortStrs(f.statuses),
+    userTypes: sortStrs(f.userTypes),
+    programCourseIds: sortNums(f.programCourseIds),
+    streamIds: sortNums(f.streamIds),
+    affiliationIds: sortNums(f.affiliationIds),
+    regulationTypeIds: sortNums(f.regulationTypeIds),
+    classIds: sortNums(f.classIds),
+    shiftIds: sortNums(f.shiftIds),
+    days: f.days ?? null,
+  };
+  return crypto
+    .createHash("sha256")
+    .update(JSON.stringify(canonical))
+    .digest("hex")
+    .slice(0, 16);
+}
+
+async function computeDashboard(f: DashboardFilters) {
   const where = dashWhere(f);
 
   // Full spine: notifications → users → students → active promotion →
@@ -1800,6 +1834,28 @@ export async function getDashboard(f: DashboardFilters) {
   };
 }
 
+// The dashboard is a ~14-query fan-out that every open console tab reruns on
+// every poll; share one computation per filter combo fleet-wide via the
+// epoch-keyed snapshot cache (Redis-backed — a bump on any instance is seen
+// by every instance, so this is safe under the multi-instance/no-sticky-
+// sessions prod deployment). Bumped from this file's own mutation endpoints
+// (see confirmResend below) that create notification rows the totals must
+// reflect immediately; the 30s TTL is the only thing covering worker-side
+// status flips (SENT/FAILED), since those happen in the separate
+// notification-system process and cannot call bumpSnapshotEpoch here — that
+// 30s staleness bound on worker-driven status transitions is accepted as a
+// known, deliberate tradeoff for a monitoring dashboard.
+export function getDashboard(
+  f: DashboardFilters,
+): ReturnType<typeof computeDashboard> {
+  return getCachedSnapshot(
+    "notifications:dashboard",
+    stableDashboardFilterKey(f),
+    30,
+    () => computeDashboard(f),
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Export (list rows, capped)
 // ---------------------------------------------------------------------------
@@ -1824,7 +1880,7 @@ export async function exportNotifications(
     .limit(EXPORT_CAP);
 }
 
-export async function getStats() {
+async function computeStats() {
   const [totals] = await db
     .select({
       total: count(),
@@ -1883,4 +1939,12 @@ export async function getStats() {
     })),
     recent,
   };
+}
+
+// Same fleet-wide sharing rationale as getDashboard above; same scope (a
+// single stats snapshot has no filters, so a fixed variant key is enough).
+export function getStats(): ReturnType<typeof computeStats> {
+  return getCachedSnapshot("notifications:dashboard", "stats", 30, () =>
+    computeStats(),
+  );
 }

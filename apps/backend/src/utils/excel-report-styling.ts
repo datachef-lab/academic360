@@ -1,8 +1,80 @@
-import type { Worksheet } from "exceljs";
+import type { Row, Worksheet } from "exceljs";
 
 /** Standard grey header fill used across admin Excel exports */
 export const EXCEL_REPORT_HEADER_FILL_ARGB = "FFD3D3D3";
 export const EXCEL_REPORT_BODY_BORDER_COLOR_ARGB = "FFD3D3D3";
+
+/**
+ * Shared (frozen, reused) border objects for streaming exports. ExcelJS's
+ * style manager hashes/dedupes style objects into the workbook's shared
+ * style table — the same object reference can safely be assigned to every
+ * cell instead of allocating a fresh `{ top: {...}, left: {...}, ... }`
+ * literal per cell, which is what made `applyStandardExcelReportTableStyling`
+ * O(rows*cols) in allocations on huge sheets. Mirrors the
+ * `EXCEL_THIN_BORDER` pattern already used in
+ * `fees/services/fee-structure.service.ts`.
+ */
+export const EXCEL_REPORT_HEADER_THIN_BORDER = Object.freeze({
+  top: { style: "thin" as const },
+  left: { style: "thin" as const },
+  bottom: { style: "thin" as const },
+  right: { style: "thin" as const },
+});
+
+export const EXCEL_REPORT_BODY_THIN_BORDER = Object.freeze({
+  top: {
+    style: "thin" as const,
+    color: { argb: EXCEL_REPORT_BODY_BORDER_COLOR_ARGB },
+  },
+  left: {
+    style: "thin" as const,
+    color: { argb: EXCEL_REPORT_BODY_BORDER_COLOR_ARGB },
+  },
+  bottom: {
+    style: "thin" as const,
+    color: { argb: EXCEL_REPORT_BODY_BORDER_COLOR_ARGB },
+  },
+  right: {
+    style: "thin" as const,
+    color: { argb: EXCEL_REPORT_BODY_BORDER_COLOR_ARGB },
+  },
+});
+
+/**
+ * Row-by-row equivalent of the header block in
+ * `applyStandardExcelReportTableStyling` — for use with
+ * `ExcelJS.stream.xlsx.WorkbookWriter`, where rows are committed (and can no
+ * longer be revisited) as soon as they're written, so the whole-sheet
+ * `eachRow` pass that function does is not available. Call once on row 1.
+ */
+export function styleStreamedHeaderRow(row: Row): void {
+  row.font = { bold: true, size: 12 };
+  row.fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: EXCEL_REPORT_HEADER_FILL_ARGB },
+  };
+  row.alignment = {
+    vertical: "middle",
+    horizontal: "left",
+    wrapText: true,
+  };
+  row.height = 20;
+  row.eachCell({ includeEmpty: true }, (cell) => {
+    cell.border = EXCEL_REPORT_HEADER_THIN_BORDER;
+  });
+}
+
+/**
+ * Row-by-row equivalent of the body-border block in
+ * `applyStandardExcelReportTableStyling`. Call on every data row (row number
+ * > 1) as it's added, before `row.commit()`.
+ */
+export function styleStreamedBodyRow(row: Row): void {
+  row.eachCell({ includeEmpty: true }, (cell) => {
+    cell.border = EXCEL_REPORT_BODY_THIN_BORDER;
+  });
+}
 
 /**
  * Grey header row, full grid borders, frozen header — matches student/promotion/subject exports.

@@ -1,26 +1,19 @@
-import { createHash } from "crypto";
 import { socketService } from "@/services/socketService.js";
+import { bumpSnapshotEpoch } from "@/services/snapshot-cache.js";
 import {
-  canonicalRealtimeTrackerFilters,
+  stableRealtimeTrackerFilterKey as stableFilterKey,
   type RealtimeTrackerFilters,
 } from "@/utils/realtime-tracker-filters.js";
 import {
-  getAffiliationRegistrationData,
-  getExamFormDeclarationData,
-  getFeeMisData,
+  getAffiliationRegistrationDataCached,
+  getExamFormDeclarationDataCached,
+  getFeeMisDataCached,
 } from "./services/realtime-tracker.service.js";
 
 export type RealtimeTrackerTab =
   | "affiliation"
   | "fee_mis"
   | "exam_form_declaration";
-
-function stableFilterKey(filters: RealtimeTrackerFilters): string {
-  return createHash("sha256")
-    .update(JSON.stringify(canonicalRealtimeTrackerFilters(filters)))
-    .digest("hex")
-    .slice(0, 16);
-}
 
 export function getRealtimeTrackerRoomName(
   tab: RealtimeTrackerTab,
@@ -43,6 +36,11 @@ export function scheduleRealtimeTrackerBroadcast(
   reason: string,
   filters: RealtimeTrackerFilters = {},
 ): void {
+  // Invalidate BEFORE the debounce: any read landing in the 400ms window must
+  // already see the new epoch and recompute. "cross_instance" is a relay of a
+  // mutation that already bumped on the originating instance — bumping again
+  // would orphan the entry that instance just cached and double the work.
+  if (reason !== "cross_instance") bumpSnapshotEpoch(`rt:${tab}`);
   const existing = debounceTimers.get(tab);
   if (existing) clearTimeout(existing);
   debounceTimers.set(
@@ -75,6 +73,8 @@ export function scheduleRealtimeTrackerThrottledBroadcast(
   filters: RealtimeTrackerFilters = {},
   minIntervalMs = 1500,
 ): void {
+  // Same invalidation rule as the debounced variant (see comment there).
+  if (reason !== "cross_instance") bumpSnapshotEpoch(`rt:${tab}`);
   const now = Date.now();
   const last = throttleLastAt.get(tab) ?? 0;
   const elapsed = now - last;
@@ -124,7 +124,7 @@ export async function pushRealtimeTrackerSnapshot(
 ): Promise<void> {
   try {
     if (tab === "affiliation") {
-      const payload = await getAffiliationRegistrationData(filters);
+      const payload = await getAffiliationRegistrationDataCached(filters);
       socketService.sendAffiliationRegistrationUpdate(
         filters as Record<string, unknown>,
         { ...payload, _ts: Date.now() } as Record<string, unknown>,
@@ -142,7 +142,7 @@ export async function pushRealtimeTrackerSnapshot(
       return;
     }
     if (tab === "exam_form_declaration") {
-      const payload = await getExamFormDeclarationData(filters);
+      const payload = await getExamFormDeclarationDataCached(filters);
       socketService.sendExamFormDeclarationUpdate(
         filters as Record<string, unknown>,
         { ...payload, _ts: Date.now() } as Record<string, unknown>,
@@ -156,7 +156,7 @@ export async function pushRealtimeTrackerSnapshot(
       }
       return;
     }
-    const payload = await getFeeMisData(filters);
+    const payload = await getFeeMisDataCached(filters);
     socketService.sendFeeMisUpdate(
       filters as Record<string, unknown>,
       { ...payload, _ts: Date.now() } as Record<string, unknown>,

@@ -205,7 +205,10 @@ export async function findByIdOrName(idOrName: string | number) {
   return setting;
 }
 
-export async function getSettingFileService(idOrName: string) {
+export async function getSettingFileService(
+  idOrName: string,
+  ifNoneMatch?: string,
+) {
   const setting = await db
     .select()
     .from(settingsModel)
@@ -220,23 +223,34 @@ export async function getSettingFileService(idOrName: string) {
     return null;
   }
 
+  // Strong validator derived from the row identity + last update: it only
+  // changes when an admin replaces the file (PUT bumps updatedAt). Lets the
+  // controller answer repeat requests with 304 — no S3 fetch, no megabyte
+  // re-transfer — while still serving the fresh file the instant it changes.
+  const etag = `"settings-${setting.id}-${new Date(
+    setting.updatedAt ?? 0,
+  ).getTime()}"`;
+  if (ifNoneMatch && ifNoneMatch === etag) {
+    return { notModified: true as const, etag };
+  }
+
   const extensions = ["jpg", "jpeg", "png", "webp"];
 
   if (setting.value) {
     const fromS3 = await streamSettingFromS3(setting.value);
-    if (fromS3) return fromS3;
+    if (fromS3) return { ...fromS3, etag };
 
     const fromDisk = streamSettingFromDisk(setting.value);
-    if (fromDisk) return fromDisk;
+    if (fromDisk) return { ...fromDisk, etag };
   }
 
   for (const ext of extensions) {
     const fileName = `${setting.id}.${ext}`;
     const fromS3 = await streamSettingFromS3(fileName);
-    if (fromS3) return fromS3;
+    if (fromS3) return { ...fromS3, etag };
 
     const fromDisk = streamSettingFromDisk(fileName);
-    if (fromDisk) return fromDisk;
+    if (fromDisk) return { ...fromDisk, etag };
   }
 
   return null;

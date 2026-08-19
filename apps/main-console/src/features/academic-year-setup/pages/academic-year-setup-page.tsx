@@ -26,7 +26,7 @@ type FeatureCard = {
   illustrationName: IllustrationName;
   /** Optional real image; overrides the themed SVG when provided. */
   illustration?: string | null;
-  /** Header pill shown for not-yet-built modules (routes to Under Construction). */
+  /** Marks a not-yet-built module: greys the illustration until hover. */
   badge?: string;
 };
 
@@ -152,11 +152,6 @@ export default function AcademicYearSetupPage() {
                         <CardTitle className="truncate text-base font-semibold text-gray-900 transition-colors group-hover:text-gray-700 sm:text-lg">
                           {card.title}
                         </CardTitle>
-                        {card.badge && (
-                          <span className="shrink-0 rounded-full border border-amber-200 bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
-                            {card.badge}
-                          </span>
-                        )}
                       </div>
                       <p className="truncate text-xs font-medium text-gray-500">{card.items}</p>
                     </div>
@@ -168,6 +163,7 @@ export default function AcademicYearSetupPage() {
                       name={card.illustrationName}
                       image={card.illustration ?? undefined}
                       alt={`${card.title} illustration`}
+                      dimmed={card.badge === "Under construction"}
                     />
                     <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/85 via-black/50 to-transparent p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                       <p className="text-xs leading-relaxed text-white sm:text-sm">

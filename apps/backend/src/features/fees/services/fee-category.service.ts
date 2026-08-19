@@ -88,6 +88,18 @@ export const updateFeeCategory = async (
     .where(eq(feeCategoryModel.id, id))
     .returning();
 
+  // Emit socket event for fee category update (the console subscribes to
+  // fee_category_updated but nothing was emitting it — mirrors the create path).
+  const io = socketService.getIO();
+  if (io && updated) {
+    io.emit("fee_category_updated", {
+      feeCategoryId: (updated as FeeCategoryDto).id,
+      type: "update",
+      message: "A fee category has been updated",
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   return (updated ?? null) as FeeCategoryDto | null;
 };
 

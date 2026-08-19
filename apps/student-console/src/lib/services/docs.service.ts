@@ -1,4 +1,4 @@
-import { promises as fs } from "fs";
+import { promises as fs, createReadStream } from "fs";
 import path from "path";
 
 const DOCS_PATH = process.env.DOCS_PATH!;
@@ -21,7 +21,6 @@ export async function scanDocs(
   _registrationNumber: string = "", // Make registrationNumber optional with default empty string
   framework?: string,
 ) {
-  const docsArr: ScanDoc[] = [];
   let frameworks: Framework[] = ["CBCS", "CCF"];
 
   // If a specific framework is provided, only scan that one
@@ -29,80 +28,100 @@ export async function scanDocs(
     frameworks = [framework];
   }
 
-  // Scan both curriculum frameworks
-  for (const fw of frameworks) {
-    try {
-      // Check if the framework directory exists
-      const frameworkPath = path.join(DOCS_PATH, fw);
-      if (!(await dirExists(frameworkPath))) continue;
+  // Scan both curriculum frameworks in parallel. Promise.all preserves the
+  // order of `frameworks` in the resulting array regardless of resolution
+  // order, so the flattened output keeps the original sequential ordering.
+  const frameworkResults = await Promise.all(
+    frameworks.map(async (fw): Promise<ScanDoc[]> => {
+      try {
+        // Check if the framework directory exists
+        const frameworkPath = path.join(DOCS_PATH, fw);
+        if (!(await dirExists(frameworkPath))) return [];
 
-      // Check if the stream directory exists
-      const streamPath = path.join(frameworkPath, stream);
-      if (!(await dirExists(streamPath))) continue;
+        // Check if the stream directory exists
+        const streamPath = path.join(frameworkPath, stream);
+        if (!(await dirExists(streamPath))) return [];
 
-      // Get list of all years
-      const yearDirs = await fs.readdir(streamPath);
+        // Get list of all years
+        const yearDirs = await fs.readdir(streamPath);
 
-      for (const yearDir of yearDirs) {
-        // Skip non-directory items like .DS_Store
-        const yearPath = path.join(streamPath, yearDir);
-        if (!(await dirExists(yearPath))) continue;
+        const yearResults = await Promise.all(
+          yearDirs.map(async (yearDir): Promise<ScanDoc[]> => {
+            // Skip non-directory items like .DS_Store
+            const yearPath = path.join(streamPath, yearDir);
+            if (!(await dirExists(yearPath))) return [];
 
-        const year = parseInt(yearDir);
-        if (isNaN(year)) continue; // Skip if not a valid year
+            const year = parseInt(yearDir);
+            if (isNaN(year)) return []; // Skip if not a valid year
 
-        // Scan for document types
-        const docTypes = await fs.readdir(yearPath);
+            // Scan for document types
+            const docTypes = await fs.readdir(yearPath);
 
-        for (const docType of docTypes) {
-          // Skip non-directory items
-          const docTypePath = path.join(yearPath, docType);
-          if (!(await dirExists(docTypePath))) continue;
+            const docTypeResults = await Promise.all(
+              docTypes.map(async (docType): Promise<ScanDoc[]> => {
+                // Skip non-directory items
+                const docTypePath = path.join(yearPath, docType);
+                if (!(await dirExists(docTypePath))) return [];
 
-          if (docType.toUpperCase() === "MARKSHEETS") {
-            // Marksheets have semester subfolders
-            const semesterDirs = await fs.readdir(docTypePath);
+                if (docType.toUpperCase() === "MARKSHEETS") {
+                  // Marksheets have semester subfolders
+                  const semesterDirs = await fs.readdir(docTypePath);
 
-            for (const semDir of semesterDirs) {
-              const semPath = path.join(docTypePath, semDir);
-              if (!(await dirExists(semPath))) continue;
+                  const semesterResults = await Promise.all(
+                    semesterDirs.map(async (semDir): Promise<ScanDoc[]> => {
+                      const semPath = path.join(docTypePath, semDir);
+                      if (!(await dirExists(semPath))) return [];
 
-              const semester = parseInt(semDir);
-              if (isNaN(semester)) continue;
+                      const semester = parseInt(semDir);
+                      if (isNaN(semester)) return [];
 
-              // Check for student file
-              const filePath = path.join(semPath, `${rollNumber}.pdf`);
-              if (await fileExists(filePath)) {
-                docsArr.push({
-                  filePath,
-                  semester,
-                  year,
-                  type: "MARKSHEET",
-                  framework: fw,
-                });
-              }
-            }
-          } else {
-            // Other document types don't have semester folders
-            const filePath = path.join(docTypePath, `${rollNumber}.pdf`);
-            if (await fileExists(filePath)) {
-              docsArr.push({
-                filePath,
-                semester: null,
-                year,
-                type: docType.replace("-", " "),
-                framework: fw,
-              });
-            }
-          }
-        }
+                      // Check for student file
+                      const filePath = path.join(semPath, `${rollNumber}.pdf`);
+                      if (await fileExists(filePath)) {
+                        return [
+                          {
+                            filePath,
+                            semester,
+                            year,
+                            type: "MARKSHEET",
+                            framework: fw,
+                          },
+                        ];
+                      }
+                      return [];
+                    }),
+                  );
+                  return semesterResults.flat();
+                } else {
+                  // Other document types don't have semester folders
+                  const filePath = path.join(docTypePath, `${rollNumber}.pdf`);
+                  if (await fileExists(filePath)) {
+                    return [
+                      {
+                        filePath,
+                        semester: null,
+                        year,
+                        type: docType.replace("-", " "),
+                        framework: fw,
+                      },
+                    ];
+                  }
+                  return [];
+                }
+              }),
+            );
+            return docTypeResults.flat();
+          }),
+        );
+        return yearResults.flat();
+      } catch (error) {
+        console.error(`Error scanning ${fw}/${stream}:`, error);
+        return [];
       }
-    } catch (error) {
-      console.error(`Error scanning ${fw}/${stream}:`, error);
-    }
-  }
+    }),
+  );
 
-  return docsArr;
+  return frameworkResults.flat();
 }
 
 // Utility function to check if a file exists
@@ -132,6 +151,21 @@ export async function getFile(filePath: string) {
   } catch (error) {
     console.log(error);
     // throw new Error("File not found or unreadable.");
+    return null;
+  }
+}
+
+// Streaming variant of getFile: avoids buffering the whole file in memory
+// before sending it to the client. Returns null under the same conditions
+// getFile would (missing/unreadable file), so callers can preserve the
+// existing 404 behavior.
+export async function getFileStream(filePath: string) {
+  try {
+    const stats = await fs.stat(filePath);
+    if (!stats.isFile()) return null;
+    return { stream: createReadStream(filePath), size: stats.size };
+  } catch (error) {
+    console.log(error);
     return null;
   }
 }

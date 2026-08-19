@@ -16,6 +16,11 @@ import {
 } from "@/lib/services/board-university.service";
 import { BoardUniversityDto } from "@/types/admissions";
 import { createSubject } from "@/lib/services/academic-subject.service";
+import { createTtlCache } from "@/lib/utils/ttl-cache";
+
+// See @/lib/utils/ttl-cache for scope/limitations (60s, per-instance).
+// Keyed by the `disabled` filter since it changes the result set.
+const listCache = createTtlCache<unknown>(60_000);
 
 export async function GET(request: Request) {
   try {
@@ -33,9 +38,16 @@ export async function GET(request: Request) {
       return NextResponse.json(university);
     }
 
+    const cacheKey = `disabled:${disabled ?? "null"}`;
+    const cached = listCache.get(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+
     const universities = await getAllBoardUniversities(
       disabled === null ? undefined : disabled === "true",
     );
+    listCache.set(cacheKey, universities);
     return NextResponse.json(universities);
   } catch (error) {
     console.error("Error fetching board universities:", error);
@@ -50,6 +62,7 @@ export async function POST(request: Request) {
     console.log("in board-university post route: ", body);
     const result = await createBoardUniversity(body);
 
+    listCache.clear();
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error creating board university:", error);
@@ -75,6 +88,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Board/University not found" }, { status: 404 });
     }
 
+    listCache.clear();
     return NextResponse.json(updatedUniversity);
   } catch (error) {
     console.error("Error updating board university:", error);
@@ -97,6 +111,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Board/University not found" }, { status: 404 });
     }
 
+    listCache.clear();
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error toggling board university status:", error);

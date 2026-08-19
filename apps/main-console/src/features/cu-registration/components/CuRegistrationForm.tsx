@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -139,18 +139,12 @@ type StudentSelectionsResponse = {
 
 export default function CuRegistrationForm({ studentId, studentData }: CuRegistrationFormProps) {
   const [activeTab, setActiveTab] = useState("personal");
-  console.log("test");
   // Check if student is in BCOM program (for MDC display logic)
   const isBcomProgram = studentData?.programCourse?.course?.name
     ?.normalize("NFKD")
     .replace(/[^A-Za-z]/g, "")
     .toUpperCase()
     .startsWith("BCOM");
-
-  // Debug: Track activeTab changes
-  React.useEffect(() => {
-    console.info("[CU-REG MAIN-CONSOLE] activeTab changed to:", activeTab);
-  }, [activeTab]);
 
   const [correctionFlags, setCorrectionFlags] = useState<CorrectionFlags>({
     gender: false,
@@ -195,14 +189,6 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
   // Correction request status
   const [correctionRequestStatus, setCorrectionRequestStatus] =
     useState<CorrectionRequestStatus | null>(null);
-
-  // Debug: Track correction request status changes
-  React.useEffect(() => {
-    console.info(
-      "[CU-REG MAIN-CONSOLE] correctionRequestStatus changed to:",
-      correctionRequestStatus,
-    );
-  }, [correctionRequestStatus]);
 
   // File upload states for each document (like student console - store files, upload on declaration)
   const [documents, setDocuments] = useState<Record<string, File | null>>({});
@@ -290,6 +276,12 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
   const [uploadedDocuments, setUploadedDocuments] = useState<Array<Record<string, unknown>>>([]);
   const [docPreviewUrls, setDocPreviewUrls] = useState<Record<number, string>>({});
+  // Doc ids whose preview <img> already failed once and got a re-fetch. A second
+  // failure must NOT re-fetch again — otherwise a genuinely broken/missing image
+  // loops forever (onError -> new signed URL -> setState -> full re-render ->
+  // onError -> ...), freezing the whole form. After one retry we just show the
+  // "Load" fallback. A missing image must never hamper the rest of the UI.
+  const docPreviewRetried = useRef<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
 
   // Helper: format Aadhaar number to 4-4-4 format
@@ -1101,7 +1093,6 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
       try {
         setLoading(true);
-        console.info(`[CU-REG MAIN-CONSOLE] Fetching data for student: ${studentId}`);
 
         // Fire core requests in parallel for speed
         const profilePromise: Promise<ProfileInfo | null> = studentData.userId
@@ -1113,7 +1104,6 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
         const correctionReqPromise = getStudentCuCorrectionRequests(studentId)
           .then((data) => {
-            console.log("correctionReqPromise data", data);
             return data || ([] as Array<Record<string, unknown>>);
           })
           .catch((e) => {
@@ -1140,7 +1130,6 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
         ]);
 
         const existingRequest = (requests as Array<Record<string, unknown>>)?.[0] || null;
-        console.log("existingRequest", existingRequest);
 
         if (existingRequest) {
           const ex = existingRequest as Record<string, unknown>;
@@ -1149,7 +1138,6 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
             typeof v === "number" ? v : typeof v === "string" ? Number(v) : undefined;
           const getStr = (v: unknown): string | undefined =>
             typeof v === "string" ? v : undefined;
-          console.info(`[CU-REG MAIN-CONSOLE] Found correction request:`, existingRequest);
 
           // Update correction flags
           setCorrectionFlags({
@@ -1386,82 +1374,40 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
           setEditableData((prev) => ({ ...prev, ...newData }));
 
-          // Load states for both residential and mailing addresses
+          // Load residential + mailing address dropdowns. Every id (country,
+          // state) is already known from the profile above, so the six lookups
+          // are independent — fire them all in parallel instead of a sequential
+          // states->cities->districts chain per section. (Verbose array-dump
+          // logs removed: printing the ~400-item district/city arrays to the
+          // console was a large dev-only cost.)
           const loadAddressData = async () => {
-            try {
-              // Load states for residential address
-              if (resCountryId) {
-                console.info(
-                  "[CU-REG MAIN-CONSOLE] Loading states for residential country:",
-                  resCountryId,
-                );
-                const resStatesData = await getStatesByCountry(parseInt(resCountryId));
-                setResidentialStates(resStatesData);
-                console.info("[CU-REG MAIN-CONSOLE] Loaded residential states:", resStatesData);
-
-                // Load cities for residential state
-                if (resStateId) {
-                  console.info(
-                    "[CU-REG MAIN-CONSOLE] Loading cities for residential state:",
-                    resStateId,
-                  );
-                  const resCitiesData = await getCitiesByState(parseInt(resStateId));
-                  setResidentialCities(resCitiesData);
-                  console.info("[CU-REG MAIN-CONSOLE] Loaded residential cities:", resCitiesData);
-
-                  // Load districts for residential state
-                  try {
-                    const resDistrictsData = await getDistrictsByState(parseInt(resStateId));
-                    setResidentialDistricts(resDistrictsData);
-                    console.info(
-                      "[CU-REG MAIN-CONSOLE] Loaded residential districts:",
-                      resDistrictsData,
-                    );
-                  } catch (error) {
-                    console.error(
-                      "[CU-REG MAIN-CONSOLE] Error loading residential districts:",
-                      error,
-                    );
-                  }
-                }
-              }
-
-              // Load states for mailing address
-              if (mailCountryId) {
-                console.info(
-                  "[CU-REG MAIN-CONSOLE] Loading states for mailing country:",
-                  mailCountryId,
-                );
-                const mailStatesData = await getStatesByCountry(parseInt(mailCountryId));
-                setMailingStates(mailStatesData);
-                console.info("[CU-REG MAIN-CONSOLE] Loaded mailing states:", mailStatesData);
-
-                // Load cities for mailing state
-                if (mailStateId) {
-                  console.info(
-                    "[CU-REG MAIN-CONSOLE] Loading cities for mailing state:",
-                    mailStateId,
-                  );
-                  const mailCitiesData = await getCitiesByState(parseInt(mailStateId));
-                  setMailingCities(mailCitiesData);
-                  console.info("[CU-REG MAIN-CONSOLE] Loaded mailing cities:", mailCitiesData);
-
-                  // Load districts for mailing state
-                  try {
-                    const mailDistrictsData = await getDistrictsByState(parseInt(mailStateId));
-                    setMailingDistricts(mailDistrictsData);
-                    console.info(
-                      "[CU-REG MAIN-CONSOLE] Loaded mailing districts:",
-                      mailDistrictsData,
-                    );
-                  } catch (error) {
-                    console.error("[CU-REG MAIN-CONSOLE] Error loading mailing districts:", error);
-                  }
-                }
-              }
-            } catch (error) {
-              console.error("[CU-REG MAIN-CONSOLE] Error loading address data:", error);
-            }
+            const settle = <T,>(p: Promise<T>, fallback: T): Promise<T> => p.catch(() => fallback);
+            const numOrNull = (v?: string | null) => (v ? parseInt(v) : null);
+            const resCountry = numOrNull(resCountryId);
+            const resState = numOrNull(resStateId);
+            const mailCountry = numOrNull(mailCountryId);
+            const mailState = numOrNull(mailStateId);
+            const [
+              resStatesData,
+              resCitiesData,
+              resDistrictsData,
+              mailStatesData,
+              mailCitiesData,
+              mailDistrictsData,
+            ] = await Promise.all([
+              resCountry ? settle(getStatesByCountry(resCountry), []) : Promise.resolve(null),
+              resState ? settle(getCitiesByState(resState), []) : Promise.resolve(null),
+              resState ? settle(getDistrictsByState(resState), []) : Promise.resolve(null),
+              mailCountry ? settle(getStatesByCountry(mailCountry), []) : Promise.resolve(null),
+              mailState ? settle(getCitiesByState(mailState), []) : Promise.resolve(null),
+              mailState ? settle(getDistrictsByState(mailState), []) : Promise.resolve(null),
+            ]);
+            if (resStatesData) setResidentialStates(resStatesData);
+            if (resCitiesData) setResidentialCities(resCitiesData);
+            if (resDistrictsData) setResidentialDistricts(resDistrictsData);
+            if (mailStatesData) setMailingStates(mailStatesData);
+            if (mailCitiesData) setMailingCities(mailCitiesData);
+            if (mailDistrictsData) setMailingDistricts(mailDistrictsData);
           };
 
           loadAddressData();
@@ -1647,9 +1593,6 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               });
             });
 
-            console.info(`[CU-REG MAIN-CONSOLE] Processed subjects data:`, next);
-            console.info(`[CU-REG MAIN-CONSOLE] Processed mandatory subjects:`, mandatoryNext);
-
             setSubjectsData(next);
             setMandatorySubjects(mandatoryNext);
           } catch (error) {
@@ -1690,21 +1633,12 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
             return;
           }
           try {
-            console.info(`[CU-REG MAIN-CONSOLE] Fetching preview URL for document ${docId}`);
             const url = await getCuRegistrationDocumentSignedUrl(docId);
             if (url && url !== "undefined" && url !== "null") {
-              // Add cache-busting parameter to force browser refresh
-              const cacheBustedUrl = url + (url.includes("?") ? "&" : "?") + `t=${Date.now()}`;
-              console.info(
-                `[CU-REG MAIN-CONSOLE] Got preview URL for document ${docId}:`,
-                cacheBustedUrl,
-              );
-              setDocPreviewUrls((prev) => ({ ...prev, [docId]: cacheBustedUrl }));
-            } else {
-              console.error(
-                `[CU-REG MAIN-CONSOLE] Invalid URL received for document ${docId}:`,
-                url,
-              );
+              // Store the signed URL as-is. Do NOT append a cache-buster: S3
+              // presigned URLs sign their query string, so an extra `?t=...`
+              // invalidates the signature and makes the image fail to load.
+              setDocPreviewUrls((prev) => ({ ...prev, [docId]: url }));
             }
           } catch (error) {
             console.error(
@@ -1739,10 +1673,6 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
     return isMA || isMCOM;
   })();
-
-  console.log("[CU-REG MAIN-CONSOLE] Programme course name:", studentData?.programCourse?.name);
-  console.log("[CU-REG MAIN-CONSOLE] Is MA or MCOM program:", isMaOrMcomProgram);
-  console.log("[CU-REG MAIN-CONSOLE] Is BCOM program:", isBcomProgram);
 
   if (loading) {
     return (
@@ -2842,11 +2772,6 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                               },
                             );
 
-                            console.info(
-                              `[CU-REG MAIN-CONSOLE] Found existing doc for ${docType.name}:`,
-                              existingDoc,
-                            );
-
                             const fileSizeKB = existingDoc?.fileSize
                               ? ((existingDoc.fileSize as number) / 1024).toFixed(1)
                               : "N/A";
@@ -2867,11 +2792,24 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                               alt="Preview"
                                               className="w-full h-full object-cover"
                                               onError={async () => {
+                                                const id = existingDoc.id as number;
+                                                // Never loop on a broken image. If we've already
+                                                // retried this doc once, drop its preview URL so the
+                                                // "Load" fallback shows — the rest of the form is
+                                                // unaffected.
+                                                if (docPreviewRetried.current.has(id)) {
+                                                  setDocPreviewUrls((prev) => {
+                                                    if (!(id in prev)) return prev;
+                                                    const next = { ...prev };
+                                                    delete next[id];
+                                                    return next;
+                                                  });
+                                                  return;
+                                                }
+                                                docPreviewRetried.current.add(id);
                                                 try {
                                                   const url =
-                                                    await getCuRegistrationDocumentSignedUrl(
-                                                      existingDoc.id as number,
-                                                    );
+                                                    await getCuRegistrationDocumentSignedUrl(id);
                                                   if (
                                                     url &&
                                                     url !== "undefined" &&
@@ -2879,7 +2817,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                                   ) {
                                                     setDocPreviewUrls((prev) => ({
                                                       ...prev,
-                                                      [existingDoc.id as number]: url,
+                                                      [id]: url,
                                                     }));
                                                   }
                                                 } catch (error) {

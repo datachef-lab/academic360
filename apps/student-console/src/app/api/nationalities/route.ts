@@ -7,6 +7,7 @@ import { nationality } from "@/db/schema";
 import { eq, ilike } from "drizzle-orm";
 import { z } from "zod";
 import { dbPostgres } from "@/db/index";
+import { createTtlCache } from "@/lib/utils/ttl-cache";
 
 const nationalitySchema = z.object({
   id: z.number().optional(),
@@ -15,10 +16,19 @@ const nationalitySchema = z.object({
   code: z.number().optional(),
 });
 
+// See @/lib/utils/ttl-cache for scope/limitations (60s, per-instance).
+const listCache = createTtlCache<{ success: true; data: unknown }>(60_000);
+
 export async function GET() {
   try {
+    const cached = listCache.get();
+    if (cached) {
+      return NextResponse.json(cached);
+    }
     const allNationalities = await dbPostgres.select().from(nationality);
-    return NextResponse.json({ success: true, data: allNationalities });
+    const payload = { success: true as const, data: allNationalities };
+    listCache.set(undefined, payload);
+    return NextResponse.json(payload);
   } catch (error: any) {
     console.error("Error fetching nationalities:", error);
     return NextResponse.json(
@@ -52,6 +62,7 @@ export async function POST(req: Request) {
       })
       .returning();
 
+    listCache.clear();
     return NextResponse.json({ success: true, data: newNationality });
   } catch (error: any) {
     console.error("Error creating nationality:", error);
@@ -92,6 +103,7 @@ export async function PUT(req: Request) {
       );
     }
 
+    listCache.clear();
     return NextResponse.json({ success: true, data: updatedNationality });
   } catch (error: any) {
     console.error("Error updating nationality:", error);
@@ -123,6 +135,7 @@ export async function DELETE(req: Request) {
       );
     }
 
+    listCache.clear();
     return NextResponse.json({ success: true, data: deletedNationality });
   } catch (error: any) {
     console.error("Error deleting nationality:", error);

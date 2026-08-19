@@ -1866,6 +1866,10 @@ export default function LibraryDashboard() {
     queryKey: ["library-dashboard-stats", applied],
     queryFn: async () => (await getLibraryDashboardStats(applied)).payload!,
     keepPreviousData: true,
+    // ~30 aggregate queries per compute server-side; remounts/refocus within a
+    // minute reuse the cache. Library writes still refetch immediately — the
+    // library:master:updated socket invalidation overrides staleTime.
+    staleTime: 60_000,
   });
 
   // Second stats fetch for the Overview trend charts, padded to ≥7 days.
@@ -1877,6 +1881,7 @@ export default function LibraryDashboard() {
     queryKey: ["library-dashboard-stats", chartApplied],
     queryFn: async () => (await getLibraryDashboardStats(chartApplied)).payload!,
     keepPreviousData: true,
+    staleTime: 60_000,
   });
 
   const [loadBanner, setLoadBanner] = useState<null | {

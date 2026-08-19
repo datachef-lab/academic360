@@ -1,8 +1,9 @@
 import ExcelJS from "exceljs";
+import { Writable } from "node:stream";
 import type { CareerProgressionFormDto } from "@repo/db/dtos/academics";
 import {
-  applyStandardExcelReportTableStyling,
-  autosizeExcelSheetColumns,
+  styleStreamedBodyRow,
+  styleStreamedHeaderRow,
 } from "@/utils/excel-report-styling.js";
 import { findAllCertificateFieldMasters } from "./certificate-field-master.service.js";
 import { findAllCertificateMasters } from "./certificate-master.service.js";
@@ -199,12 +200,67 @@ function buildDataRows(
   });
 }
 
+/**
+ * Pure filename builder — split out of `exportCareerProgressionFormsExcel`
+ * so the controller can set `Content-Disposition` BEFORE the streaming
+ * write starts (the old buffered version could set headers after the
+ * buffer was built; a stream can't — headers must go out before the first
+ * byte of body).
+ */
+export function careerProgressionExportFileName(
+  academicYearId?: number,
+): string {
+  const datePart = new Date().toISOString().split("T")[0];
+  const yearPart =
+    academicYearId != null ? `year-${academicYearId}` : "all-years";
+  return `career-progression-forms_${yearPart}_${datePart}.xlsx`;
+}
+
+/** Mirrors `autosizeExcelSheetColumns`'s heuristic, but computed directly off
+ * the in-memory header/data arrays (all string values here) instead of
+ * reading back already-committed streamed cells, which isn't possible with
+ * `ExcelJS.stream.xlsx.WorkbookWriter` once a row is committed. Same
+ * min/max/padding constants as the call this replaces, so widths are
+ * unchanged. */
+function computeColumnWidths(
+  headers: readonly string[],
+  dataRows: readonly string[][],
+  minWidth: number,
+  maxWidth: number,
+): number[] {
+  const widths = headers.map(() => minWidth);
+  const allRows: readonly string[][] = [headers as string[], ...dataRows];
+  for (const row of allRows) {
+    for (let c = 0; c < headers.length; c++) {
+      const len = row[c] == null ? 0 : String(row[c]).length;
+      widths[c] = Math.max(widths[c], Math.min(len + 2, maxWidth));
+    }
+  }
+  return widths;
+}
+
+/**
+ * Streams the career-progression export directly to `res`. The submission
+ * fetch (`findAllCareerProgressionForms`) and DTO shaping are unchanged —
+ * that pipeline lives in career-progression-form.service.ts and does its
+ * own per-form enrichment queries; chunking it is out of scope here (see
+ * PR notes). What changed is that the workbook is no longer built fully in
+ * memory and serialized to a `Buffer` before anything is sent: rows are
+ * written straight to the HTTP response as they're produced, so the
+ * (already in-memory) row data isn't ALSO held as a fully zipped/compressed
+ * buffer at the same time.
+ */
 export async function exportCareerProgressionFormsExcel(params: {
   academicYearId?: number;
   filters?: ReportExportFilters;
   onProgress?: (pct: number, message: string) => void;
+  // A plain `NodeJS.WritableStream` (not Express's `Response`) — this is
+  // all ExcelJS's `WorkbookWriter` needs, and it lets the report-job queue
+  // in reports/report-generators.ts reuse this streaming path via a
+  // `PassThrough` to still get a `Buffer` back for its job-storage
+  // contract.
+  res: Writable;
 }): Promise<{
-  buffer: Buffer;
   fileName: string;
   rowCount: number;
   fieldColumnCount: number;
@@ -225,36 +281,35 @@ export async function exportCareerProgressionFormsExcel(params: {
 
   report(75, "Writing worksheet…");
 
-  const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet("Career progression");
+  const widths = computeColumnWidths(headers, dataRows, 10, 55);
 
-  sheet.addRow(headers);
+  const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+    stream: params.res,
+    useStyles: true,
+    useSharedStrings: true,
+  });
+  const sheet = workbook.addWorksheet("Career progression", {
+    views: [{ state: "frozen", ySplit: 1 }],
+  });
+  sheet.columns = headers.map((header, i) => ({
+    header,
+    key: String(i),
+    width: widths[i],
+  }));
+  styleStreamedHeaderRow(sheet.getRow(1));
+  sheet.getRow(1).commit();
+
   for (const row of dataRows) {
-    sheet.addRow(row);
+    const dataRow = sheet.addRow(row);
+    styleStreamedBodyRow(dataRow);
+    dataRow.commit();
   }
 
-  if (sheet.rowCount > 0) {
-    applyStandardExcelReportTableStyling(sheet);
-    autosizeExcelSheetColumns(sheet, headers.length, {
-      minWidth: 10,
-      maxWidth: 55,
-    });
-  }
-
-  const excelBuffer = await workbook.xlsx.writeBuffer();
-  const buffer = Buffer.isBuffer(excelBuffer)
-    ? excelBuffer
-    : Buffer.from(excelBuffer);
-
-  const datePart = new Date().toISOString().split("T")[0];
-  const yearPart =
-    params.academicYearId != null
-      ? `year-${params.academicYearId}`
-      : "all-years";
+  sheet.commit();
+  await workbook.commit();
 
   return {
-    buffer,
-    fileName: `career-progression-forms_${yearPart}_${datePart}.xlsx`,
+    fileName: careerProgressionExportFileName(params.academicYearId),
     rowCount: dataRows.length,
     fieldColumnCount: fieldColumns.length,
   };

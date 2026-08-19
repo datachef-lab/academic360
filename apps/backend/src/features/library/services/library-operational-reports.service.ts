@@ -10,6 +10,7 @@
  */
 
 import { db } from "@/db/index.js";
+import { getCachedSnapshot } from "@/services/snapshot-cache.js";
 import {
   and,
   count,
@@ -77,6 +78,17 @@ export type OverdueRow = {
 export async function getOverdueList(
   filters: ReportFilters,
 ): Promise<OverdueRow[]> {
+  return getCachedSnapshot(
+    "library:reports",
+    `getOverdueList:${JSON.stringify(filters)}`,
+    60,
+    () => getOverdueListCompute(filters),
+  );
+}
+
+async function getOverdueListCompute(
+  filters: ReportFilters,
+): Promise<OverdueRow[]> {
   const now = new Date();
   const where = compose(
     eq(bookCirculationModel.isReturned, false),
@@ -140,6 +152,17 @@ export type FinesOutstandingPayload = {
 };
 
 export async function getFinesOutstanding(
+  filters: ReportFilters,
+): Promise<FinesOutstandingPayload> {
+  return getCachedSnapshot(
+    "library:reports",
+    `getFinesOutstanding:${JSON.stringify(filters)}`,
+    60,
+    () => getFinesOutstandingCompute(filters),
+  );
+}
+
+async function getFinesOutstandingCompute(
   filters: ReportFilters,
 ): Promise<FinesOutstandingPayload> {
   const where = compose(
@@ -233,6 +256,17 @@ export type FinesCollectedPayload = {
 export async function getFinesCollected(
   filters: ReportFilters,
 ): Promise<FinesCollectedPayload> {
+  return getCachedSnapshot(
+    "library:reports",
+    `getFinesCollected:${JSON.stringify(filters)}`,
+    60,
+    () => getFinesCollectedCompute(filters),
+  );
+}
+
+async function getFinesCollectedCompute(
+  filters: ReportFilters,
+): Promise<FinesCollectedPayload> {
   const where = compose(
     eq(paymentModel.context, "LIBRARY_FINE"),
     eq(paymentModel.status, "SUCCESS"),
@@ -275,6 +309,17 @@ export type StockSummaryRow = {
 };
 
 export async function getStockSummary(
+  filters: ReportFilters,
+): Promise<StockSummaryRow[]> {
+  return getCachedSnapshot(
+    "library:reports",
+    `getStockSummary:${JSON.stringify(filters)}`,
+    60,
+    () => getStockSummaryCompute(filters),
+  );
+}
+
+async function getStockSummaryCompute(
   filters: ReportFilters,
 ): Promise<StockSummaryRow[]> {
   const where = compose(
@@ -321,6 +366,18 @@ export type HighDemandRow = {
 };
 
 export async function getHighDemandTitles(
+  filters: ReportFilters,
+  limit: number = 25,
+): Promise<HighDemandRow[]> {
+  return getCachedSnapshot(
+    "library:reports",
+    `getHighDemandTitles:${JSON.stringify(filters)}:${limit}`,
+    60,
+    () => getHighDemandTitlesCompute(filters, limit),
+  );
+}
+
+async function getHighDemandTitlesCompute(
   filters: ReportFilters,
   limit: number = 25,
 ): Promise<HighDemandRow[]> {

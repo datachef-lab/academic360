@@ -2189,118 +2189,116 @@ async function isSubjectSelectionRequired(studentId: number): Promise<boolean> {
 async function modelToDto(
   request: CuRegistrationCorrectionRequest,
 ): Promise<CuRegistrationCorrectionRequestDto> {
-  // Get student details with user info and program course
-  const [studentData] = await db
-    .select({
-      id: studentModel.id,
-      legacyStudentId: studentModel.legacyStudentId,
-      userId: studentModel.userId,
-      applicationId: studentModel.applicationId,
-      admissionCourseDetailsId: studentModel.admissionCourseDetailsId,
-      programCourseId: studentModel.programCourseId,
-      specializationId: studentModel.specializationId,
-      uid: studentModel.uid,
-      oldUid: studentModel.oldUid,
-      rfidNumber: studentModel.rfidNumber,
-      cuFormNumber: studentModel.cuFormNumber,
-      registrationNumber: studentModel.registrationNumber,
-      rollNumber: studentModel.rollNumber,
-      classRollNumber: studentModel.classRollNumber,
-      apaarId: studentModel.apaarId,
+  // These 4 lookups are independent of one another (student/user/course info,
+  // physical-marker user, last-updated-by user, documents) — run concurrently.
+  const [studentRows, physicalMarkerRows, lastUpdatedByRows, documents] =
+    await Promise.all([
+      db
+        .select({
+          id: studentModel.id,
+          legacyStudentId: studentModel.legacyStudentId,
+          userId: studentModel.userId,
+          applicationId: studentModel.applicationId,
+          admissionCourseDetailsId: studentModel.admissionCourseDetailsId,
+          programCourseId: studentModel.programCourseId,
+          specializationId: studentModel.specializationId,
+          uid: studentModel.uid,
+          oldUid: studentModel.oldUid,
+          rfidNumber: studentModel.rfidNumber,
+          cuFormNumber: studentModel.cuFormNumber,
+          registrationNumber: studentModel.registrationNumber,
+          rollNumber: studentModel.rollNumber,
+          classRollNumber: studentModel.classRollNumber,
+          apaarId: studentModel.apaarId,
 
-      checkRepeat: studentModel.checkRepeat,
-      community: studentModel.community,
-      handicapped: studentModel.handicapped,
-      lastPassedYear: studentModel.lastPassedYear,
-      notes: studentModel.notes,
-      active: studentModel.active,
-      alumni: studentModel.alumni,
-      leavingDate: studentModel.leavingDate,
-      leavingReason: studentModel.leavingReason,
-      createdAt: studentModel.createdAt,
-      updatedAt: studentModel.updatedAt,
-      programCourseName: programCourseModel.name,
-      user: {
-        id: userModel.id,
-        name: userModel.name,
-        email: userModel.email,
-        phone: userModel.phone,
-        whatsappNumber: userModel.whatsappNumber,
-        image: userModel.image,
-        type: userModel.type,
-        isSuspended: userModel.isSuspended,
-        suspendedReason: userModel.suspendedReason,
-        suspendedTillDate: userModel.suspendedTillDate,
-        isActive: userModel.isActive,
-        sendStagingNotifications: userModel.sendStagingNotifications,
-        createdAt: userModel.createdAt,
-        updatedAt: userModel.updatedAt,
-      },
-    })
-    .from(studentModel)
-    .leftJoin(userModel, eq(studentModel.userId, userModel.id))
-    .leftJoin(
-      programCourseModel,
-      eq(studentModel.programCourseId, programCourseModel.id),
-    )
-    .where(eq(studentModel.id, request.studentId));
+          checkRepeat: studentModel.checkRepeat,
+          community: studentModel.community,
+          handicapped: studentModel.handicapped,
+          lastPassedYear: studentModel.lastPassedYear,
+          notes: studentModel.notes,
+          active: studentModel.active,
+          alumni: studentModel.alumni,
+          leavingDate: studentModel.leavingDate,
+          leavingReason: studentModel.leavingReason,
+          createdAt: studentModel.createdAt,
+          updatedAt: studentModel.updatedAt,
+          programCourseName: programCourseModel.name,
+          user: {
+            id: userModel.id,
+            name: userModel.name,
+            email: userModel.email,
+            phone: userModel.phone,
+            whatsappNumber: userModel.whatsappNumber,
+            image: userModel.image,
+            type: userModel.type,
+            isSuspended: userModel.isSuspended,
+            suspendedReason: userModel.suspendedReason,
+            suspendedTillDate: userModel.suspendedTillDate,
+            isActive: userModel.isActive,
+            sendStagingNotifications: userModel.sendStagingNotifications,
+            createdAt: userModel.createdAt,
+            updatedAt: userModel.updatedAt,
+          },
+        })
+        .from(studentModel)
+        .leftJoin(userModel, eq(studentModel.userId, userModel.id))
+        .leftJoin(
+          programCourseModel,
+          eq(studentModel.programCourseId, programCourseModel.id),
+        )
+        .where(eq(studentModel.id, request.studentId)),
+      request.physicalRegistrationDoneBy
+        ? db
+            .select()
+            .from(userModel)
+            .where(eq(userModel.id, request.physicalRegistrationDoneBy))
+        : Promise.resolve([]),
+      request.lastUpdatedBy
+        ? db
+            .select()
+            .from(userModel)
+            .where(eq(userModel.id, request.lastUpdatedBy))
+        : Promise.resolve([]),
+      db
+        .select({
+          id: cuRegistrationDocumentUploadModel.id,
+          documentUrl: cuRegistrationDocumentUploadModel.documentUrl,
+          path: cuRegistrationDocumentUploadModel.path,
+          fileName: cuRegistrationDocumentUploadModel.fileName,
+          fileType: cuRegistrationDocumentUploadModel.fileType,
+          fileSize: cuRegistrationDocumentUploadModel.fileSize,
+          remarks: cuRegistrationDocumentUploadModel.remarks,
+          createdAt: cuRegistrationDocumentUploadModel.createdAt,
+          updatedAt: cuRegistrationDocumentUploadModel.updatedAt,
+          document: {
+            id: documentTypeModel.id,
+            code: documentTypeModel.code,
+            name: documentTypeModel.name,
+            description: documentTypeModel.description,
+            sequence: documentTypeModel.sequence,
+            isActive: documentTypeModel.isActive,
+            bgColor: documentTypeModel.bgColor,
+            textColor: documentTypeModel.textColor,
+            createdAt: documentTypeModel.createdAt,
+            updatedAt: documentTypeModel.updatedAt,
+          },
+        })
+        .from(cuRegistrationDocumentUploadModel)
+        .leftJoin(
+          documentTypeModel,
+          eq(cuRegistrationDocumentUploadModel.documentId, documentTypeModel.id),
+        )
+        .where(
+          eq(
+            cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
+            request.id!,
+          ),
+        ),
+    ]);
 
-  // Get physical registration marked by details
-  let physicalRegistrationDoneBy = null;
-  if (request.physicalRegistrationDoneBy) {
-    const [marker] = await db
-      .select()
-      .from(userModel)
-      .where(eq(userModel.id, request.physicalRegistrationDoneBy));
-    physicalRegistrationDoneBy = marker;
-  }
-
-  // Get last updated by details
-  let lastUpdatedBy = null;
-  if (request.lastUpdatedBy) {
-    const [updater] = await db
-      .select()
-      .from(userModel)
-      .where(eq(userModel.id, request.lastUpdatedBy));
-    lastUpdatedBy = updater;
-  }
-
-  // Get documents
-  const documents = await db
-    .select({
-      id: cuRegistrationDocumentUploadModel.id,
-      documentUrl: cuRegistrationDocumentUploadModel.documentUrl,
-      path: cuRegistrationDocumentUploadModel.path,
-      fileName: cuRegistrationDocumentUploadModel.fileName,
-      fileType: cuRegistrationDocumentUploadModel.fileType,
-      fileSize: cuRegistrationDocumentUploadModel.fileSize,
-      remarks: cuRegistrationDocumentUploadModel.remarks,
-      createdAt: cuRegistrationDocumentUploadModel.createdAt,
-      updatedAt: cuRegistrationDocumentUploadModel.updatedAt,
-      document: {
-        id: documentTypeModel.id,
-        code: documentTypeModel.code,
-        name: documentTypeModel.name,
-        description: documentTypeModel.description,
-        sequence: documentTypeModel.sequence,
-        isActive: documentTypeModel.isActive,
-        bgColor: documentTypeModel.bgColor,
-        textColor: documentTypeModel.textColor,
-        createdAt: documentTypeModel.createdAt,
-        updatedAt: documentTypeModel.updatedAt,
-      },
-    })
-    .from(cuRegistrationDocumentUploadModel)
-    .leftJoin(
-      documentTypeModel,
-      eq(cuRegistrationDocumentUploadModel.documentId, documentTypeModel.id),
-    )
-    .where(
-      eq(
-        cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
-        request.id!,
-      ),
-    );
+  const studentData = studentRows[0];
+  const physicalRegistrationDoneBy = physicalMarkerRows[0] ?? null;
+  const lastUpdatedBy = lastUpdatedByRows[0] ?? null;
 
   return {
     id: request.id,

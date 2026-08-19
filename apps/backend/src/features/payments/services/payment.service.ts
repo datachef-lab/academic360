@@ -15,6 +15,7 @@ import { studentModel, userModel } from "@repo/db/schemas/models/user";
 import { issueFeeStudentMappingReceiptIfMissing } from "@/features/fees/services/fee-student-mapping.service.js";
 import { scheduleFeesDashboardBroadcast } from "@/features/fees/fees-dashboard.socket.js";
 import { onFeePaymentApplied } from "@/features/documents/services/fee-clearance.service.js";
+import { bumpAdmissionDashboardEpoch } from "@/features/admissions/services/admission-dashboard.service.js";
 import { applicationFormModel } from "@/features/admissions/models/application-form.model.js";
 import { and, eq, sql } from "drizzle-orm";
 import type {
@@ -840,6 +841,14 @@ export async function updatePaymentByOrderId(
         `[FEE] fee-clearance recompute failed for student ${studentIdForRecompute} after gateway SUCCESS: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
+  }
+
+  // A successful admission-application-fee payment flips the application form's
+  // status (above), which the admission dashboard counts — invalidate its
+  // cached snapshot so a reload reflects it. Guarded so ordinary fee payments
+  // don't bump it needlessly.
+  if (updatedPayment?.context === "ADMISSION_APPLICATION_FEE") {
+    bumpAdmissionDashboardEpoch();
   }
 
   return updatedPayment;

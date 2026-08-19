@@ -107,3 +107,16 @@ export function parseRealtimeTrackerFilters(
     dateTo: parseOptionalString(q.dateTo),
   };
 }
+
+// Stable 16-hex key of the canonical filters. Shared by the socket room names
+// AND the snapshot-cache variant keys so a pushed recompute pre-warms exactly
+// the entry that viewer refetches will hit.
+import { createHash } from "crypto";
+export function stableRealtimeTrackerFilterKey(
+  filters: RealtimeTrackerFilters,
+): string {
+  return createHash("sha256")
+    .update(JSON.stringify(canonicalRealtimeTrackerFilters(filters)))
+    .digest("hex")
+    .slice(0, 16);
+}

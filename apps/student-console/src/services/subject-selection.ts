@@ -114,7 +114,14 @@ export interface SaveSelectionsResponse {
   errors?: Array<{ field: string; message: string }>;
 }
 
-export async function fetchStudentSubjectSelections(
+// The admission-registration page loads a student's selections from two
+// independent effects (a completion check + the subject grid) that mount at the
+// same time, so they'd fire two identical requests. Share a single in-flight
+// request per studentId: concurrent callers get the same promise; the entry is
+// cleared once it settles, so a later call always fetches fresh (no staleness).
+const inFlightSelections = new Map<number, Promise<StudentSubjectSelectionApiResponse>>();
+
+async function fetchStudentSubjectSelectionsUncached(
   studentId: number,
 ): Promise<StudentSubjectSelectionApiResponse> {
   const res = await api.get<ApiResponse<StudentSubjectSelectionApiResponse>>(
@@ -135,6 +142,21 @@ export async function fetchStudentSubjectSelections(
     };
   }
   return payload as StudentSubjectSelectionApiResponse;
+}
+
+export async function fetchStudentSubjectSelections(
+  studentId: number,
+): Promise<StudentSubjectSelectionApiResponse> {
+  const existing = inFlightSelections.get(studentId);
+  if (existing) return existing;
+
+  const promise = fetchStudentSubjectSelectionsUncached(studentId);
+  inFlightSelections.set(studentId, promise);
+  try {
+    return await promise;
+  } finally {
+    inFlightSelections.delete(studentId);
+  }
 }
 
 // Fetch current active selections (flat DTO array)

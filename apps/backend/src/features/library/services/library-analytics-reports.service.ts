@@ -11,6 +11,7 @@
  */
 
 import { db } from "@/db/index.js";
+import { getCachedSnapshot } from "@/services/snapshot-cache.js";
 import { and, count, desc, eq, gte, lte, sql, SQL } from "drizzle-orm";
 import { bookCirculationModel } from "@repo/db/schemas/models/library/book-circulation.model.js";
 import { copyDetailsModel } from "@repo/db/schemas/models/library/copy-details.model.js";
@@ -93,6 +94,17 @@ export type FootfallPayload = {
 };
 
 export async function getFootfallReport(
+  filters: AnalyticsFilters,
+): Promise<FootfallPayload> {
+  return getCachedSnapshot(
+    "library:reports",
+    `getFootfallReport:${JSON.stringify(filters)}`,
+    60,
+    () => getFootfallReportCompute(filters),
+  );
+}
+
+async function getFootfallReportCompute(
   filters: AnalyticsFilters,
 ): Promise<FootfallPayload> {
   const where = compose(
@@ -182,6 +194,20 @@ export type HoldingsRow = {
 };
 
 export async function getHoldingsReport(
+  filters: AnalyticsFilters,
+  groupBy: HoldingsGroupBy,
+  pageOpt?: number,
+  pageSizeOpt?: number,
+): Promise<Paginated<HoldingsRow>> {
+  return getCachedSnapshot(
+    "library:reports",
+    `getHoldingsReport:${JSON.stringify(filters)}:${groupBy}:${pageOpt}:${pageSizeOpt}`,
+    60,
+    () => getHoldingsReportCompute(filters, groupBy, pageOpt, pageSizeOpt),
+  );
+}
+
+async function getHoldingsReportCompute(
   filters: AnalyticsFilters,
   groupBy: HoldingsGroupBy,
   pageOpt?: number,
@@ -289,6 +315,17 @@ export type AccessionGrowthRow = {
 export async function getAccessionGrowth(
   filters: AnalyticsFilters,
 ): Promise<AccessionGrowthRow[]> {
+  return getCachedSnapshot(
+    "library:reports",
+    `getAccessionGrowth:${JSON.stringify(filters)}`,
+    60,
+    () => getAccessionGrowthCompute(filters),
+  );
+}
+
+async function getAccessionGrowthCompute(
+  filters: AnalyticsFilters,
+): Promise<AccessionGrowthRow[]> {
   const where = compose(
     branchCond(filters.branchId, copyDetailsModel.branchId),
   );
@@ -327,6 +364,17 @@ export type CopiesDistributionRow = {
 };
 
 export async function getCopiesDistribution(
+  filters: AnalyticsFilters,
+): Promise<CopiesDistributionRow[]> {
+  return getCachedSnapshot(
+    "library:reports",
+    `getCopiesDistribution:${JSON.stringify(filters)}`,
+    60,
+    () => getCopiesDistributionCompute(filters),
+  );
+}
+
+async function getCopiesDistributionCompute(
   filters: AnalyticsFilters,
 ): Promise<CopiesDistributionRow[]> {
   const branchSql =
@@ -385,6 +433,18 @@ export type PopularBookRow = {
 };
 
 export async function getPopularBooks(
+  filters: AnalyticsFilters,
+  opts?: { itemCategoryId?: number; page?: number; pageSize?: number },
+): Promise<Paginated<PopularBookRow>> {
+  return getCachedSnapshot(
+    "library:reports",
+    `getPopularBooks:${JSON.stringify(filters)}:${JSON.stringify(opts ?? {})}`,
+    60,
+    () => getPopularBooksCompute(filters, opts),
+  );
+}
+
+async function getPopularBooksCompute(
   filters: AnalyticsFilters,
   opts?: { itemCategoryId?: number; page?: number; pageSize?: number },
 ): Promise<Paginated<PopularBookRow>> {
@@ -471,6 +531,20 @@ export type PublicationUsageRow = {
 };
 
 export async function getPublicationUsage(
+  filters: AnalyticsFilters,
+  dimension: PublicationDimension,
+  pageOpt?: number,
+  pageSizeOpt?: number,
+): Promise<Paginated<PublicationUsageRow>> {
+  return getCachedSnapshot(
+    "library:reports",
+    `getPublicationUsage:${JSON.stringify(filters)}:${dimension}:${pageOpt}:${pageSizeOpt}`,
+    60,
+    () => getPublicationUsageCompute(filters, dimension, pageOpt, pageSizeOpt),
+  );
+}
+
+async function getPublicationUsageCompute(
   filters: AnalyticsFilters,
   dimension: PublicationDimension,
   pageOpt?: number,
@@ -611,6 +685,20 @@ export type BatchUsageRow = {
 };
 
 export async function getBatchUsage(
+  filters: AnalyticsFilters,
+  metric: BatchUsageMetric,
+  pageOpt?: number,
+  pageSizeOpt?: number,
+): Promise<Paginated<BatchUsageRow>> {
+  return getCachedSnapshot(
+    "library:reports",
+    `getBatchUsage:${JSON.stringify(filters)}:${metric}:${pageOpt}:${pageSizeOpt}`,
+    60,
+    () => getBatchUsageCompute(filters, metric, pageOpt, pageSizeOpt),
+  );
+}
+
+async function getBatchUsageCompute(
   filters: AnalyticsFilters,
   metric: BatchUsageMetric,
   pageOpt?: number,

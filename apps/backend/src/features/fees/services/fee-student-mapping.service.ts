@@ -5,6 +5,11 @@ import {
   feeStructureModel,
   feeGroupPromotionMappingModel,
   feeGroupModel,
+  feeSlabModel,
+  boardResultStatusModel,
+  sectionModel,
+  religionModel,
+  categoryModel,
   paymentModel,
   studentModel,
   academicYearModel,
@@ -20,8 +25,12 @@ import {
   feeStudentReceiptNumberModel,
   promotionModel,
 } from "@repo/db/schemas";
-import { and, asc, eq, sql } from "drizzle-orm";
-import { FeeStudentMappingDto } from "@repo/db/dtos/fees";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import {
+  FeeStudentMappingDto,
+  FeeGroupPromotionMappingDto,
+} from "@repo/db/dtos/fees";
+import { PromotionDto } from "@repo/db/dtos/batches";
 import {
   withAdvisoryXactLock,
   isUniqueViolation,
@@ -31,8 +40,10 @@ import { onFeePaymentApplied } from "@/features/documents/services/fee-clearance
 import * as feeStructureService from "./fee-structure.service.js";
 import * as feeGroupPromotionMappingService from "./fee-group-promotion-mapping.service.js";
 import * as feeStructureInstallmentService from "./fee-structure-installment.service.js";
+import { feeStructureInstallmentModel } from "@repo/db/schemas/models/fees/fee-structure-installment.model.js";
 import * as feeHeadService from "./fee-head.service.js";
 import * as userService from "@/features/user/services/user.service.js";
+import * as programCourseService from "@/features/course-design/services/program-course.service.js";
 import { pdfGenerationService } from "@/services/pdf-generation.service.js";
 import {
   formatIndianNumber,
@@ -494,6 +505,489 @@ const nonDeprecatedPromotionMappingSql = sql`
   )
 `;
 
+type PromotionRow = typeof promotionModel.$inferSelect;
+
+/**
+ * Batch version of the promotion → PromotionDto conversion, mirroring the
+ * equivalent private helper in fee-group-promotion-mapping.service.ts /
+ * fee-category-promotion-mapping.service.ts (same source model, same DTO,
+ * same fields) — needed here because fee-group-promotion-mapping ids barely
+ * dedupe across fee-student-mapping rows (close to 1:1), so even a deduped
+ * per-id `getFeeGroupPromotionMappingById` call (itself ~10 queries) would
+ * still mean tens of thousands of round-trips. This batches it to a fixed
+ * handful of bulk `inArray` queries regardless of row count.
+ */
+async function promotionsToDtoBatchForFsm(
+  promotions: PromotionRow[],
+): Promise<Map<number, PromotionDto>> {
+  const map = new Map<number, PromotionDto>();
+  if (promotions.length === 0) return map;
+
+  const boardIds = [
+    ...new Set(
+      promotions
+        .map((p) => p.boardResultStatusId)
+        .filter((id): id is number => id != null),
+    ),
+  ];
+  const sessionIds = [...new Set(promotions.map((p) => p.sessionId))];
+  const classIds = [...new Set(promotions.map((p) => p.classId))];
+  const sectionIds = [
+    ...new Set(
+      promotions
+        .map((p) => p.sectionId)
+        .filter((id): id is number => id != null),
+    ),
+  ];
+  const shiftIds = [...new Set(promotions.map((p) => p.shiftId))];
+  const programCourseIds = [
+    ...new Set(promotions.map((p) => p.programCourseId)),
+  ];
+  const studentIds = [...new Set(promotions.map((p) => p.studentId))];
+
+  const [
+    boardRows,
+    sessionRows,
+    classRows,
+    sectionRows,
+    shiftRows,
+    studentDetailRows,
+  ] = await Promise.all([
+    boardIds.length
+      ? db
+          .select()
+          .from(boardResultStatusModel)
+          .where(inArray(boardResultStatusModel.id, boardIds))
+      : Promise.resolve([]),
+    sessionIds.length
+      ? db
+          .select()
+          .from(sessionModel)
+          .where(inArray(sessionModel.id, sessionIds))
+      : Promise.resolve([]),
+    classIds.length
+      ? db.select().from(classModel).where(inArray(classModel.id, classIds))
+      : Promise.resolve([]),
+    sectionIds.length
+      ? db
+          .select()
+          .from(sectionModel)
+          .where(inArray(sectionModel.id, sectionIds))
+      : Promise.resolve([]),
+    shiftIds.length
+      ? db.select().from(shiftModel).where(inArray(shiftModel.id, shiftIds))
+      : Promise.resolve([]),
+    studentIds.length
+      ? db
+          .select({
+            studentId: studentModel.id,
+            uid: studentModel.uid,
+            community: studentModel.community,
+            firstName: personalDetailsModel.firstName,
+            middleName: personalDetailsModel.middleName,
+            lastName: personalDetailsModel.lastName,
+            religionName: religionModel.name,
+            categoryName: categoryModel.name,
+          })
+          .from(studentModel)
+          .leftJoin(
+            personalDetailsModel,
+            eq(personalDetailsModel.userId, studentModel.userId),
+          )
+          .leftJoin(
+            religionModel,
+            eq(religionModel.id, personalDetailsModel.religionId),
+          )
+          .leftJoin(
+            categoryModel,
+            eq(categoryModel.id, personalDetailsModel.categoryId),
+          )
+          .where(inArray(studentModel.id, studentIds))
+      : Promise.resolve([]),
+  ]);
+
+  const programCourseDtos =
+    programCourseIds.length > 0
+      ? await Promise.all(
+          programCourseIds.map((id) => programCourseService.findById(id)),
+        )
+      : [];
+
+  const ayIds = [
+    ...new Set(
+      sessionRows
+        .map((s) => s.academicYearId)
+        .filter((id): id is number => id != null),
+    ),
+  ];
+  const academicYearRows =
+    ayIds.length > 0
+      ? await db
+          .select()
+          .from(academicYearModel)
+          .where(inArray(academicYearModel.id, ayIds))
+      : [];
+  const ayMap = new Map(academicYearRows.map((ay) => [ay.id, ay]));
+
+  const boardMap = new Map(boardRows.map((b) => [b.id, b]));
+  const sessionMap = new Map(
+    sessionRows.map((s) => {
+      const ay = s.academicYearId
+        ? (ayMap.get(s.academicYearId) ?? null)
+        : null;
+      return [s.id, { ...s, academicYear: ay }] as const;
+    }),
+  );
+  const classMap = new Map(classRows.map((c) => [c.id, c]));
+  const sectionMap = new Map(sectionRows.map((s) => [s.id, s]));
+  const shiftMap = new Map(shiftRows.map((s) => [s.id, s]));
+  const pcMap = new Map(
+    programCourseDtos
+      .filter((pc): pc is NonNullable<typeof pc> => pc != null)
+      .map((pc) => [pc.id, pc] as const),
+  );
+  const studentMap = new Map(
+    studentDetailRows.map((r) => [r.studentId, r] as const),
+  );
+
+  for (const promotion of promotions) {
+    const boardResStatus = promotion.boardResultStatusId
+      ? (boardMap.get(promotion.boardResultStatusId) ?? null)
+      : null;
+    const sess = sessionMap.get(promotion.sessionId) ?? null;
+    const cls = classMap.get(promotion.classId) ?? null;
+    const sec = promotion.sectionId
+      ? (sectionMap.get(promotion.sectionId) ?? null)
+      : null;
+    const shf = shiftMap.get(promotion.shiftId) ?? null;
+    const progCourse = pcMap.get(promotion.programCourseId) ?? null;
+    const studentWithDetails = studentMap.get(promotion.studentId) ?? null;
+
+    if (!sess || !cls || !shf || !progCourse) continue;
+
+    const fullName = studentWithDetails
+      ? [
+          studentWithDetails.firstName,
+          studentWithDetails.middleName,
+          studentWithDetails.lastName,
+        ]
+          .filter(Boolean)
+          .join(" ")
+      : null;
+
+    map.set(promotion.id, {
+      id: promotion.id,
+      legacyHistoricalRecordId: promotion.legacyHistoricalRecordId ?? null,
+      studentId: promotion.studentId,
+      isAlumni: promotion.isAlumni,
+      dateOfJoining: promotion.dateOfJoining,
+      classRollNumber: promotion.classRollNumber,
+      rollNumber: promotion.rollNumber ?? null,
+      rollNumberSI: promotion.rollNumberSI ?? null,
+      examNumber: promotion.examNumber ?? null,
+      examSerialNumber: promotion.examSerialNumber ?? null,
+      startDate: promotion.startDate ?? null,
+      endDate: promotion.endDate ?? null,
+      remarks: promotion.remarks ?? null,
+      createdAt: promotion.createdAt ?? new Date(),
+      updatedAt: promotion.updatedAt ?? new Date(),
+      boardResultStatus: boardResStatus!,
+      session: sess,
+      class: cls,
+      section: sec,
+      shift: shf,
+      programCourse: progCourse,
+      studentName: fullName,
+      uid: studentWithDetails?.uid ?? null,
+      religionName: studentWithDetails?.religionName ?? null,
+      categoryName: studentWithDetails?.categoryName ?? null,
+      communityName: studentWithDetails?.community ?? null,
+      academicYearName:
+        (sess as { academicYear?: { year?: string } | null }).academicYear
+          ?.year ?? null,
+    } as PromotionDto & {
+      studentName?: string | null;
+      uid?: string | null;
+      religionName?: string | null;
+      categoryName?: string | null;
+      communityName?: string | null;
+      academicYearName?: string | null;
+    });
+  }
+
+  return map as Map<number, PromotionDto>;
+}
+
+/**
+ * Batch-builds FeeGroupPromotionMappingDto for a set of ids in a fixed
+ * number of bulk queries, mirroring fee-group-promotion-mapping.service.ts's
+ * `modelToDto` output exactly (`{...model, feeGroup: {...feeGroup,
+ * feeCategory, feeSlab}, promotion}`).
+ */
+async function buildFeeGroupPromotionMappingDtoMap(
+  fgpmIds: number[],
+): Promise<Map<number, FeeGroupPromotionMappingDto>> {
+  const result = new Map<number, FeeGroupPromotionMappingDto>();
+  if (fgpmIds.length === 0) return result;
+
+  const rows = await db
+    .select()
+    .from(feeGroupPromotionMappingModel)
+    .where(inArray(feeGroupPromotionMappingModel.id, fgpmIds));
+
+  const feeGroupIds = [...new Set(rows.map((r) => r.feeGroupId))];
+  const promotionIds = [...new Set(rows.map((r) => r.promotionId))];
+
+  const [feeGroups, promotions] = await Promise.all([
+    feeGroupIds.length > 0
+      ? db
+          .select()
+          .from(feeGroupModel)
+          .where(inArray(feeGroupModel.id, feeGroupIds))
+      : Promise.resolve([]),
+    promotionIds.length > 0
+      ? db
+          .select()
+          .from(promotionModel)
+          .where(inArray(promotionModel.id, promotionIds))
+      : Promise.resolve([]),
+  ]);
+
+  const feeGroupMap = new Map(feeGroups.map((fg) => [fg.id, fg]));
+
+  const feeCategoryIds = [...new Set(feeGroups.map((fg) => fg.feeCategoryId))];
+  const feeSlabIds = [...new Set(feeGroups.map((fg) => fg.feeSlabId))];
+
+  const [feeCategories, feeSlabs] = await Promise.all([
+    feeCategoryIds.length > 0
+      ? db
+          .select()
+          .from(feeCategoryModel)
+          .where(inArray(feeCategoryModel.id, feeCategoryIds))
+      : Promise.resolve([]),
+    feeSlabIds.length > 0
+      ? db
+          .select()
+          .from(feeSlabModel)
+          .where(inArray(feeSlabModel.id, feeSlabIds))
+      : Promise.resolve([]),
+  ]);
+
+  const feeCategoryMap = new Map(feeCategories.map((fc) => [fc.id, fc]));
+  const feeSlabMap = new Map(feeSlabs.map((fs) => [fs.id, fs]));
+
+  const promotionDtoMap = await promotionsToDtoBatchForFsm(promotions);
+
+  for (const row of rows) {
+    const feeGroup = feeGroupMap.get(row.feeGroupId);
+    const promotionDto = promotionDtoMap.get(row.promotionId);
+    if (!feeGroup || !promotionDto) continue;
+
+    const feeCategory = feeCategoryMap.get(feeGroup.feeCategoryId);
+    const feeSlab = feeSlabMap.get(feeGroup.feeSlabId);
+    if (!feeCategory || !feeSlab) continue;
+
+    result.set(row.id, {
+      ...row,
+      feeGroup: {
+        ...feeGroup,
+        feeCategory,
+        feeSlab,
+      },
+      promotion: promotionDto,
+    });
+  }
+
+  return result;
+}
+
+type FeeStudentMappingRow = typeof feeStudentMappingModel.$inferSelect;
+
+/**
+ * Batch-assembles FeeStudentMappingDto[] for a set of rows using bulk-fetched
+ * lookups (payments/receipts via `inArray`, fee-structure/fee-group-promotion-
+ * mapping/installment/waived-off-user deduped by unique id) instead of
+ * N per-row queries. Mirrors `modelToDto`'s logic/fields exactly — same
+ * output, far fewer round-trips since the same fee structures / fee group
+ * promotion mappings repeat across thousands of mapping rows.
+ */
+async function assembleFeeStudentMappingDtos(
+  rows: FeeStudentMappingRow[],
+): Promise<FeeStudentMappingDto[]> {
+  if (rows.length === 0) return [];
+
+  const mappingIds = rows.map((r) => r.id);
+  const structureIds = Array.from(new Set(rows.map((r) => r.feeStructureId)));
+  const fgpmIds = Array.from(
+    new Set(rows.map((r) => r.feeGroupPromotionMappingId)),
+  );
+  const installmentIds = Array.from(
+    new Set(
+      rows
+        .map((r) => r.feeStructureInstallmentId)
+        .filter((id): id is number => id != null),
+    ),
+  );
+  const waivedOffUserIds = Array.from(
+    new Set(
+      rows
+        .map((r) => r.waivedOffByUserId)
+        .filter((id): id is number => id != null),
+    ),
+  );
+
+  const [
+    paymentRows,
+    receiptRows,
+    feeStructures,
+    feeGroupPromotionMappingById,
+    installmentRows,
+    waivedOffUsers,
+  ] = await Promise.all([
+    db
+      .select({
+        feeStudentMappingId: paymentModel.feeStudentMappingId,
+        status: paymentModel.status,
+        txnDate: paymentModel.txnDate,
+        updatedAt: paymentModel.updatedAt,
+        gatewayResponse: paymentModel.gatewayResponse,
+      })
+      .from(paymentModel)
+      .where(
+        and(
+          inArray(paymentModel.feeStudentMappingId, mappingIds),
+          eq(paymentModel.isLinked, true),
+        ),
+      ),
+    db
+      .select({
+        feeStudentMappingId: feeStudentReceiptNumberModel.feeStudentMappingId,
+        receiptNumber: feeStudentReceiptNumberModel.receiptNumber,
+        challanGeneratedAt: feeStudentReceiptNumberModel.challanGeneratedAt,
+        uid: feeStudentReceiptNumberModel.uid,
+      })
+      .from(feeStudentReceiptNumberModel)
+      .where(
+        and(
+          inArray(feeStudentReceiptNumberModel.feeStudentMappingId, mappingIds),
+          eq(feeStudentReceiptNumberModel.isDeprecated, false),
+        ),
+      ),
+    // Fee structures dedupe hard (repeat massively across mappings), so a
+    // deduped per-id service call is cheap here.
+    Promise.all(
+      structureIds.map((id) => feeStructureService.getFeeStructureById(id)),
+    ),
+    // Fee-group-promotion-mapping ids barely dedupe (near 1:1 with mapping
+    // rows) and the single-row service fans out ~10 queries per call, so
+    // use the real bulk builder instead of deduped per-id calls.
+    buildFeeGroupPromotionMappingDtoMap(fgpmIds),
+    installmentIds.length > 0
+      ? db
+          .select()
+          .from(feeStructureInstallmentModel)
+          .where(inArray(feeStructureInstallmentModel.id, installmentIds))
+      : Promise.resolve([]),
+    Promise.all(waivedOffUserIds.map((id) => userService.findById(id))),
+  ]);
+
+  const paymentByMappingId = new Map<number, (typeof paymentRows)[number]>();
+  for (const p of paymentRows) {
+    if (p.feeStudentMappingId == null) continue;
+    if (!paymentByMappingId.has(p.feeStudentMappingId)) {
+      paymentByMappingId.set(p.feeStudentMappingId, p);
+    }
+  }
+
+  const activeReceiptByMappingId = new Map<
+    number,
+    (typeof receiptRows)[number]
+  >();
+  for (const r of receiptRows) {
+    if (r.feeStudentMappingId == null) continue;
+    if (!activeReceiptByMappingId.has(r.feeStudentMappingId)) {
+      activeReceiptByMappingId.set(r.feeStudentMappingId, r);
+    }
+  }
+
+  const feeStructureById = new Map<
+    number,
+    NonNullable<(typeof feeStructures)[number]>
+  >();
+  structureIds.forEach((id, i) => {
+    const fs = feeStructures[i];
+    if (fs) feeStructureById.set(id, fs);
+  });
+
+  const installmentById = new Map(
+    installmentRows.map((row) => [row.id, row] as const),
+  );
+
+  const waivedOffUserById = new Map<
+    number,
+    NonNullable<(typeof waivedOffUsers)[number]>
+  >();
+  waivedOffUserIds.forEach((id, i) => {
+    const u = waivedOffUsers[i];
+    if (u) waivedOffUserById.set(id, u);
+  });
+
+  const dtos: FeeStudentMappingDto[] = [];
+  for (const model of rows) {
+    const feeStructure = feeStructureById.get(model.feeStructureId);
+    const feeGroupPromotionMapping = feeGroupPromotionMappingById.get(
+      model.feeGroupPromotionMappingId,
+    );
+
+    if (!feeStructure || !feeGroupPromotionMapping) continue;
+
+    const feeStructureInstallment = model.feeStructureInstallmentId
+      ? (installmentById.get(model.feeStructureInstallmentId) ?? null)
+      : null;
+    const waivedOffByUser = model.waivedOffByUserId
+      ? (waivedOffUserById.get(model.waivedOffByUserId) ?? null)
+      : null;
+
+    const payment = paymentByMappingId.get(model.id);
+
+    const totalPayable = model.totalPayable ?? 0;
+    const amountPaid = model.amountPaid ?? 0;
+    const paymentStatus: FeeStudentMappingDto["paymentStatus"] =
+      payment?.status === "FAILED"
+        ? "FAILED"
+        : totalPayable > 0 && amountPaid >= totalPayable
+          ? "SUCCESS"
+          : "PENDING";
+
+    const gatewayTxnDate =
+      extractTxnDateFromGateway(
+        (payment as { gatewayResponse?: unknown } | undefined)?.gatewayResponse,
+      ) || null;
+    const transactionDate: FeeStudentMappingDto["transactionDate"] =
+      (payment as { txnDate?: string | null } | undefined)?.txnDate ??
+      gatewayTxnDate ??
+      (payment as { updatedAt?: Date | string | null } | undefined)
+        ?.updatedAt ??
+      null;
+
+    const activeReceipt = activeReceiptByMappingId.get(model.id);
+
+    dtos.push({
+      ...model,
+      receiptNumber: activeReceipt?.receiptNumber ?? null,
+      challanGeneratedAt: activeReceipt?.challanGeneratedAt ?? null,
+      feeStructure,
+      feeGroupPromotionMappings: [feeGroupPromotionMapping],
+      feeStructureInstallment,
+      waivedOffByUser,
+      paymentStatus,
+      transactionDate,
+    });
+  }
+
+  return dtos;
+}
+
 export const getAllFeeStudentMappings = async (): Promise<
   FeeStudentMappingDto[]
 > => {
@@ -501,8 +995,7 @@ export const getAllFeeStudentMappings = async (): Promise<
     .select()
     .from(feeStudentMappingModel)
     .where(nonDeprecatedPromotionMappingSql);
-  const dtos = await Promise.all(rows.map((row) => modelToDto(row)));
-  return dtos.filter((dto): dto is FeeStudentMappingDto => dto !== null);
+  return assembleFeeStudentMappingDtos(rows);
 };
 
 export const getFeeStudentMappingById = async (
@@ -530,8 +1023,7 @@ export const getFeeStudentMappingsByStudentId = async (
     )
     .orderBy(asc(feeStudentMappingModel.id));
 
-  const dtos = await Promise.all(rows.map((row) => modelToDto(row)));
-  return dtos.filter((dto): dto is FeeStudentMappingDto => dto !== null);
+  return assembleFeeStudentMappingDtos(rows);
 };
 
 export const updateFeeStudentMapping = async (
