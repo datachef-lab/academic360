@@ -64,7 +64,11 @@ class SocketService {
       this.socket = io(origin, {
         path: socketPath,
         withCredentials: true,
-        transports: ["websocket", "polling"],
+        // websocket-only: prod runs multiple instances without sticky sessions —
+      // the Redis adapter bridges rooms but NOT Engine.IO sessions, so a
+      // long-polling handshake split across instances 400s ("Session ID
+      // unknown") and churns presence. ALB passes websockets fine.
+      transports: ["websocket"],
       });
 
       this.socket.on("connect", this.handleConnect);

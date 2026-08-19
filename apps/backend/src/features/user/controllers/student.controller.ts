@@ -179,7 +179,7 @@ export const getOnlineStudents = async (
   next: NextFunction,
 ) => {
   try {
-    const userIds = socketService.getOnlineStudentUserIds();
+    const userIds = await socketService.getOnlineStudentUserIds();
 
     if (userIds.length === 0) {
       res
@@ -209,7 +209,9 @@ export const getOnlineStudents = async (
     const enriched = await Promise.all(
       filtered.map(async (student) => ({
         ...student,
-        loginTime: socketService.getOnlineStudentLoginTime(student.userId),
+        loginTime: await socketService.getOnlineStudentLoginTime(
+          student.userId,
+        ),
         // Class/semester of the student's active promotion (end_date IS NULL).
         activeClassName: await studentService.getActiveClassNameForStudent(
           student.id as number,
