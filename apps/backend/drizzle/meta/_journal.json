@@ -1296,6 +1296,13 @@
       "when": 1786701133486,
       "tag": "0194_library_legacy_sync_watermark",
       "breakpoints": true
+    },
+    {
+      "idx": 191,
+      "version": "7",
+      "when": 1787138439000,
+      "tag": "0196_library_perf_indexes",
+      "breakpoints": true
     }
   ]
 }
