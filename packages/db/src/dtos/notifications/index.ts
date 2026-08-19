@@ -20,6 +20,9 @@ export interface NotificationEventDto extends NotificationEventT {
         contentBase64: string; // base64 content
         mimeType: string;
     }>;
+    // Subject-selection email rows carrying subject_selection_meta labels
+    // verbatim, so the template renders whatever the console has configured.
+    selectionRows?: Array<{ label: string; value: string }>;
     // WhatsApp
     bodyValues?: string[]; // override values if needed
     whatsappHeaderMediaUrl?: string; // media header URL for Interakt templates
