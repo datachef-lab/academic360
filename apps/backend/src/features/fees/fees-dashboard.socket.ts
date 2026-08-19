@@ -10,6 +10,12 @@ export type FeesDashboardSocketPayload = {
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function scheduleFeesDashboardBroadcast(reason: string): void {
+  // Invalidate the fees-dashboard aggregation cache IMMEDIATELY (not inside the
+  // 400ms debounce below), so even a direct dashboard load in the moment right
+  // after a fee mutation recomputes fresh numbers — never a stale collected/
+  // pending figure. The debounce only batches the socket broadcast.
+  void bumpSnapshotEpoch("fees:dashboard");
+
   if (debounceTimer) {
     clearTimeout(debounceTimer);
   }
