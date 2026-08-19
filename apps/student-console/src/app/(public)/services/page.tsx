@@ -3,14 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { GraduationCap, Users, ArrowRight, BookOpen } from "lucide-react";
-import { useCollegeSettings } from "@/hooks/use-college-settings";
+import { useBranding } from "@/features/settings/hooks/use-branding";
 import { fetchServiceTypes } from "@/services/service-requests.service";
 import type { ServiceType } from "@/services/service-requests.service";
 
 export const dynamic = "force-dynamic";
 
 export default function ServicesChooserPage() {
-  const { collegeName, abbreviation, logoUrl } = useCollegeSettings();
+  const { collegeName, abbreviation, logoUrl } = useBranding();
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
 
   useEffect(() => {

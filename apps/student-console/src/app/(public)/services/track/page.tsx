@@ -7,7 +7,7 @@ import { Search, ArrowLeft, Clock, CheckCircle2, XCircle, AlertCircle } from "lu
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCollegeSettings } from "@/hooks/use-college-settings";
+import { useBranding } from "@/features/settings/hooks/use-branding";
 import { getTicketByRef } from "@/services/service-requests.service";
 import type { TicketPublic } from "@/services/service-requests.service";
 
@@ -52,7 +52,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function TrackRequestContent() {
-  const { collegeName, abbreviation, logoUrl } = useCollegeSettings();
+  const { collegeName, abbreviation, logoUrl } = useBranding();
   const searchParams = useSearchParams();
   const initialRef = searchParams.get("ref") ?? "";
 

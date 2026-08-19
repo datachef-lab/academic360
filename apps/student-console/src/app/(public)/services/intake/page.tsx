@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCollegeSettings } from "@/hooks/use-college-settings";
+import { useBranding } from "@/features/settings/hooks/use-branding";
 import {
   fetchServiceTypes,
   createAlumniIntake,
@@ -72,7 +72,7 @@ function StepIndicator({ step }: { step: Step }) {
 }
 
 export default function AlumniIntakePage() {
-  const { collegeName, abbreviation, logoUrl } = useCollegeSettings();
+  const { collegeName, abbreviation, logoUrl } = useBranding();
   const router = useRouter();
 
   const [step, setStep] = useState<Step>("identity");
