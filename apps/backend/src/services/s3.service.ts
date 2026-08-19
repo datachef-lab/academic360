@@ -415,13 +415,30 @@ export async function listFilesInFolder(
 
     const bucket = s3Config?.bucket || defaultBucket;
 
-    const command = new ListObjectsV2Command({
-      Bucket: bucket,
-      Prefix: folder,
-    });
+    // ListObjectsV2 caps a single response at 1000 keys. Without following
+    // ContinuationToken, any folder with >1000 objects silently lost
+    // everything past the first page — a real data-loss bug for callers
+    // like the CU registration document zip export, which would just skip
+    // files it never knew existed. Loop until IsTruncated is false.
+    const keys: string[] = [];
+    let continuationToken: string | undefined;
+    do {
+      const command = new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: folder,
+        ContinuationToken: continuationToken,
+      });
 
-    const response = await s3Client.send(command);
-    return response.Contents?.map((obj) => obj.Key || "") || [];
+      const response = await s3Client.send(command);
+      for (const obj of response.Contents ?? []) {
+        if (obj.Key) keys.push(obj.Key);
+      }
+      continuationToken = response.IsTruncated
+        ? response.NextContinuationToken
+        : undefined;
+    } while (continuationToken);
+
+    return keys;
   } catch (error) {
     console.error("Error listing files in folder:", error);
     throw new ApiError(500, "Failed to list files in folder");

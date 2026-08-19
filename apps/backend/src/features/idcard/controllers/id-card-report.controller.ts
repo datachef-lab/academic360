@@ -35,7 +35,6 @@ export const downloadExcelReportController = async (
     const date = String(req.query.date ?? "");
     if (!DATE_RE.test(date))
       throw new ApiError(400, "date=YYYY-MM-DD required.");
-    const buf = await buildExcelReport(date);
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -44,7 +43,9 @@ export const downloadExcelReportController = async (
       "Content-Disposition",
       `attachment; filename="id-cards-${date}.xlsx"`,
     );
-    res.send(buf);
+    // Streamed directly to `res` (see buildExcelReport) — Content-Length is
+    // unknown up front and intentionally omitted.
+    await buildExcelReport(date, res);
   } catch (e) {
     handleError(e, res, next);
   }

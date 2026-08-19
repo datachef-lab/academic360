@@ -6,6 +6,15 @@ export const handleError = (
   res: Response,
   next?: NextFunction,
 ) => {
+  // If the response has already begun (e.g. a streamed Excel/zip export that
+  // failed after the first chunk was flushed), we cannot send a JSON error
+  // body — writing headers again throws ERR_HTTP_HEADERS_SENT and leaves the
+  // client with a truncated-but-"200" file. Abort the socket instead so the
+  // client sees a broken connection rather than a silently-corrupt download.
+  if (res.headersSent) {
+    res.destroy(error instanceof Error ? error : undefined);
+    return;
+  }
   // ApiError instances carry their own statusCode — respect it instead of
   // string-matching the message and falling through to 500.
   if (error instanceof ApiError) {

@@ -359,12 +359,7 @@ export async function getPaperDetailedById(id: number) {
 
 export async function getAllPapers() {
   const papers = await db.select().from(paperModel);
-
-  return (
-    await Promise.all(
-      papers.map(async (paper) => await modelToDto(paper as Paper)),
-    )
-  ).filter((paper) => paper !== null) as PaperDto[]; // Ensure we return only valid PaperDto objects
+  return modelToDtoBatch(papers as Paper[]);
 }
 
 export async function getPapersPaginated(
@@ -384,11 +379,7 @@ export async function getPapersPaginated(
     .limit(Math.max(1, pageSize))
     .offset(offset);
 
-  const content = (
-    await Promise.all(
-      rows.map(async (paper) => await modelToDto(paper as Paper)),
-    )
-  ).filter(Boolean) as PaperDto[];
+  const content = await modelToDtoBatch(rows as Paper[]);
 
   const totalElements = Number(total || 0);
   const totalPages = Math.max(
@@ -806,6 +797,119 @@ export async function modelToDto(paper: Paper): Promise<PaperDto | null> {
   } as unknown as PaperDto;
 }
 
+/**
+ * Batched equivalent of `modelToDto` for a list of papers. Each entry is
+ * byte-identical to calling `modelToDto(paper)` — it calls the exact same
+ * resolver helpers and applies the same null-drop rule — but deduplicates the
+ * shared dimension lookups (subject/affiliation/regulation/year/type/course/
+ * class) by id and runs everything concurrently, instead of 9 sequential
+ * queries per paper. Collapses the paper-list N+1 (5,700 papers × 9 queries ≈
+ * 51k round trips, ~19s) into a handful of parallel batches.
+ */
+export async function modelToDtoBatch(papers: Paper[]): Promise<PaperDto[]> {
+  if (papers.length === 0) return [];
+
+  const uniquePapers = new Map<number, Paper>();
+  for (const p of papers) {
+    if (p?.id != null && !uniquePapers.has(p.id)) uniquePapers.set(p.id, p);
+  }
+  const paperList = Array.from(uniquePapers.values());
+
+  const uniq = <T>(vals: Array<T | null | undefined>): T[] =>
+    Array.from(
+      new Set(vals.filter((v): v is T => v !== null && v !== undefined)),
+    );
+  const mapFrom = async <T>(
+    ids: number[],
+    fetch: (id: number) => Promise<T>,
+  ): Promise<Map<number, T>> =>
+    new Map(
+      await Promise.all(ids.map(async (id) => [id, await fetch(id)] as const)),
+    );
+
+  const [
+    subjectMap,
+    affiliationMap,
+    regulationTypeMap,
+    academicYearMap,
+    subjectTypeMap,
+    programCourseMap,
+    classMap,
+    componentsByPaper,
+    topicsByPaper,
+  ] = await Promise.all([
+    mapFrom(uniq(paperList.map((p) => p.subjectId as number)), (id) =>
+      getSubjectById(id),
+    ),
+    mapFrom(uniq(paperList.map((p) => p.affiliationId as number)), (id) =>
+      findAffiliationById(id),
+    ),
+    mapFrom(uniq(paperList.map((p) => p.regulationTypeId as number)), (id) =>
+      findRegulationTypeById(id),
+    ),
+    mapFrom(uniq(paperList.map((p) => p.academicYearId as number)), (id) =>
+      findAcademicYearById(id),
+    ),
+    mapFrom(uniq(paperList.map((p) => p.subjectTypeId as number)), (id) =>
+      getSubjectTypeById(String(id)),
+    ),
+    mapFrom(uniq(paperList.map((p) => p.programCourseId as number)), (id) =>
+      findProgramCourseById(id),
+    ),
+    mapFrom(uniq(paperList.map((p) => p.classId as number)), (id) =>
+      findClassById(id),
+    ),
+    Promise.all(
+      paperList.map(
+        async (p) =>
+          [p.id!, await findPaperComponentsByPaperId(p.id!)] as const,
+      ),
+    ).then((e) => new Map(e)),
+    Promise.all(
+      paperList.map(
+        async (p) => [p.id!, await getTopicsByPaperId(p.id!)] as const,
+      ),
+    ).then((e) => new Map(e)),
+  ]);
+
+  const out: PaperDto[] = [];
+  for (const paper of paperList) {
+    const subject = subjectMap.get(paper.subjectId as number);
+    const affiliation = affiliationMap.get(paper.affiliationId as number);
+    const regulationType = regulationTypeMap.get(
+      paper.regulationTypeId as number,
+    );
+    const academicYear = academicYearMap.get(paper.academicYearId as number);
+    const subjectType = subjectTypeMap.get(paper.subjectTypeId as number);
+    const programCourse = programCourseMap.get(paper.programCourseId as number);
+    const classRecord = classMap.get(paper.classId as number);
+    if (
+      !subject ||
+      !affiliation ||
+      !regulationType ||
+      !academicYear ||
+      !subjectType ||
+      !programCourse ||
+      !classRecord
+    ) {
+      continue;
+    }
+    out.push({
+      ...paper,
+      topics: topicsByPaper.get(paper.id!),
+      components: componentsByPaper.get(paper.id!),
+      subjectId: subject.id!,
+      subjectTypeId: Number(subjectType.id!),
+      affiliationId: affiliation.id!,
+      regulationTypeId: regulationType.id!,
+      academicYearId: academicYear.id!,
+      programCourseId: programCourse.id!,
+      classId: classRecord.id!,
+    } as unknown as PaperDto);
+  }
+  return out;
+}
+
 export async function modelToDetailedDto(
   paper: Paper,
 ): Promise<PaperDetailedDto | null> {
@@ -850,6 +954,134 @@ export async function modelToDetailedDto(
     programCourse,
     class: classRecord,
   } as unknown as PaperDetailedDto;
+}
+
+/**
+ * Batched equivalent of `modelToDetailedDto` for a list of papers. Produces a
+ * Map<paperId, PaperDetailedDto | null> whose per-paper values are BYTE-IDENTICAL
+ * to calling `modelToDetailedDto(paper)` individually — it calls the exact same
+ * resolver helpers, only (a) deduplicated by id so each distinct
+ * subject/affiliation/regulation/academicYear/subjectType/programCourse/class is
+ * fetched once instead of once per paper, and (b) run concurrently instead of
+ * nine sequential awaits per paper. This collapses the subject-selection form
+ * loader's hundreds of sequential round trips into a handful of parallel batches
+ * with no change to output shape or null semantics.
+ */
+export async function modelToDetailedDtoBatch(
+  papers: Paper[],
+): Promise<Map<number, PaperDetailedDto | null>> {
+  const result = new Map<number, PaperDetailedDto | null>();
+  if (papers.length === 0) return result;
+
+  // De-duplicate the papers themselves by id (the caller may pass repeats).
+  const uniquePapers = new Map<number, Paper>();
+  for (const p of papers) {
+    if (p?.id != null && !uniquePapers.has(p.id)) uniquePapers.set(p.id, p);
+  }
+  const paperList = Array.from(uniquePapers.values());
+
+  const uniq = <T>(vals: Array<T | null | undefined>): T[] =>
+    Array.from(
+      new Set(vals.filter((v): v is T => v !== null && v !== undefined)),
+    );
+
+  const subjectIds = uniq(paperList.map((p) => p.subjectId as number));
+  const affiliationIds = uniq(paperList.map((p) => p.affiliationId as number));
+  const regulationTypeIds = uniq(
+    paperList.map((p) => p.regulationTypeId as number),
+  );
+  const academicYearIds = uniq(
+    paperList.map((p) => p.academicYearId as number),
+  );
+  const subjectTypeIds = uniq(paperList.map((p) => p.subjectTypeId as number));
+  const programCourseIds = uniq(
+    paperList.map((p) => p.programCourseId as number),
+  );
+  const classIds = uniq(paperList.map((p) => p.classId as number));
+
+  // Resolve every distinct dimension value once, in parallel, reusing the exact
+  // same helpers modelToDetailedDto uses.
+  const mapFrom = async <T>(
+    ids: number[],
+    fetch: (id: number) => Promise<T>,
+  ): Promise<Map<number, T>> => {
+    const entries = await Promise.all(
+      ids.map(async (id) => [id, await fetch(id)] as const),
+    );
+    return new Map(entries);
+  };
+
+  const [
+    subjectMap,
+    affiliationMap,
+    regulationTypeMap,
+    academicYearMap,
+    subjectTypeMap,
+    programCourseMap,
+    classMap,
+    componentsByPaper,
+    topicsByPaper,
+  ] = await Promise.all([
+    mapFrom(subjectIds, (id) => getSubjectById(id)),
+    mapFrom(affiliationIds, (id) => findAffiliationById(id)),
+    mapFrom(regulationTypeIds, (id) => findRegulationTypeById(id)),
+    mapFrom(academicYearIds, (id) => findAcademicYearById(id)),
+    mapFrom(subjectTypeIds, (id) => getSubjectTypeById(String(id))),
+    mapFrom(programCourseIds, (id) => findProgramCourseById(id)),
+    mapFrom(classIds, (id) => findClassById(id)),
+    Promise.all(
+      paperList.map(
+        async (p) =>
+          [p.id!, await findPaperComponentsByPaperId(p.id!)] as const,
+      ),
+    ).then((e) => new Map(e)),
+    Promise.all(
+      paperList.map(
+        async (p) => [p.id!, await getTopicsByPaperId(p.id!)] as const,
+      ),
+    ).then((e) => new Map(e)),
+  ]);
+
+  for (const paper of paperList) {
+    const subject = subjectMap.get(paper.subjectId as number);
+    const affiliation = affiliationMap.get(paper.affiliationId as number);
+    const regulationType = regulationTypeMap.get(
+      paper.regulationTypeId as number,
+    );
+    const academicYear = academicYearMap.get(paper.academicYearId as number);
+    const subjectType = subjectTypeMap.get(paper.subjectTypeId as number);
+    const programCourse = programCourseMap.get(paper.programCourseId as number);
+    const classRecord = classMap.get(paper.classId as number);
+
+    // Same null-guard as modelToDetailedDto — any missing dimension → null.
+    if (
+      !subject ||
+      !affiliation ||
+      !regulationType ||
+      !academicYear ||
+      !subjectType ||
+      !programCourse ||
+      !classRecord
+    ) {
+      result.set(paper.id!, null);
+      continue;
+    }
+
+    result.set(paper.id!, {
+      ...paper,
+      topics: topicsByPaper.get(paper.id!),
+      components: componentsByPaper.get(paper.id!),
+      subject,
+      affiliation,
+      regulationType,
+      academicYear,
+      subjectType,
+      programCourse,
+      class: classRecord,
+    } as unknown as PaperDetailedDto);
+  }
+
+  return result;
 }
 
 // export const bulkUploadCourses = async (

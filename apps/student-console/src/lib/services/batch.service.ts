@@ -219,29 +219,46 @@ export async function findBatchesMetadataByCourseId(courseId: number) {
 
   const result = (await query<RowDataPacket[]>(sqlQuery)) as Batch[];
 
-  for (const tmpBatch of result) {
-    const sqlQuery = `
+  if (result.length === 0) {
+    return batches;
+  }
+
+  // Single grouped COUNT query instead of one COUNT query per batch.
+  // Same join conditions as before, just evaluated for all batch ids at
+  // once via IN(...) + GROUP BY, so per-batch numbers are identical.
+  const batchIds = result.map((tmpBatch) => tmpBatch.id);
+  const countsQuery = `
         SELECT
+            batch.id AS batchId,
             COUNT(st.id) AS totalCount
-        FROM 
+        FROM
             studentpersonaldetails st,
             studentpaperlinkingmain batch,
-            
+
             studentpaperlinkingpaperlist paper,
-            
+
             studentpaperlinkingstudentlist sl
 
         WHERE
-            batch.id = ${tmpBatch.id}
-            AND paper.parent_id = ${tmpBatch.id}
+            batch.id IN (${batchIds.join(",")})
+            AND paper.parent_id = batch.id
             AND sl.parent_id = paper.id
             AND sl.studentId = st.id
+        GROUP BY
+            batch.id
     `;
 
-    const { totalCount } = (
-      (await query<RowDataPacket[]>(sqlQuery)) as { totalCount: number }[]
-    )[0];
+  const countsResult = (await query<RowDataPacket[]>(countsQuery)) as {
+    batchId: number;
+    totalCount: number;
+  }[];
 
+  const totalCountByBatchId = new Map<number, number>(
+    countsResult.map((row) => [row.batchId, row.totalCount]),
+  );
+
+  for (const tmpBatch of result) {
+    const totalCount = totalCountByBatchId.get(tmpBatch.id!) ?? 0;
     if (totalCount > 0) {
       batches.push(tmpBatch);
     }

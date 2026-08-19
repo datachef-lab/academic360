@@ -21,6 +21,19 @@ export const createReceiptType = async (
       updatedByUserId: userId,
     })
     .returning();
+
+  // Emit socket event for receipt type creation (the console subscribes to
+  // receipt_type_created but nothing was emitting it — mirrors the update path).
+  const io = socketService.getIO();
+  if (io && created) {
+    io.emit("receipt_type_created", {
+      receiptTypeId: created.id,
+      type: "creation",
+      message: "A new receipt type has been created",
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   return created || null;
 };
 

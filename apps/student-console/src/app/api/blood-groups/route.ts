@@ -12,6 +12,10 @@ import {
 } from "@/lib/services/blood-group.service";
 import { createBloodGroupSchema } from "@/db/schema";
 import { z } from "zod";
+import { createTtlCache } from "@/lib/utils/ttl-cache";
+
+// See @/lib/utils/ttl-cache for scope/limitations (60s, per-instance).
+const listCache = createTtlCache<unknown>(60_000);
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,7 +30,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(result);
     }
 
+    const cached = listCache.get();
+    if (cached) {
+      return NextResponse.json(cached);
+    }
     const bloodGroups = await getAllBloodGroups();
+    listCache.set(undefined, bloodGroups);
     return NextResponse.json(bloodGroups);
   } catch (error) {
     console.error("Error in GET /api/blood-groups:", error);
@@ -43,6 +52,7 @@ export async function POST(request: NextRequest) {
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
+    listCache.clear();
     return NextResponse.json(result.data, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -69,6 +79,7 @@ export async function PUT(request: NextRequest) {
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
+    listCache.clear();
     return NextResponse.json(result.data);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -92,6 +103,7 @@ export async function PATCH(request: NextRequest) {
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 404 });
     }
+    listCache.clear();
     return NextResponse.json(result.data);
   } catch (error) {
     console.error("Error in PATCH /api/blood-groups:", error);

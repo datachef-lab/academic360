@@ -12,11 +12,21 @@ import {
 } from "@/lib/services/academic-year.service";
 import { createAcademicYearSchema } from "@/db/schema";
 import { z } from "zod";
+import { createTtlCache } from "@/lib/utils/ttl-cache";
+
+// See @/lib/utils/ttl-cache for scope/limitations (60s, per-instance).
+const listCache = createTtlCache<{ success: true; data: unknown }>(60_000);
 
 export async function GET() {
   try {
+    const cached = listCache.get();
+    if (cached) {
+      return NextResponse.json(cached);
+    }
     const allAcademicYears = await getAllAcademicYears();
-    return NextResponse.json({ success: true, data: allAcademicYears });
+    const payload = { success: true as const, data: allAcademicYears };
+    listCache.set(undefined, payload);
+    return NextResponse.json(payload);
   } catch (error: any) {
     return NextResponse.json(
       { success: false, message: "Failed to fetch academic years", error: error.message },
@@ -30,6 +40,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const validatedData = createAcademicYearSchema.parse(body);
     const newAcademicYear = await createAcademicYear(validatedData);
+    listCache.clear();
     return NextResponse.json({ success: true, data: newAcademicYear });
   } catch (error: any) {
     return NextResponse.json(
@@ -55,6 +66,7 @@ export async function PUT(req: Request) {
         { status: 404 },
       );
     }
+    listCache.clear();
     return NextResponse.json({ success: true, data: updatedAcademicYear });
   } catch (error: any) {
     return NextResponse.json(
@@ -78,6 +90,7 @@ export async function DELETE(req: Request) {
         { status: 404 },
       );
     }
+    listCache.clear();
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json(

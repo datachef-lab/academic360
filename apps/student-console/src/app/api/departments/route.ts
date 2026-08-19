@@ -12,11 +12,21 @@ import {
 } from "@/lib/services/department.service";
 import { createDepartmentSchema } from "@/db/schema";
 import { z } from "zod";
+import { createTtlCache } from "@/lib/utils/ttl-cache";
+
+// See @/lib/utils/ttl-cache for scope/limitations (60s, per-instance).
+const listCache = createTtlCache<{ success: true; data: unknown }>(60_000);
 
 export async function GET() {
   try {
+    const cached = listCache.get();
+    if (cached) {
+      return NextResponse.json(cached);
+    }
     const allDepartments = await getAllDepartments();
-    return NextResponse.json({ success: true, data: allDepartments });
+    const payload = { success: true as const, data: allDepartments };
+    listCache.set(undefined, payload);
+    return NextResponse.json(payload);
   } catch (error: any) {
     return NextResponse.json(
       { success: false, message: "Failed to fetch departments", error: error.message },
@@ -30,6 +40,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const validatedData = createDepartmentSchema.parse(body);
     const newDepartment = await createDepartment(validatedData);
+    listCache.clear();
     return NextResponse.json({ success: true, data: newDepartment });
   } catch (error: any) {
     return NextResponse.json(
@@ -55,6 +66,7 @@ export async function PUT(req: Request) {
         { status: 404 },
       );
     }
+    listCache.clear();
     return NextResponse.json({ success: true, data: updatedDepartment });
   } catch (error: any) {
     return NextResponse.json(
@@ -78,6 +90,7 @@ export async function DELETE(req: Request) {
         { status: 404 },
       );
     }
+    listCache.clear();
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json(

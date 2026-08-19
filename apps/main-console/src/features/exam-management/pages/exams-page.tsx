@@ -464,12 +464,24 @@ const ExamsPage = () => {
       refetchExams();
     };
 
+    // The backend already emits exam_deleted, but the list wasn't listening,
+    // so a deletion elsewhere didn't refresh this page live. Mirror the others.
+    const handleExamDeleted = (data: { examId?: number; message?: string }) => {
+      console.log("[Exams Page] Exam deleted:", data);
+      toast.info("An exam has been deleted. Refreshing...", {
+        duration: 3000,
+      });
+      refetchExams();
+    };
+
     socket.on("exam_created", handleExamCreated);
     socket.on("exam_updated", handleExamUpdated);
+    socket.on("exam_deleted", handleExamDeleted);
 
     return () => {
       socket.off("exam_created", handleExamCreated);
       socket.off("exam_updated", handleExamUpdated);
+      socket.off("exam_deleted", handleExamDeleted);
     };
   }, [socket, isConnected, refetchExams]);
 

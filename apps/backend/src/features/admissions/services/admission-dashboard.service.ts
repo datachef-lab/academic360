@@ -1,6 +1,10 @@
 import { and, count, countDistinct, eq, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db/index.js";
 import {
+  getCachedSnapshot,
+  bumpSnapshotEpoch,
+} from "@/services/snapshot-cache.js";
+import {
   applicationFormModel,
   admissionModel,
   sessionModel,
@@ -71,7 +75,7 @@ const asBuckets = (
     count: Number(r.count),
   }));
 
-export async function getAdmissionDashboard(f: DashboardFilters) {
+async function computeAdmissionDashboard(f: DashboardFilters) {
   const academicYearId = await resolveAcademicYearId(f);
   const where = and(...spineConds(academicYearId, f));
 
@@ -639,4 +643,37 @@ export async function getAdmissionDashboard(f: DashboardFilters) {
     },
     trend: trend.map((t) => ({ date: String(t.day), count: Number(t.count) })),
   };
+}
+
+// This is a ~17-query fan-out over the whole applications table that every
+// open Admission Home dashboard reruns on every poll; share one computation
+// per filter combo fleet-wide via the epoch-keyed snapshot cache
+// (Redis-backed — a bump on any instance is seen by every instance, so this
+// is safe under the multi-instance/no-sticky-sessions prod deployment).
+//
+// Invalidation: the dashboard's numbers derive ONLY from applicationFormModel
+// (formStatus / isBlocked) and admissionCourseDetailsModel (payment/verify/
+// merit/cancel flags). The interactive mutations that change those — creating
+// an application, changing its status/block, and a payment flipping its
+// form/course flags — call bumpAdmissionDashboardEpoch() below, so a viewer who
+// reloads right after their own action sees fresh counts. Bulk legacy imports
+// (old-student.service.ts) do not bump per-row; they fall back to the 30s TTL,
+// which is fine for an admin bulk op with no live viewer racing it.
+export function bumpAdmissionDashboardEpoch(): void {
+  void bumpSnapshotEpoch("admissions:dashboard");
+}
+
+export function getAdmissionDashboard(
+  f: DashboardFilters,
+): ReturnType<typeof computeAdmissionDashboard> {
+  return getCachedSnapshot(
+    "admissions:dashboard",
+    JSON.stringify({
+      academicYearId: f.academicYearId ?? null,
+      level: f.level ?? null,
+      formStatus: f.formStatus ?? null,
+    }),
+    30,
+    () => computeAdmissionDashboard(f),
+  );
 }

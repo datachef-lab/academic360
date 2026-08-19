@@ -276,31 +276,35 @@ export const downloadBookCirculationExcelController = async (
     const issueDate =
       typeof req.query.issueDate === "string" ? req.query.issueDate : undefined;
 
-    const file = await exportBookCirculationExcel({
-      search,
-      userType: userType as
-        | "ADMIN"
-        | "STUDENT"
-        | "FACULTY"
-        | "STAFF"
-        | "PARENTS"
-        | undefined,
-      status: status as
-        | "ISSUED"
-        | "OVERDUE"
-        | "REISSUED"
-        | "RETURNED"
-        | undefined,
-      issueDate,
-    });
-
     const filename = `book-circulation-report-${new Date().toISOString().slice(0, 10)}.xlsx`;
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.status(200).send(file);
+
+    // Streamed directly to `res` (see exportBookCirculationExcel) —
+    // Content-Length is unknown up front and intentionally omitted.
+    await exportBookCirculationExcel(
+      {
+        search,
+        userType: userType as
+          | "ADMIN"
+          | "STUDENT"
+          | "FACULTY"
+          | "STAFF"
+          | "PARENTS"
+          | undefined,
+        status: status as
+          | "ISSUED"
+          | "OVERDUE"
+          | "REISSUED"
+          | "RETURNED"
+          | undefined,
+        issueDate,
+      },
+      res,
+    );
   } catch (error) {
     handleError(error, res, next);
   }

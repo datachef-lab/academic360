@@ -246,10 +246,41 @@ class SocketService {
     try {
       this.io = ioServer;
       this.setupListeners();
+      this.startPresenceSweep();
       log.info("Initialized");
     } catch (error) {
       log.error("Error initializing", { error });
     }
+  }
+
+  /**
+   * Every 60s, drop Redis presence entries for users with no sockets on ANY
+   * instance (adapter-aware allSockets). An instance that dies without firing
+   * disconnects leaves ghosts in the set; this bounds them to ~60s instead of
+   * the 2h info-key TTL. Fully best-effort — never throws.
+   */
+  private startPresenceSweep() {
+    setInterval(async () => {
+      const pub = getRedisPubClient();
+      if (!pub || !this.io) return;
+      try {
+        const members = await pub.sMembers(ONLINE_USERS_SET);
+        for (const userId of members) {
+          if (this.activeConnections.has(userId)) continue; // locally alive
+          try {
+            const global = await this.io.in(`user:${userId}`).allSockets();
+            if (global.size === 0) {
+              await pub.sRem(ONLINE_USERS_SET, userId);
+              await pub.del(userInfoKey(userId));
+            }
+          } catch {
+            // adapter hiccup — leave the entry for the next sweep
+          }
+        }
+      } catch (error) {
+        log.debug("Presence sweep skipped", { error });
+      }
+    }, 60_000).unref?.();
   }
 
   // Set up connection listeners
@@ -306,12 +337,15 @@ class SocketService {
         }
       });
 
-      // Handle get active users request
-      socket.on("get_active_users", () => {
+      // Handle get active users request — must be the FLEET-WIDE snapshot:
+      // this is the header's baseline on every connect, and reading the
+      // process-local maps here is what made counts differ per instance.
+      socket.on("get_active_users", async () => {
         try {
-          const activeUsers = this.getActiveAdminStaffUsers();
-          socket.emit("active_users_list", activeUsers);
-          socket.emit("students_online_count", this.getOnlineStudentsCount());
+          const { adminStaff, studentCount } =
+            await this.computeGlobalPresence();
+          socket.emit("active_users_list", adminStaff);
+          socket.emit("students_online_count", studentCount);
         } catch (error) {
           console.error("[SocketService] Error getting active users:", error);
         }
@@ -904,6 +938,25 @@ class SocketService {
     if (pub && this.userInfoCache.has(userId)) {
       const info = this.userInfoCache.get(userId)!;
       try {
+        // Preserve the earliest connectedAt fleet-wide: the user may have
+        // connected on another instance first, and login time must not reset
+        // every time a new socket lands here.
+        let connectedAt =
+          this.userConnectedAt.get(userId)?.toISOString() ??
+          new Date().toISOString();
+        try {
+          const existingRaw = await pub.get(userInfoKey(userId));
+          if (existingRaw) {
+            const existing = JSON.parse(existingRaw) as {
+              connectedAt?: string;
+            };
+            if (existing.connectedAt && existing.connectedAt < connectedAt) {
+              connectedAt = existing.connectedAt;
+            }
+          }
+        } catch {
+          // best effort — keep the local value
+        }
         await pub.sAdd(ONLINE_USERS_SET, userId);
         await pub.set(
           userInfoKey(userId),
@@ -911,6 +964,7 @@ class SocketService {
             name: info.name,
             image: info.image,
             type: info.type,
+            connectedAt,
           }),
           { EX: USER_INFO_TTL },
         );
@@ -1026,6 +1080,111 @@ class SocketService {
     }
   }
 
+  /**
+   * Fleet-wide presence snapshot. Reads the Redis presence store (set +
+   * per-user info keys) so the result covers users connected to ANY backend
+   * instance — the process-local maps only know about sockets terminated
+   * here, which is exactly the bug that made the header counts differ per
+   * instance. Local cache is preferred per user (fresher tabActive); missing
+   * info keys are self-healed out of the set. Any Redis failure falls back
+   * to local-only data — presence must never throw.
+   */
+  private async computeGlobalPresence(): Promise<{
+    adminStaff: ActiveUserInfo[];
+    studentCount: number;
+    studentIds: number[];
+    connectedAtByUserId: Map<string, string>;
+  }> {
+    const local = () => ({
+      adminStaff: this.getActiveAdminStaffUsers(),
+      studentCount: this.getOnlineStudentsCount(),
+      studentIds: this.getLocalOnlineStudentUserIds(),
+      connectedAtByUserId: new Map(
+        [...this.userConnectedAt.entries()].map(([id, d]) => [
+          id,
+          d.toISOString(),
+        ]),
+      ),
+    });
+
+    const pub = getRedisPubClient();
+    if (!pub) return local();
+
+    try {
+      const userIds = await pub.sMembers(ONLINE_USERS_SET);
+      const adminStaff: ActiveUserInfo[] = [];
+      const studentIds: number[] = [];
+      const connectedAtByUserId = new Map<string, string>();
+      let studentCount = 0;
+
+      const remoteIds = userIds.filter((id) => !this.userInfoCache.has(id));
+      const remoteRaw = remoteIds.length
+        ? await pub.mGet(remoteIds.map((id) => userInfoKey(id)))
+        : [];
+      const remoteById = new Map<string, string | null>(
+        remoteIds.map((id, i) => [id, remoteRaw[i] ?? null]),
+      );
+
+      for (const userId of userIds) {
+        const localConnectedAt = this.userConnectedAt.get(userId);
+        if (localConnectedAt) {
+          connectedAtByUserId.set(userId, localConnectedAt.toISOString());
+        }
+
+        const cached = this.userInfoCache.get(userId);
+        if (cached) {
+          if (cached.type === "STUDENT") {
+            studentCount++;
+            const num = Number(userId);
+            if (!Number.isNaN(num)) studentIds.push(num);
+          } else {
+            adminStaff.push(cached);
+          }
+          continue;
+        }
+
+        const raw = remoteById.get(userId);
+        if (!raw) {
+          // Info expired or stale — self-heal the set
+          try {
+            await pub.sRem(ONLINE_USERS_SET, userId);
+          } catch {
+            // best effort
+          }
+          continue;
+        }
+
+        const info = JSON.parse(raw) as {
+          name: string;
+          image: string | null;
+          type: string;
+          connectedAt?: string;
+        };
+        if (info.connectedAt && !connectedAtByUserId.has(userId)) {
+          connectedAtByUserId.set(userId, info.connectedAt);
+        }
+        if (info.type === "STUDENT") {
+          studentCount++;
+          const num = Number(userId);
+          if (!Number.isNaN(num)) studentIds.push(num);
+        } else {
+          adminStaff.push({
+            id: Number(userId),
+            name: info.name,
+            image: info.image,
+            type: info.type as "ADMIN" | "STAFF",
+            tabActive: true,
+          });
+        }
+      }
+
+      return { adminStaff, studentCount, studentIds, connectedAtByUserId };
+    } catch (error) {
+      log.error("Error computing global presence, using local data", { error });
+      return local();
+    }
+  }
+
   // Get active ADMIN/STAFF users
   private getActiveAdminStaffUsers(): ActiveUserInfo[] {
     const activeUsers: ActiveUserInfo[] = [];
@@ -1056,8 +1215,9 @@ class SocketService {
     return count;
   }
 
-  // Expose list of online student userIds (for REST API consumers)
-  public getOnlineStudentUserIds(): number[] {
+  // Local-only student ids (fallback path; fleet-wide callers use the async
+  // getOnlineStudentUserIds below)
+  private getLocalOnlineStudentUserIds(): number[] {
     const ids: number[] = [];
     this.activeConnections.forEach((sockets, userId) => {
       if (sockets.size === 0) return;
@@ -1072,74 +1232,45 @@ class SocketService {
     return ids;
   }
 
-  public getOnlineStudentLoginTime(userId: number): string | null {
-    const connectedAt = this.userConnectedAt.get(String(userId));
-    return connectedAt ? connectedAt.toISOString() : null;
+  // Expose list of online student userIds (for REST API consumers) —
+  // fleet-wide via the Redis presence store, not just this instance.
+  public async getOnlineStudentUserIds(): Promise<number[]> {
+    const { studentIds } = await this.computeGlobalPresence();
+    return studentIds;
   }
 
-  // Broadcast active users list to all connected clients (reads from global Redis if available)
+  public async getOnlineStudentLoginTime(
+    userId: number,
+  ): Promise<string | null> {
+    const local = this.userConnectedAt.get(String(userId));
+    if (local) return local.toISOString();
+    // Student may be connected to another instance — read Redis info
+    const pub = getRedisPubClient();
+    if (!pub) return null;
+    try {
+      const raw = await pub.get(userInfoKey(String(userId)));
+      if (!raw) return null;
+      const info = JSON.parse(raw) as { connectedAt?: string };
+      return info.connectedAt ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  // Broadcast active users list to all connected clients (fleet-wide via the
+  // shared presence snapshot; falls back to local data inside it).
   private async broadcastActiveUsers() {
     if (!this.io) {
       return;
     }
 
     try {
-      const pub = getRedisPubClient();
-      if (pub) {
-        // Read from Redis for global presence
-        const userIds = await pub.sMembers(ONLINE_USERS_SET);
-        const adminStaff: ActiveUserInfo[] = [];
-        let studentCount = 0;
-
-        for (const userId of userIds) {
-          // Try local cache first (faster, covers users on this instance)
-          const cached = this.userInfoCache.get(userId);
-          if (cached) {
-            if (cached.type === "STUDENT") studentCount++;
-            else adminStaff.push(cached);
-            continue;
-          }
-
-          // Cross-instance user — read from Redis
-          const raw = await pub.get(userInfoKey(userId));
-          if (!raw) {
-            // Info expired or stale — clean up
-            await pub.sRem(ONLINE_USERS_SET, userId);
-            continue;
-          }
-
-          const info = JSON.parse(raw) as {
-            name: string;
-            image: string | null;
-            type: string;
-          };
-          if (info.type === "STUDENT") {
-            studentCount++;
-          } else {
-            adminStaff.push({
-              id: Number(userId),
-              name: info.name,
-              image: info.image,
-              type: info.type as "ADMIN" | "STAFF",
-              tabActive: true,
-            });
-          }
-        }
-
-        this.io.emit("active_users_update", adminStaff);
-        this.io.emit("students_online_count", studentCount);
-        log.debug(
-          `Active users broadcast: ${adminStaff.length} admin/staff, ${studentCount} students`,
-        );
-      } else {
-        // Redis not available — fall back to local data only
-        const activeUsers = this.getActiveAdminStaffUsers();
-        this.io.emit("active_users_update", activeUsers);
-        this.io.emit("students_online_count", this.getOnlineStudentsCount());
-        log.debug(
-          `Active users broadcast: ${activeUsers.length} users (local only)`,
-        );
-      }
+      const { adminStaff, studentCount } = await this.computeGlobalPresence();
+      this.io.emit("active_users_update", adminStaff);
+      this.io.emit("students_online_count", studentCount);
+      log.debug(
+        `Active users broadcast: ${adminStaff.length} admin/staff, ${studentCount} students`,
+      );
     } catch (error) {
       log.error("Error broadcasting active users", { error });
     }

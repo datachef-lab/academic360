@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from "express";
+import { getCachedSnapshot } from "@/services/snapshot-cache.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import {
@@ -41,7 +42,19 @@ export const getLibraryDashboardStatsController = async (
       dateFrom: optDate(req.query.dateFrom),
       dateTo: optDate(req.query.dateTo),
     };
-    const stats = await getLibraryDashboardStats(filters);
+    // ~30 aggregate queries per compute and every open dashboard used to rerun
+    // them all; share one snapshot per filter combo. Any library write bumps
+    // the epoch (library-broadcast.middleware), so stats never lag a mutation.
+    const stats = await getCachedSnapshot(
+      "library:dashboard",
+      JSON.stringify([
+        filters.branchId ?? null,
+        filters.dateFrom?.toISOString() ?? null,
+        filters.dateTo?.toISOString() ?? null,
+      ]),
+      60,
+      () => getLibraryDashboardStats(filters),
+    );
     res
       .status(200)
       .json(
@@ -103,7 +116,15 @@ export const getLibraryConsistencyReportController = async (
   next: NextFunction,
 ) => {
   try {
-    ok(res, await runLibraryConsistencyCheck());
+    // Ops-only diagnostic scan over the full catalogue; no console caller
+    // pushes a bump on write, so this is TTL-only staleness (10 min is
+    // acceptable for a manually-triggered consistency report).
+    ok(
+      res,
+      await getCachedSnapshot("library:consistency", "all", 600, () =>
+        runLibraryConsistencyCheck(),
+      ),
+    );
   } catch (err) {
     handleError(err, res, next);
   }

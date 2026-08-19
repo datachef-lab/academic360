@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import useDebounce from "@/components/Hooks/useDebounce";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -257,7 +258,9 @@ export default function BookCirculationPage() {
 
   const handlePickerSearch = useCallback(async (term: string) => {
     const trimmed = term.trim();
-    if (!trimmed) {
+    // Min 2 chars: a single character matches half the catalogue and costs a
+    // full search round-trip per keystroke pause.
+    if (trimmed.length < 2) {
       pickerRequestIdRef.current++;
       setPickerOptions([]);
       setPickerLoading(false);
@@ -309,13 +312,19 @@ export default function BookCirculationPage() {
   const previewBatchProgram =
     previewUser?.programCourseShortName?.trim() || previewUser?.programCourse || "-";
 
+  // Debounced + min-2-chars: the raw input used to fire one unbounded list
+  // query per keystroke — a large share of the 2026-08-19 DB incident.
+  const debouncedSearch = useDebounce(search, 400);
+  const effectiveSearch =
+    debouncedSearch.trim().length >= 2 ? debouncedSearch.trim() : "";
+
   const fetchRows = useCallback(async () => {
     try {
       setLoading(true);
       const response = await getBookCirculationList({
         page,
         limit,
-        ...(search.trim() ? { search: search.trim() } : {}),
+        ...(effectiveSearch ? { search: effectiveSearch } : {}),
         ...(filters.userType !== "all" ? { userType: filters.userType } : {}),
         ...(filters.status !== "all" ? { status: filters.status } : {}),
         ...(filters.issueDate ? { issueDate: filters.issueDate } : {}),
@@ -329,7 +338,7 @@ export default function BookCirculationPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, search, filters, activeBranchId]);
+  }, [page, limit, effectiveSearch, filters, activeBranchId]);
 
   useEffect(() => {
     void fetchRows();

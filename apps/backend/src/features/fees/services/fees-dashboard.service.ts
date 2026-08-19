@@ -1,5 +1,10 @@
 import { db } from "@/db/index.js";
 import {
+  getCachedSnapshot,
+  bumpSnapshotEpoch,
+  getSnapshotEpoch,
+} from "@/services/snapshot-cache.js";
+import {
   academicYearModel,
   classModel,
   feeCategoryModel,
@@ -776,9 +781,15 @@ const canonicalScopeCache = new Map<
 
 function canonicalScopeCacheKey(
   filters: FeesDashboardFilters,
-  options?: MappingWhereOptions,
+  options: MappingWhereOptions | undefined,
+  epoch: string,
 ): string {
   return JSON.stringify({
+    // Fold the fleet-wide fees:dashboard epoch into this per-process key. Any
+    // instance's fee mutation bumps that epoch (Redis INCR), so the key changes
+    // fleet-wide and this Map's stale scope (mapping-id set) is never reused —
+    // it self-invalidates across instances, not just on the mutating one.
+    epoch,
     filters,
     forTodayLive: options?.forTodayLive ?? false,
     includeClosedPromotions: options?.includeClosedPromotions ?? false,
@@ -794,7 +805,8 @@ export async function resolveDashboardScope(
   options?: MappingWhereOptions,
 ): Promise<DashboardScope> {
   const filters = resolveDashboardFilters(filtersInput);
-  const cacheKey = canonicalScopeCacheKey(filters, options);
+  const epoch = await getSnapshotEpoch("fees:dashboard");
+  const cacheKey = canonicalScopeCacheKey(filters, options, epoch);
   const cached = canonicalScopeCache.get(cacheKey);
   if (cached && Date.now() - cached.cachedAt < CANONICAL_SCOPE_CACHE_TTL_MS) {
     return { canonicalMappingIds: cached.canonicalMappingIds, filters };
@@ -811,6 +823,15 @@ export async function resolveDashboardScope(
         .filter((id): id is number => id != null),
     ),
   ];
+  // Now that the epoch is part of the key, keys under superseded epochs are
+  // dead weight. Prune expired entries when the map grows so it stays bounded
+  // as the fleet-wide epoch advances.
+  if (canonicalScopeCache.size > 200) {
+    const cutoff = Date.now() - CANONICAL_SCOPE_CACHE_TTL_MS;
+    for (const [k, v] of canonicalScopeCache) {
+      if (v.cachedAt < cutoff) canonicalScopeCache.delete(k);
+    }
+  }
   canonicalScopeCache.set(cacheKey, {
     canonicalMappingIds,
     cachedAt: Date.now(),
@@ -1811,6 +1832,66 @@ async function loadReportsBundle(mappingWhere: SQL) {
     slabBreakdown,
     promotionBreakdown,
   };
+}
+
+const FEES_DASHBOARD_TTL_SEC = 60;
+
+/**
+ * Stable cache key: normalize the filters (same resolution the compute uses) and
+ * sort the id/string arrays so equivalent filter sets share one cache entry.
+ */
+function stableFeesDashboardKey(
+  rawFilters: FeesDashboardFilters,
+  section: FeesDashboardSection,
+): string {
+  const f = resolveDashboardFilters(rawFilters);
+  const sortNum = (a?: number[]) => (a ? [...a].sort((x, y) => x - y) : null);
+  const sortStr = (a?: string[]) => (a ? [...a].sort() : null);
+  return JSON.stringify({
+    section,
+    academicYearIds: sortNum(f.academicYearIds),
+    courseLevelIds: sortNum(f.courseLevelIds),
+    programCourseIds: sortNum(f.programCourseIds),
+    classIds: sortNum(f.classIds),
+    shiftIds: sortNum(f.shiftIds),
+    regulationTypeIds: sortNum(f.regulationTypeIds),
+    affiliationIds: sortNum(f.affiliationIds),
+    streamIds: sortNum(f.streamIds),
+    categoryIds: sortNum(f.categoryIds),
+    religionIds: sortNum(f.religionIds),
+    genders: sortStr(f.genders),
+    paymentStatuses: sortStr(f.paymentStatuses),
+    paymentModes: sortStr(f.paymentModes),
+    transactionStatuses: sortStr(f.transactionStatuses),
+    dateFrom: f.dateFrom ?? null,
+    dateTo: f.dateTo ?? null,
+    studentSearch: f.studentSearch ?? null,
+  });
+}
+
+/**
+ * Cached entry point for the dashboard aggregation. The heavy ~1s aggregation is
+ * shared fleet-wide via the epoch-keyed snapshot cache (Redis-backed, multi-
+ * instance safe). Invalidated on EVERY fee mutation through
+ * `bumpFeesDashboardEpoch()` (called in scheduleFeesDashboardBroadcast before the
+ * socket refresh), so a viewer never sees stale collection numbers. Per-process
+ * single-flight also collapses the dev StrictMode double-fetch into one compute.
+ * Falls through to a direct compute if Redis is down (never stale, never fails).
+ */
+export function getFeesDashboardDataCached(
+  rawFilters: FeesDashboardFilters = {},
+  section: FeesDashboardSection = "all",
+): Promise<FeesDashboardPayload> {
+  return getCachedSnapshot(
+    "fees:dashboard",
+    stableFeesDashboardKey(rawFilters, section),
+    FEES_DASHBOARD_TTL_SEC,
+    () => getFeesDashboardData(rawFilters, section),
+  );
+}
+
+export function bumpFeesDashboardEpoch(): void {
+  void bumpSnapshotEpoch("fees:dashboard");
 }
 
 export async function getFeesDashboardData(

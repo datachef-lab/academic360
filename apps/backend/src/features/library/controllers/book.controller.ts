@@ -187,26 +187,33 @@ export const downloadBookExcelController = async (
     const search =
       typeof req.query.search === "string" ? req.query.search : undefined;
 
-    const buffer = await exportBooksExcel({
-      search,
-      publisherId: parseQueryInt(req.query, "publisherId"),
-      languageId: parseQueryInt(req.query, "languageId"),
-      subjectGroupId: parseQueryInt(req.query, "subjectGroupId"),
-      seriesId: parseQueryInt(req.query, "seriesId"),
-      libraryDocumentTypeId: parseQueryInt(req.query, "libraryDocumentTypeId"),
-      journalId: parseQueryInt(req.query, "journalId"),
-      enclosureId: parseQueryInt(req.query, "enclosureId"),
-      branchId: parseQueryInt(req.query, "branchId"),
-    });
-
     const filename = `library-books-${new Date().toISOString().slice(0, 10)}.xlsx`;
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.setHeader("Content-Length", buffer.length);
-    res.status(200).send(buffer);
+
+    // Streamed directly to `res` (see exportBooksExcel) — Content-Length is
+    // unknown up front and intentionally omitted; response uses chunked
+    // transfer encoding.
+    await exportBooksExcel(
+      {
+        search,
+        publisherId: parseQueryInt(req.query, "publisherId"),
+        languageId: parseQueryInt(req.query, "languageId"),
+        subjectGroupId: parseQueryInt(req.query, "subjectGroupId"),
+        seriesId: parseQueryInt(req.query, "seriesId"),
+        libraryDocumentTypeId: parseQueryInt(
+          req.query,
+          "libraryDocumentTypeId",
+        ),
+        journalId: parseQueryInt(req.query, "journalId"),
+        enclosureId: parseQueryInt(req.query, "enclosureId"),
+        branchId: parseQueryInt(req.query, "branchId"),
+      },
+      res,
+    );
   } catch (error) {
     handleError(error, res, next);
   }

@@ -10,7 +10,10 @@ import { db } from "@/db/index.js";
 import { careerProgressionFormModel } from "@repo/db/schemas";
 import { and, eq } from "drizzle-orm";
 import { listCertificateMastersWithFields } from "../services/default-certificate-master-loader.service.js";
-import { exportCareerProgressionFormsExcel } from "../services/career-progression-form-export.service.js";
+import {
+  careerProgressionExportFileName,
+  exportCareerProgressionFormsExcel,
+} from "../services/career-progression-form-export.service.js";
 
 export async function exportCareerProgressionFormsHandler(
   req: Request,
@@ -25,18 +28,18 @@ export async function exportCareerProgressionFormsHandler(
       if (!Number.isNaN(p)) academicYearId = p;
     }
 
-    const result = await exportCareerProgressionFormsExcel({ academicYearId });
-
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${result.fileName}"`,
+      `attachment; filename="${careerProgressionExportFileName(academicYearId)}"`,
     );
-    res.setHeader("Content-Length", result.buffer.length);
-    res.status(200).send(result.buffer);
+
+    // Streamed directly to `res` (see exportCareerProgressionFormsExcel) —
+    // Content-Length is unknown up front and intentionally omitted.
+    await exportCareerProgressionFormsExcel({ academicYearId, res });
   } catch (error) {
     handleError(error, res, next);
   }

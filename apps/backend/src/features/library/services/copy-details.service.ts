@@ -1,7 +1,12 @@
 import ExcelJS from "exceljs";
 import { db } from "@/db/index.js";
-import { and, count, desc, eq, ilike, or, SQL } from "drizzle-orm";
-import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
+import { and, count, desc, eq, ilike, lt, or, SQL } from "drizzle-orm";
+import type { Response } from "express";
+import {
+  applyStandardExcelReportTableStyling,
+  styleStreamedBodyRow,
+  styleStreamedHeaderRow,
+} from "@/utils/excel-report-styling.js";
 import { addressModel } from "@repo/db/schemas/models/user/address.model.js";
 import { authorTypeModel } from "@repo/db/schemas/models/library/author-type.model.js";
 import { bindingModel } from "@repo/db/schemas/models/library/binding.model.js";
@@ -306,52 +311,28 @@ const formatExcelDateTime = (value: Date | string | null) => {
   });
 };
 
+/**
+ * Streams the copy-details export directly to `res` in ID-descending
+ * keyset chunks instead of pulling the full (up to 100k row) result set
+ * into memory. The `.limit(100_000)` cap on total rows is preserved
+ * exactly.
+ */
 export async function exportCopyDetailsExcel(
   filters: CopyDetailsExportFilters,
-): Promise<Buffer> {
+  res: Response,
+): Promise<void> {
   const whereClause = buildListWhere(filters);
+  const HARD_CAP = 100_000;
+  const CHUNK_SIZE = 2000;
 
-  const rows = await db
-    .select({
-      id: copyDetailsModel.id,
-      bookId: copyDetailsModel.bookId,
-      bookTitle: bookModel.title,
-      publisherName: publisherModel.name,
-      accessNumber: copyDetailsModel.accessNumber,
-      oldAccessNumber: copyDetailsModel.oldAccessNumber,
-      isbn: copyDetailsModel.isbn,
-      publishedYear: copyDetailsModel.publishedYear,
-      statusName: statusModel.name,
-      entryModeName: entryModeModel.name,
-      rackName: rackModel.name,
-      shelfName: shelfModel.name,
-      enclosureName: enclosureModel.name,
-      bindingName: bindingModel.name,
-      priceInINR: copyDetailsModel.priceInINR,
-      createdAt: copyDetailsModel.createdAt,
-      updatedAt: copyDetailsModel.updatedAt,
-    })
-    .from(copyDetailsModel)
-    .innerJoin(bookModel, eq(copyDetailsModel.bookId, bookModel.id))
-    .leftJoin(publisherModel, eq(bookModel.publisherId, publisherModel.id))
-    .leftJoin(statusModel, eq(copyDetailsModel.statusId, statusModel.id))
-    .leftJoin(
-      entryModeModel,
-      eq(copyDetailsModel.enntryModeId, entryModeModel.id),
-    )
-    .leftJoin(rackModel, eq(copyDetailsModel.rackId, rackModel.id))
-    .leftJoin(shelfModel, eq(copyDetailsModel.shelfId, shelfModel.id))
-    .leftJoin(
-      enclosureModel,
-      eq(copyDetailsModel.enclosureId, enclosureModel.id),
-    )
-    .leftJoin(bindingModel, eq(copyDetailsModel.bindingTypeId, bindingModel.id))
-    .where(whereClause)
-    .orderBy(desc(copyDetailsModel.id))
-    .limit(100_000);
-
-  const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet("Copy details");
+  const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+    stream: res,
+    useStyles: true,
+    useSharedStrings: true,
+  });
+  const sheet = workbook.addWorksheet("Copy details", {
+    views: [{ state: "frozen", ySplit: 1 }],
+  });
 
   sheet.columns = [
     { header: "ID", key: "id", width: 10 },
@@ -372,33 +353,99 @@ export async function exportCopyDetailsExcel(
     { header: "Created at", key: "createdAt", width: 22 },
     { header: "Updated at", key: "updatedAt", width: 22 },
   ];
+  styleStreamedHeaderRow(sheet.getRow(1));
+  sheet.getRow(1).commit();
 
-  for (const row of rows) {
-    sheet.addRow({
-      id: row.id,
-      bookId: row.bookId,
-      bookTitle: row.bookTitle ?? "",
-      publisher: row.publisherName ?? "",
-      accessNumber: row.accessNumber ?? "",
-      oldAccessNumber: row.oldAccessNumber ?? "",
-      isbn: row.isbn ?? "",
-      publishedYear: row.publishedYear ?? "",
-      status: row.statusName ?? "",
-      entryMode: row.entryModeName ?? "",
-      rack: row.rackName ?? "",
-      shelf: row.shelfName ?? "",
-      enclosure: row.enclosureName ?? "",
-      binding: row.bindingName ?? "",
-      priceInINR: row.priceInINR ?? "",
-      createdAt: formatExcelDateTime(row.createdAt),
-      updatedAt: formatExcelDateTime(row.updatedAt),
-    });
+  let lastId: number | null = null;
+  let totalFetched = 0;
+  for (;;) {
+    const remaining = HARD_CAP - totalFetched;
+    if (remaining <= 0) break;
+    const take = Math.min(CHUNK_SIZE, remaining);
+
+    const cursorCond: SQL | undefined =
+      lastId != null ? lt(copyDetailsModel.id, lastId) : undefined;
+    const chunkWhere: SQL | undefined = whereClause
+      ? cursorCond
+        ? and(whereClause, cursorCond)
+        : whereClause
+      : cursorCond;
+
+    const chunk = await db
+      .select({
+        id: copyDetailsModel.id,
+        bookId: copyDetailsModel.bookId,
+        bookTitle: bookModel.title,
+        publisherName: publisherModel.name,
+        accessNumber: copyDetailsModel.accessNumber,
+        oldAccessNumber: copyDetailsModel.oldAccessNumber,
+        isbn: copyDetailsModel.isbn,
+        publishedYear: copyDetailsModel.publishedYear,
+        statusName: statusModel.name,
+        entryModeName: entryModeModel.name,
+        rackName: rackModel.name,
+        shelfName: shelfModel.name,
+        enclosureName: enclosureModel.name,
+        bindingName: bindingModel.name,
+        priceInINR: copyDetailsModel.priceInINR,
+        createdAt: copyDetailsModel.createdAt,
+        updatedAt: copyDetailsModel.updatedAt,
+      })
+      .from(copyDetailsModel)
+      .innerJoin(bookModel, eq(copyDetailsModel.bookId, bookModel.id))
+      .leftJoin(publisherModel, eq(bookModel.publisherId, publisherModel.id))
+      .leftJoin(statusModel, eq(copyDetailsModel.statusId, statusModel.id))
+      .leftJoin(
+        entryModeModel,
+        eq(copyDetailsModel.enntryModeId, entryModeModel.id),
+      )
+      .leftJoin(rackModel, eq(copyDetailsModel.rackId, rackModel.id))
+      .leftJoin(shelfModel, eq(copyDetailsModel.shelfId, shelfModel.id))
+      .leftJoin(
+        enclosureModel,
+        eq(copyDetailsModel.enclosureId, enclosureModel.id),
+      )
+      .leftJoin(
+        bindingModel,
+        eq(copyDetailsModel.bindingTypeId, bindingModel.id),
+      )
+      .where(chunkWhere)
+      .orderBy(desc(copyDetailsModel.id))
+      .limit(take);
+
+    if (chunk.length === 0) break;
+
+    for (const row of chunk) {
+      const dataRow = sheet.addRow({
+        id: row.id,
+        bookId: row.bookId,
+        bookTitle: row.bookTitle ?? "",
+        publisher: row.publisherName ?? "",
+        accessNumber: row.accessNumber ?? "",
+        oldAccessNumber: row.oldAccessNumber ?? "",
+        isbn: row.isbn ?? "",
+        publishedYear: row.publishedYear ?? "",
+        status: row.statusName ?? "",
+        entryMode: row.entryModeName ?? "",
+        rack: row.rackName ?? "",
+        shelf: row.shelfName ?? "",
+        enclosure: row.enclosureName ?? "",
+        binding: row.bindingName ?? "",
+        priceInINR: row.priceInINR ?? "",
+        createdAt: formatExcelDateTime(row.createdAt),
+        updatedAt: formatExcelDateTime(row.updatedAt),
+      });
+      styleStreamedBodyRow(dataRow);
+      dataRow.commit();
+    }
+
+    totalFetched += chunk.length;
+    if (chunk.length < take) break;
+    lastId = chunk[chunk.length - 1].id;
   }
 
-  applyStandardExcelReportTableStyling(sheet);
-
-  const result = await workbook.xlsx.writeBuffer();
-  return Buffer.isBuffer(result) ? result : Buffer.from(result);
+  sheet.commit();
+  await workbook.commit();
 }
 
 export async function getBookTitleById(bookId: number): Promise<string | null> {

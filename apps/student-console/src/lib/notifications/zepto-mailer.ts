@@ -27,22 +27,34 @@ export async function sendZeptoMail(to: string, subject: string, htmlBody: strin
     console.log("email subject:", subject);
     console.log("email body:", htmlBody);
     console.log("email name:", name);
-    const response = await client.sendMail({
-      from: {
-        address: process.env.ZEPTO_FROM!,
-        name: "BESC Admission Communication",
-      },
-      to: [
-        {
-          email_address: {
-            address: recipientEmail,
-            name: name || "User",
-          },
+
+    // The zeptomail SendMailClient has no built-in request timeout option,
+    // so bound the call with a race against a timer instead - this doesn't
+    // cancel the underlying HTTP call, but it stops us from hanging on it.
+    // On timeout this rejects the same way any other send failure does, so
+    // callers (see the catch block below and app/api/otp/generate) see the
+    // same error shape as any other ZeptoMail failure.
+    const response = await Promise.race([
+      client.sendMail({
+        from: {
+          address: process.env.ZEPTO_FROM!,
+          name: "BESC Admission Communication",
         },
-      ],
-      subject,
-      htmlbody: htmlBody,
-    });
+        to: [
+          {
+            email_address: {
+              address: recipientEmail,
+              name: name || "User",
+            },
+          },
+        ],
+        subject,
+        htmlbody: htmlBody,
+      }),
+      new Promise((_resolve, reject) =>
+        setTimeout(() => reject(new Error("ZeptoMail request timed out")), 10_000),
+      ),
+    ]);
 
     console.log("✅ Email sent via ZeptoMail:", response);
     return response;

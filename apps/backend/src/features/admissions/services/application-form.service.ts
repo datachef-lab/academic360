@@ -3,6 +3,7 @@ import {
   ApplicationForm,
   applicationFormModel,
 } from "../models/application-form.model.js";
+import { bumpAdmissionDashboardEpoch } from "./admission-dashboard.service.js";
 import {
   ApplicationFormDto,
   AdmissionGeneralInfoDto,
@@ -78,6 +79,10 @@ export async function createApplicationForm(
 
   const dto = await formatAppform(newApplicationForm);
 
+  // New application changes the admission-dashboard counts — invalidate its
+  // cached snapshot so a reload reflects it immediately (additive: fresher only).
+  bumpAdmissionDashboardEpoch();
+
   return { applicationForm: dto, message: "New Application Form Created!" };
 }
 
@@ -141,6 +146,9 @@ export async function updateApplicationForm(
 
   const dto = await formatAppform(updatedForm);
 
+  // formStatus / isBlocked may have changed — invalidate the dashboard snapshot.
+  bumpAdmissionDashboardEpoch();
+
   return dto;
 }
 
@@ -199,6 +207,9 @@ export async function deleteApplicationForm(id: number) {
 
   // Delete the application form
   await db.delete(applicationFormModel).where(eq(applicationFormModel.id, id));
+
+  // Removed an application — invalidate the dashboard snapshot.
+  bumpAdmissionDashboardEpoch();
 
   return true;
 }
