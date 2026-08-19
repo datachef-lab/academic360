@@ -236,6 +236,21 @@ This is a deploy-sequencing consideration (affects all instances equally at migr
 
 ---
 
+## Resolutions applied (2026-08-19, post-review)
+
+- **A1 — FIXED.** The in-process `notificationMasterRowCache` was removed; `getCachedNotificationMasterRow` now always reads fresh from the DB (an indexed, non-hot lookup). No per-process staleness remains — the branch now has zero non-Redis caches.
+- **B1 — FIXED centrally.** `handleError` now checks `res.headersSent` first and, if a response has already started streaming, calls `res.destroy(err)` instead of `res.status().json()`. This covers all 7 streaming export controllers (and any future one) — a mid-stream failure now aborts the socket instead of throwing `ERR_HTTP_HEADERS_SENT` and shipping a silently-corrupt file.
+- **B2 — NOT a bug (verified).** Both sub-queries and the outer query all `ORDER BY id DESC`, and each branch returns its own top-`N` by id. Any record excluded from a branch's top-`N` necessarily has `N` higher-id rows in that same branch already present in the union, so it could never belong to the true combined top-`N`-by-id. The result set is correct for the id-desc ordering the picker uses.
+- **B3 — kept, accepted low-risk.** Verified no caller of the email path auto-retries (OTP/notification routes return the error; "resend" is a deliberate user action = a new send). The 10s `Promise.race` bounds a real hang; the theoretical duplicate needs an auto-retry that does not exist. Bounded-wait > unbounded-hang here.
+- **B4 — accepted (minor).** The report-job stream-to-buffer adapter runs off the request path in the async job queue; a stuck job is visible/retryable in that system. Left as-is.
+- **A3 / A4 — accepted tradeoffs, flagged for sign-off.** A3 (per-instance 60s reference-data cache in student-console) is a self-declared accepted staleness window on slow-changing admin master data. A4 (websocket-only transport) is the *correct* fix for the multi-instance/no-sticky-sessions topology (long-polling splits handshakes across instances); the residual is that a client unable to upgrade to WS gets no realtime — acceptable for an internal console behind an ALB that passes WS.
+- **C1 / C2 / C3 — already on current `main`.** These were flagged against the old merge-base; current `main` already contains them (merged earlier today), so they are not new changes this branch introduces.
+- **D1 — migration renumbered 0195 and confirmed skip-safe.** `0196` → `0195` (main ends at 0194, no gap). `when = 1787138439000` exceeds main's watermark (1786701133486) and develop's highest stamp (1787118909043), so it applies on the main→prod deploy rather than being silently skipped. A future merge-down to develop still needs a renumber (develop owns `0195_service_requests`) — noted in the migration header.
+
+**Merge status:** branch merges into current `main` with zero conflicts; backend / main-console / student-console all type-check clean. Awaiting owner confirmation before any merge or deploy.
+
+---
+
 ## Checked and confirmed _not_ an issue
 
 **`library-copy-details` report job key rename**: `apps/main-console/src/pages/library/LibraryReportsPage.tsx:168-169` renames the report picker entry to `id: "copy-details"`, `jobKey: "library-copy-details"`. `apps/backend/src/features/reports/report-generators.ts:465` independently renames the backend job registry key to `key: "library-copy-details"`. Both sides were read directly and agree on the string `library-copy-details` — this cross-service rename is coordinated correctly and does not break the report-generation flow.
