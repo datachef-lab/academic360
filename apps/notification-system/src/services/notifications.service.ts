@@ -109,6 +109,7 @@ export class NotificationsService {
       const notificationEventData: {
         templateData?: any;
         subject?: string;
+        selectionRows?: Array<{ label: string; value: string }>;
       } = {};
 
       if (dto.notificationEvent.templateData) {
@@ -117,6 +118,11 @@ export class NotificationsService {
 
       if (dto.notificationEvent.subject) {
         notificationEventData.subject = dto.notificationEvent.subject;
+      }
+
+      if (Array.isArray(dto.notificationEvent.selectionRows)) {
+        notificationEventData.selectionRows =
+          dto.notificationEvent.selectionRows;
       }
 
       message = JSON.stringify({

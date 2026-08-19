@@ -154,6 +154,9 @@ async function processBatch() {
       // Extract templateData and subject from notification message if present
       let extractedTemplateData: Record<string, any> = {};
       let extractedSubject: string | undefined;
+      let extractedSelectionRows:
+        | Array<{ label: string; value: string }>
+        | undefined;
       try {
         if (notif?.message) {
           console.log(
@@ -189,6 +192,11 @@ async function processBatch() {
           } else {
             console.log("[email.worker] ❌ No subject found in parsed message");
           }
+          // Subject-selection rows carrying the meta labels verbatim
+          if (Array.isArray(parsedMessage?.notificationEvent?.selectionRows)) {
+            extractedSelectionRows =
+              parsedMessage.notificationEvent.selectionRows;
+          }
         } else {
           console.log("[email.worker] ⚠️ No message field in notification");
         }
@@ -200,6 +208,7 @@ async function processBatch() {
       const dto: NotificationEventDto = {
         templateData: extractedTemplateData,
         subject: extractedSubject,
+        selectionRows: extractedSelectionRows,
         meta: { devOnly: true },
         emailAttachments: await prepareEmailAttachments(notif.emailAttachments),
       } as NotificationEventDto;
@@ -397,7 +406,7 @@ async function processBatch() {
       if (computedTemplateData) {
         // Initialize categories
         subjectsByCategory = {
-          Minor: { I: "", II: "", III: "", IV: "" },
+          Minor: { I: "", II: "", III: "", IV: "", V: "" },
           IDC: { I: "", II: "", III: "", IV: "" },
           AEC: { I: "", II: "", III: "", IV: "" },
           CVAC: { I: "", II: "", III: "", IV: "" },
@@ -421,9 +430,10 @@ async function processBatch() {
               subjectsByCategory["Minor"]["IV"] = subjectName;
             }
           } else if (fieldName.includes("Minor 3")) {
-            // If Minor 3 exists in master/meta it should appear in Sem III
+            // Minor 3 keeps its own slot so it never overwrites the Minor 2
+            // value in Sem III; the template picks its label.
             if (hasValue) {
-              subjectsByCategory["Minor"]["III"] = subjectName;
+              subjectsByCategory["Minor"]["V"] = subjectName;
             }
           } else if (fieldName.includes("IDC 1")) {
             if (hasValue) subjectsByCategory["IDC"]["I"] = subjectName;

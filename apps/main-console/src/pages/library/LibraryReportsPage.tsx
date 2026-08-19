@@ -61,6 +61,7 @@ import {
   ClipboardList,
   Clock,
   Coins,
+  Copy,
   DoorOpen,
   Download,
   Filter,
@@ -164,13 +165,13 @@ const REPORTS: ReportEntry[] = [
     icon: <BookOpen className="h-5 w-5 text-emerald-600" />,
   },
   {
-    id: "available-copies",
-    jobKey: "library-available-copies",
+    id: "copy-details",
+    jobKey: "library-copy-details",
     domain: "INVENTORY",
-    name: "Available copies (not on loan)",
+    name: "Copy details",
     description:
-      "Every copy currently on the shelf — no open issue or reissue against it — with book, branch, item category, status and price.",
-    icon: <ClipboardList className="h-5 w-5 text-emerald-600" />,
+      "Every copy with accession, status and shelving details. Copies whose status isn't issuable are highlighted light red.",
+    icon: <Copy className="h-5 w-5 text-emerald-600" />,
   },
   {
     id: "entry-exit",

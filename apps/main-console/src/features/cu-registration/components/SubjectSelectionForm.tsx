@@ -750,7 +750,8 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
       const autos = [...new Set(views.flatMap((v) => v.autoAssignSubjects))];
       for (const auto of autos) {
         if (views.some((v) => metaValues(v.metaId).includes(auto))) continue;
-        newErrors.push(`${auto} is mandatory and must be selected`);
+        const categoryName = code === "MN" ? "minor" : code;
+        newErrors.push(`It is mandatory to select ${auto} as one of the ${categoryName} subjects`);
       }
     }
 
