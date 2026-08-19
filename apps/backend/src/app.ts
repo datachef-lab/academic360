@@ -51,6 +51,7 @@ import {
   declarationRouter,
   academicActivityRouter,
   academicActivityMasterRouter,
+  academicProgressionRouter,
 } from "@/features/academics/routes/index.js";
 import { User, userModel } from "@repo/db/schemas/models/user";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
@@ -745,6 +746,7 @@ app.use("/api/classes", classRouter);
 // app.use("/api/fees/student-fees-mappings", studentFeesMappingRouter);
 app.use("/api/v1/shifts", shiftRouter);
 app.use("/api/v1/academics", academicYearRouter);
+app.use("/api/academic-progression", academicProgressionRouter);
 // Register specific routes BEFORE generic routes to avoid route conflicts
 app.use("/api/v1/fees/dashboard", feesDashboardRouter);
 app.use("/api/v1/realtime-tracker", realtimeTrackerRouter);

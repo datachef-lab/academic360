@@ -14,6 +14,7 @@ import {
   FileText,
   UploadCloud,
   ClipboardList,
+  TrendingUp,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -409,6 +410,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       url: "/dashboard/service-requests",
       icon: ClipboardList,
       isActive: pathname === "/dashboard/service-requests",
+    },
+    {
+      title: "Academic Progression",
+      url: "/dashboard/academic-progression",
+      icon: TrendingUp,
+      isActive: pathname === "/dashboard/academic-progression",
     },
     {
       title: "Profile",
