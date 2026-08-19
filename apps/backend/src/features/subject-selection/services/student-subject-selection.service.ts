@@ -37,7 +37,10 @@ import { socketService } from "@/services/socketService.js";
 import { enqueueNotification } from "@/services/notificationClient.js";
 import type { ReportExportFilters } from "@/utils/report-export-filters.js";
 import { applyStandardExcelReportTableStyling } from "@/utils/excel-report-styling.js";
-import { getCachedSnapshot } from "@/services/snapshot-cache.js";
+import {
+  getCachedSnapshot,
+  bumpSnapshotEpoch,
+} from "@/services/snapshot-cache.js";
 import {
   getNotificationMasterIdByName,
   getNotificationMasterIdByNameAndVariant,
@@ -5019,6 +5022,19 @@ export function getLiveSelectionCountsByProgramCourse(
 // Helper function to emit MIS table updates via socket
 async function emitMisTableUpdates(studentIds: number[]) {
   try {
+    // Invalidate the cached snapshots this mutation feeds BEFORE any refresh
+    // broadcast goes out, so every refetch triggered below reads post-mutation
+    // data (invalidate-before-broadcast). Both bumps are additive — they only
+    // make reads fresher, never change any response shape:
+    //   - subject-selection:metrics-live: the live selection-progress counts
+    //     (doneCount) change when active selections change.
+    //   - rt:fee_mis: emitFeeMisRefresh below tells Fee MIS viewers to refetch
+    //     (getFeeMisDataCached), but that raw emit never bumps the epoch, so
+    //     without this the refetch would serve a stale snapshot (same class of
+    //     bug fixed in fees-dashboard.socket.ts, different trigger site).
+    bumpSnapshotEpoch("subject-selection:metrics-live");
+    bumpSnapshotEpoch("rt:fee_mis");
+
     const { scheduleRealtimeTrackerBroadcast } =
       await import("@/features/realtime-tracker/realtime-tracker.socket.js");
     const { sessionModel } = await import("@repo/db/schemas");

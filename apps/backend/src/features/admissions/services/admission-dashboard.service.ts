@@ -1,6 +1,9 @@
 import { and, count, countDistinct, eq, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db/index.js";
-import { getCachedSnapshot } from "@/services/snapshot-cache.js";
+import {
+  getCachedSnapshot,
+  bumpSnapshotEpoch,
+} from "@/services/snapshot-cache.js";
 import {
   applicationFormModel,
   admissionModel,
@@ -648,15 +651,18 @@ async function computeAdmissionDashboard(f: DashboardFilters) {
 // (Redis-backed — a bump on any instance is seen by every instance, so this
 // is safe under the multi-instance/no-sticky-sessions prod deployment).
 //
-// TTL-only invalidation: admission/application-form mutations are NOT
-// centralized through one service — application-form.service.ts,
-// admission-general-info.service.ts, admission-academic-info.service.ts,
-// admission-additional-info.service.ts, cu-registration-correction-request
-// .service.ts, and old-student.service.ts all write rows this dashboard
-// aggregates, with no single choke point to bump from. Wiring a bump into
-// each would mean touching files outside this task's scope, so this relies
-// on the 30s TTL alone; that staleness bound is accepted as a known,
-// deliberate tradeoff (same as the notifications worker-status case above).
+// Invalidation: the dashboard's numbers derive ONLY from applicationFormModel
+// (formStatus / isBlocked) and admissionCourseDetailsModel (payment/verify/
+// merit/cancel flags). The interactive mutations that change those — creating
+// an application, changing its status/block, and a payment flipping its
+// form/course flags — call bumpAdmissionDashboardEpoch() below, so a viewer who
+// reloads right after their own action sees fresh counts. Bulk legacy imports
+// (old-student.service.ts) do not bump per-row; they fall back to the 30s TTL,
+// which is fine for an admin bulk op with no live viewer racing it.
+export function bumpAdmissionDashboardEpoch(): void {
+  void bumpSnapshotEpoch("admissions:dashboard");
+}
+
 export function getAdmissionDashboard(
   f: DashboardFilters,
 ): ReturnType<typeof computeAdmissionDashboard> {
