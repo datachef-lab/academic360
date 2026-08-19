@@ -51,6 +51,7 @@ import {
   declarationRouter,
   academicActivityRouter,
   academicActivityMasterRouter,
+  academicProgressionRouter,
 } from "@/features/academics/routes/index.js";
 import { User, userModel } from "@repo/db/schemas/models/user";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
@@ -113,6 +114,7 @@ import {
   institutionalRoleRouter,
   userTypeRouter,
   userRouter,
+  serviceRequestsRouter,
   // userStatusMasterDomainRouter,
   // userStatusMasterFrequencyRouter,
   // userStatusMasterLevelRouter,
@@ -744,6 +746,7 @@ app.use("/api/classes", classRouter);
 // app.use("/api/fees/student-fees-mappings", studentFeesMappingRouter);
 app.use("/api/v1/shifts", shiftRouter);
 app.use("/api/v1/academics", academicYearRouter);
+app.use("/api/academic-progression", academicProgressionRouter);
 // Register specific routes BEFORE generic routes to avoid route conflicts
 app.use("/api/v1/fees/dashboard", feesDashboardRouter);
 app.use("/api/v1/realtime-tracker", realtimeTrackerRouter);
@@ -825,6 +828,9 @@ app.use("/api/admissions/cu-registration-pdf", cuRegistrationPdfRouter);
 app.use("/api/admissions", admissionRouter);
 
 app.use("/api/payments", paymentRouter);
+
+// Service-requests feature
+app.use("/api/service-requests", serviceRequestsRouter);
 
 // Every non-GET on /api/library/* fires `library:master:updated` on the socket
 // bus so every dashboard on every EC2 instance refetches — no per-service

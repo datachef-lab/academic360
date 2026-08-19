@@ -28,7 +28,7 @@ export function NavUser() {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="h-auto w-auto p-0 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground hover:bg-transparent focus:bg-transparent"
+              className="h-auto w-auto p-0 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground hover:bg-transparent focus:bg-transparent focus-visible:ring-0"
             >
               {/* We only need name/image for avatar visuals */}
               <UserAvatar
