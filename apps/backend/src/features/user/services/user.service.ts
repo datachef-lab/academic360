@@ -638,49 +638,87 @@ export async function findProfileInfo(
   // Family details (via Additional Info or by userId)
   let family = null as typeof familyModel.$inferSelect | null;
 
-  const courseApplications = applicationForm?.id
-    ? await db
-        .select()
-        .from(admissionCourseDetailsModel)
-        .where(
-          eq(admissionCourseDetailsModel.applicationFormId, applicationForm.id),
-        )
-    : [];
-
-  // Optionally fetch academic/additional info for application form dto
-  const [academicInfo, additionalInfo] = applicationForm?.id
-    ? await Promise.all([
-        db
+  // These reads are all independent (each keyed only off applicationForm/
+  // student, none depends on another's result), so resolve them concurrently
+  // instead of one-after-another. applicationFormDto is built afterwards since
+  // it consumes courseApplications + academicInfo + additionalInfo. Output is
+  // unchanged — same queries, same shapes, just overlapped.
+  const [
+    courseApplications,
+    [academicInfo, additionalInfo],
+    studentAcademicInfo,
+    studentFamily,
+    admissionCourseDetailsDto,
+  ]: [
+    AdmissionCourseDetails[],
+    [AdmissionAcademicInfo | null, AdmissionAdditionalInfo | null],
+    AdmissionAcademicInfo | null,
+    typeof familyModel.$inferSelect | null,
+    AdmissionCourseDetailsDto | null,
+  ] = await Promise.all([
+    applicationForm?.id
+      ? db
+          .select()
+          .from(admissionCourseDetailsModel)
+          .where(
+            eq(
+              admissionCourseDetailsModel.applicationFormId,
+              applicationForm.id,
+            ),
+          )
+      : Promise.resolve([] as AdmissionCourseDetails[]),
+    applicationForm?.id
+      ? Promise.all([
+          db
+            .select()
+            .from(admissionAcademicInfoModel)
+            .where(
+              eq(
+                admissionAcademicInfoModel.applicationFormId,
+                applicationForm.id,
+              ),
+            )
+            .then((r) => r[0] ?? null),
+          db
+            .select()
+            .from(admissionAdditionalInfoModel)
+            .where(
+              eq(
+                admissionAdditionalInfoModel.applicationFormId,
+                applicationForm.id,
+              ),
+            )
+            .then((r) => r[0] ?? null),
+        ])
+      : Promise.resolve([null, null] as [
+          AdmissionAcademicInfo | null,
+          AdmissionAdditionalInfo | null,
+        ]),
+    isStudent
+      ? db
           .select()
           .from(admissionAcademicInfoModel)
-          .where(
-            eq(
-              admissionAcademicInfoModel.applicationFormId,
-              applicationForm.id,
-            ),
-          )
-          .then((r) => r[0] ?? null),
-        db
+          .where(and(eq(admissionAcademicInfoModel.studentId, student?.id!)))
+          .then((r) => r[0] ?? null)
+      : Promise.resolve(null),
+    db
+      .select()
+      .from(familyModel)
+      .where(eq(familyModel.userId, student?.userId!))
+      .then((r) => r[0] ?? null),
+    isStudent && student?.admissionCourseDetailsId
+      ? db
           .select()
-          .from(admissionAdditionalInfoModel)
+          .from(admissionCourseDetailsModel)
           .where(
             eq(
-              admissionAdditionalInfoModel.applicationFormId,
-              applicationForm.id,
+              admissionCourseDetailsModel.id,
+              student.admissionCourseDetailsId,
             ),
           )
-          .then((r) => r[0] ?? null),
-      ])
-    : [null, null];
-
-  // Fetch student reference academic info (where applicationFormId is null and studentId is set)
-  const studentAcademicInfo = isStudent
-    ? await db
-        .select()
-        .from(admissionAcademicInfoModel)
-        .where(and(eq(admissionAcademicInfoModel.studentId, student?.id!)))
-        .then((r) => r[0] ?? null)
-    : null;
+          .then((r) => (r[0] ? mapCourseDetailsToDto(r[0]) : null))
+      : Promise.resolve(null),
+  ]);
 
   const applicationFormDto: ApplicationFormDto | null | undefined =
     isStudent && applicationForm
@@ -695,31 +733,6 @@ export async function findProfileInfo(
           courseApplications,
         })
       : undefined;
-
-  // Resolve family after additionalInfo is available
-
-  let studentFamily =
-    (
-      await db
-        .select()
-        .from(familyModel)
-        .where(eq(familyModel.userId, student?.userId!))
-    )[0] ?? null;
-
-  // Map course applications to DTOs (only for students)
-  const admissionCourseDetailsDto: AdmissionCourseDetailsDto | null =
-    isStudent && student?.admissionCourseDetailsId
-      ? await db
-          .select()
-          .from(admissionCourseDetailsModel)
-          .where(
-            eq(
-              admissionCourseDetailsModel.id,
-              student.admissionCourseDetailsId,
-            ),
-          )
-          .then((r) => (r[0] ? mapCourseDetailsToDto(r[0]) : null))
-      : null;
 
   if (!personalDetailsDto) return null;
 
