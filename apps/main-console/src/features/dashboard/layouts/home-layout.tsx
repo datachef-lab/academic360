@@ -262,12 +262,21 @@ function LayoutHeader({
           </BreadcrumbList>
         </Breadcrumb>
       </div>
+      {/* Active-user avatars live OUTSIDE the sidebar-width cluster, to its
+          left, so the search bar's left edge can start exactly at the Quick
+          Links border. Restricted users (library/fee-marking/temp) must not
+          see who else is online. */}
+      {!hideGlobalSearch && !tempUser ? (
+        <div className="flex items-center flex-shrink-0">
+          <ActiveUsersAvatars />
+        </div>
+      ) : null}
       {/* On lg+ this right cluster matches the Quick Links right-sidebar width
           (see MasterLayout) and sits flush against the right edge; with no left
           padding the search bar's left edge starts exactly at the sidebar's left
-          edge, so the two line up as one column. The avatars + user menu are
-          pushed to the right (search grows via flex-1; `lg:ml-auto` handles the
-          case where the search bar is hidden for library-only staff). */}
+          edge, so the two line up as one column. The user menu is pushed to the
+          right (search grows via flex-1; `lg:ml-auto` handles the case where
+          the search bar is hidden for library-only staff). */}
       <div className="flex items-center mr-2 gap-2 flex-shrink-0 lg:mr-0 lg:h-full lg:w-[min(280px,24vw)] xl:w-72 lg:pl-0 lg:pr-4">
         {/* Spotlight search — hidden for library-only staff */}
         {!hideGlobalSearch ? (
@@ -286,9 +295,6 @@ function LayoutHeader({
         ) : null}
 
         <div className="lg:ml-auto">
-          <ActiveUsersAvatars />
-        </div>
-        <div>
           <NavUser />
         </div>
       </div>
