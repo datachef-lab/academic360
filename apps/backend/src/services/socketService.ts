@@ -430,6 +430,27 @@ class SocketService {
         }
       });
 
+      // ID card: one room covers every page in the module that wants live
+      // updates (the dashboard today). Delivery is cross-instance via the Redis
+      // adapter, so an emit from any node reaches clients on every node.
+      socket.on("subscribe_idcard", () => {
+        try {
+          socket.join("idcard");
+          log.debug(`Socket ${socket.id} joined room: idcard`);
+        } catch (error) {
+          log.error("Error subscribing to idcard room", { error });
+        }
+      });
+
+      socket.on("unsubscribe_idcard", () => {
+        try {
+          socket.leave("idcard");
+          log.debug(`Socket ${socket.id} left room: idcard`);
+        } catch (error) {
+          log.error("Error unsubscribing from idcard room", { error });
+        }
+      });
+
       socket.on("subscribe_notifications_dashboard", () => {
         try {
           socket.join("notifications_dashboard");

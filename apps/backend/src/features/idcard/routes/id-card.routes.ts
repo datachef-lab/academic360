@@ -36,6 +36,7 @@ import {
   downloadZipReportController,
   listReportDatesController,
 } from "@/features/idcard/controllers/id-card-report.controller.js";
+import { getIdCardDashboardStatsController } from "@/features/idcard/controllers/id-card-dashboard.controller.js";
 
 const router = express.Router();
 router.use(verifyJWT);
@@ -74,6 +75,9 @@ router.get(
 );
 
 router.get("/students/:studentId/validity", getStudentIdCardValidityController);
+
+// Realtime dashboard aggregates (Redis epoch-cached; live via broadcast middleware).
+router.get("/dashboard/stats", getIdCardDashboardStatsController);
 
 // Reports
 router.get("/reports/dates", listReportDatesController);
