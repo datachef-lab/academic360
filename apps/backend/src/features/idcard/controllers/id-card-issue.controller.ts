@@ -12,6 +12,8 @@ import {
   CreateIssueInput,
   createIssue,
   deleteIssue,
+  finalizeIssue,
+  findRfidConflict,
   getIssueById,
   getMostRecentIssueForStudent,
   getStudentIdCardValidity,
@@ -26,6 +28,15 @@ const optInt = (v: unknown): number | undefined => {
 };
 
 const optStatus = (
+  v: unknown,
+): "ISSUED" | "RENEWED" | "REISSUED" | "DRAFT" | undefined => {
+  if (v === "ISSUED" || v === "RENEWED" || v === "REISSUED" || v === "DRAFT")
+    return v;
+  return undefined;
+};
+
+/** Finalize accepts only the real statuses — never DRAFT. */
+const optFinalStatus = (
   v: unknown,
 ): "ISSUED" | "RENEWED" | "REISSUED" | undefined => {
   if (v === "ISSUED" || v === "RENEWED" || v === "REISSUED") return v;
@@ -145,12 +156,76 @@ export const createIssueController = async (
 
     const userId =
       (req as Request & { user?: { id: number } }).user?.id ?? null;
-    if (userId != null) input.issuedByUserId = userId;
+    if (userId != null) {
+      input.issuedByUserId = userId;
+      // The person who clicks Print (creating the draft) is the printer.
+      input.printedByUserId = userId;
+    }
 
     const id = await createIssue(input, { frontImage, photoImage });
     res
       .status(201)
       .json(new ApiResponse(201, "SUCCESS", { id }, "Issue created."));
+  } catch (e) {
+    handleError(e, res, next);
+  }
+};
+
+export const finalizeIssueController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const id = optInt(req.params.id);
+    if (!id) throw new ApiError(400, "Invalid issue id.");
+    const b = req.body as Record<string, unknown>;
+    const issueStatus = optFinalStatus(b.issueStatus);
+    if (!issueStatus)
+      throw new ApiError(
+        400,
+        "issueStatus must be ISSUED, REISSUED or RENEWED.",
+      );
+    const rfidNumber = typeof b.rfidNumber === "string" ? b.rfidNumber : "";
+    const userId =
+      (req as Request & { user?: { id: number } }).user?.id ?? null;
+
+    const finalId = await finalizeIssue(id, {
+      rfidNumber,
+      issueStatus,
+      remarks: typeof b.remarks === "string" ? b.remarks : null,
+      renewedFromIssueId: optInt(b.renewedFromIssueId) ?? null,
+      // Whoever saves the card is recorded as the issuer.
+      issuedByUserId: userId,
+    });
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", { id: finalId }, "ID card saved."));
+  } catch (e) {
+    handleError(e, res, next);
+  }
+};
+
+export const checkRfidController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const rfid = typeof req.query.rfid === "string" ? req.query.rfid : "";
+    const studentId = optInt(req.query.studentId) ?? 0;
+    if (!rfid.trim()) throw new ApiError(400, "rfid is required.");
+    const conflict = await findRfidConflict(rfid, studentId);
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          { available: !conflict, conflict: conflict ?? null },
+          conflict ? "RFID already in use." : "RFID is available.",
+        ),
+      );
   } catch (e) {
     handleError(e, res, next);
   }
@@ -192,8 +267,22 @@ async function streamIssueImage(
       .limit(1);
     const key = pick === "front" ? row?.front : row?.photo;
     if (!key) throw new ApiError(404, `Issue ${pick} image not found.`);
-    const buffer = await getBufferFromS3(key);
-    if (!buffer) throw new ApiError(502, "Could not fetch issue image.");
+    let buffer: Buffer | null = null;
+    try {
+      buffer = await getBufferFromS3(key);
+    } catch (err) {
+      // The S3 object may be absent in this environment (e.g. an old card whose
+      // image lives under a different root folder). Treat a missing object as a
+      // 404 — not a 500 — so the client can just show an empty slot.
+      const code =
+        (err as { name?: string; Code?: string })?.name ??
+        (err as { Code?: string })?.Code;
+      if (code === "NoSuchKey" || code === "NotFound") {
+        throw new ApiError(404, `Issue ${pick} image not found.`);
+      }
+      throw err;
+    }
+    if (!buffer) throw new ApiError(404, `Issue ${pick} image not found.`);
     const ext = key.split(".").pop()?.toLowerCase();
     const contentType =
       ext === "png"
