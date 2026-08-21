@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { flushSync } from "react-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Camera, Eye, History as HistoryIcon, Printer, ScanLine, Trash2, User } from "lucide-react";
 import QRCode from "qrcode";
@@ -7,9 +6,10 @@ import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
 import { toast } from "sonner";
 
+import { UserAvatar } from "@/hooks/UserAvatar";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/features/auth/providers/auth-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,16 +26,16 @@ import { fetchStudentByUid } from "@/services/student";
 import axiosInstance from "@/utils/api";
 import { useAppSelector } from "@/store/hooks";
 import { selectCurrentAcademicYear } from "@/store/slices/academicYearSlice";
-import { AcademicYearSelector } from "@/components/academic-year";
-import { cn } from "@/lib/utils";
 
 import {
+  checkRfid,
   createIssue,
   deleteIssue,
   fetchIssueFrontBlob,
   fetchIssuePhotoBlob,
   fetchTemplateBacksideBlob,
   fetchTemplateImageBlob,
+  finalizeIssue,
   getStudentIdCardValidity,
   getTemplate,
   listIssues,
@@ -63,6 +63,10 @@ type StudentInfo = {
   /** Relation of the emergency contact (e.g. Father), shown after the number. */
   emergencyRelation: string | null;
   shift: string | null;
+  /** false when the student's user is inactive/suspended — an ID card cannot be issued. */
+  isActive: boolean;
+  /** Human-readable reason shown in the blocking banner when inactive. */
+  inactiveReason: string | null;
 };
 
 const TEXT_FIELDS: IdCardFieldKey[] = [
@@ -95,7 +99,7 @@ const FIELD_FONT_PX: Record<IdCardFieldKey, number> = {
 // SHIFT text, which is rendered inline right after the course name.
 const SHIFT_GAP_PX = 6;
 
-const STATUS_REMARKS: Record<IdCardIssueStatus, string> = {
+const STATUS_REMARKS: Record<Exclude<IdCardIssueStatus, "DRAFT">, string> = {
   ISSUED: "First card issued",
   RENEWED: "Renewed the card.",
   REISSUED: "Reissued due to lost/update card",
@@ -165,6 +169,17 @@ function extractStudentInfo(raw: any): StudentInfo {
     // Filled in after lookup from the emergency-contact endpoint.
     emergencyPhone: null,
     emergencyRelation: null,
+    // Inactive = user deactivated OR suspended OR the student record is inactive.
+    isActive:
+      raw?.user?.isActive !== false && raw?.user?.isSuspended !== true && raw?.active !== false,
+    inactiveReason:
+      raw?.user?.isSuspended === true
+        ? raw?.user?.suspendedReason
+          ? `Suspended: ${raw.user.suspendedReason}`
+          : "This student's account is suspended."
+        : raw?.user?.isActive === false || raw?.active === false
+          ? "This student's account is inactive."
+          : null,
   };
 }
 
@@ -182,6 +197,7 @@ const displayToIso = (ddmmyyyy: string): string | null => {
 export default function IdCardIssuePage() {
   const currentAcademicYear = useAppSelector(selectCurrentAcademicYear);
   const academicYearId = currentAcademicYear?.id;
+  const { user } = useAuth();
 
   const [uidQuery, setUidQuery] = useState("");
   const [student, setStudent] = useState<StudentInfo | null>(null);
@@ -194,6 +210,17 @@ export default function IdCardIssuePage() {
   const [composedBlob, setComposedBlob] = useState<Blob | null>(null);
   const [composedPreview, setComposedPreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  // Print → draft → finalize flow.
+  const [draftIssueId, setDraftIssueId] = useState<number | null>(null);
+  const [isCreatingDraft, setIsCreatingDraft] = useState(false);
+  // Captured when the draft is created (print time) — shown as the issue time.
+  const [preparedAt, setPreparedAt] = useState<Date | null>(null);
+  const [showRfidDialog, setShowRfidDialog] = useState(false);
+  const [rfidChecking, setRfidChecking] = useState(false);
+  const [rfidConflict, setRfidConflict] = useState<{
+    uid: string | null;
+    name: string | null;
+  } | null>(null);
   const [showCamera, setShowCamera] = useState(false);
   const [showZoomedCard, setShowZoomedCard] = useState(false);
   const [showHistorySheet, setShowHistorySheet] = useState(false);
@@ -205,7 +232,6 @@ export default function IdCardIssuePage() {
   const [manualValidTill, setManualValidTill] = useState<string>(""); // ISO yyyy-mm-dd from <input type=date>
   const [programValidTill, setProgramValidTill] = useState<string | null>(null); // dd-mm-yyyy
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const loadedPhotoIssueIdRef = useRef<number | null>(null);
   const hasLocalPhotoOverrideRef = useRef(false);
   const latestLookupRequestRef = useRef(0);
@@ -307,20 +333,19 @@ export default function IdCardIssuePage() {
         : Promise.resolve({ rows: [], total: 0, page: 1, limit: 50 }),
     enabled: !!student,
   });
-  const priorIssues = historyQuery.data?.rows ?? [];
+  // DRAFT rows are transient (created at print, before the RFID is entered) and
+  // must never count as an existing card or flip the ISSUED→REISSUED default.
+  const priorIssues = (historyQuery.data?.rows ?? []).filter((r) => r.issueStatus !== "DRAFT");
   const hasExistingIdCard = priorIssues.length > 0;
 
   useEffect(() => {
     if (!student) return;
-    const newStatus: IdCardIssueStatus = hasExistingIdCard ? "REISSUED" : "ISSUED";
+    const newStatus: Exclude<IdCardIssueStatus, "DRAFT"> = hasExistingIdCard
+      ? "REISSUED"
+      : "ISSUED";
     setIssueStatus(newStatus);
     setRemarks(STATUS_REMARKS[newStatus]);
   }, [hasExistingIdCard, student]);
-
-  const setStatusAndRemarks = (s: IdCardIssueStatus) => {
-    setIssueStatus(s);
-    setRemarks(STATUS_REMARKS[s]);
-  };
 
   const resetCompositionState = () => {
     setPhotoPreviewUrl((prev) => {
@@ -357,7 +382,14 @@ export default function IdCardIssuePage() {
 
       const isSameStudent = student?.id === info.id;
       setStudent(info);
-      setRfid(info.rfidNumber ?? "");
+      // RFID is always entered fresh in the finalize dialog — never pre-filled.
+      setRfid("");
+      // Reset any in-flight print/draft state from a previous student.
+      setDraftIssueId(null);
+      setShowRfidDialog(false);
+      setRfidConflict(null);
+      setIsSaving(false);
+      setPreparedAt(null);
 
       if (!isSameStudent) {
         resetCompositionState();
@@ -410,18 +442,6 @@ export default function IdCardIssuePage() {
     setPhotoBlob(cropped);
     setPhotoPreviewUrl(URL.createObjectURL(cropped));
     void full;
-  };
-
-  const handleUpload = (file: File) => {
-    loadedPhotoIssueIdRef.current = null;
-    hasLocalPhotoOverrideRef.current = true;
-    setComposedBlob(null);
-    setComposedPreview((prev) => {
-      if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev);
-      return null;
-    });
-    setPhotoBlob(file);
-    setPhotoPreviewUrl(URL.createObjectURL(file));
   };
 
   // Draw the full card (template bg + photo + fields + QR) for a given photo onto
@@ -574,8 +594,9 @@ export default function IdCardIssuePage() {
       );
       return blob;
     } catch (err) {
+      // A missing image (template bg or photo not found in S3) just leaves the
+      // preview empty — no error toast, per product decision.
       console.error("compose failed", err);
-      toast.error("Failed to compose card. Check template image access.");
       return null;
     } finally {
       if (bgUrl) URL.revokeObjectURL(bgUrl);
@@ -584,12 +605,9 @@ export default function IdCardIssuePage() {
   };
 
   const compose = async () => {
-    if (!templateWithFields?.fields?.length || !student || !photoBlob) {
-      toast.error("Need student, template, and photo before composing.");
-      return;
-    }
-    const ok = await composeFromPhoto(photoBlob, templateWithFields, student, activeValidTill);
-    if (!ok) toast.error("Could not compose the card image.");
+    if (!templateWithFields?.fields?.length || !student || !photoBlob) return;
+    // Silent on failure — the empty preview + disabled Print convey the state.
+    await composeFromPhoto(photoBlob, templateWithFields, student, activeValidTill);
   };
 
   const isImageBlob = (blob: Blob) =>
@@ -795,76 +813,120 @@ export default function IdCardIssuePage() {
     };
   }, [showBack, activeTemplate?.id, activeTemplate?.backsideImageKey]);
 
-  const saveMutation = useMutation({
+  // Read a friendly message from an axios/API error (RFID conflict comes back 409).
+  const apiErrorMessage = (e: unknown, fallback: string): string => {
+    const resp = (e as { response?: { data?: { message?: string } } })?.response;
+    return resp?.data?.message || (e instanceof Error ? e.message : fallback);
+  };
+
+  // Shared create payload for the print/draft step.
+  const buildIssuePayload = (status: IdCardIssueStatus) => {
+    if (!student || !templateId) return null;
+    // validTill column is a Postgres date → persist ISO (yyyy-mm-dd); the
+    // dd-mm-yyyy form is what gets drawn on the card.
+    const validTillIso = validTillDisplay ? displayToIso(validTillDisplay) : null;
+    return {
+      studentId: student.id,
+      templateId,
+      issueStatus: status,
+      rfidNumber: null,
+      validFrom: null,
+      validTill: validTillIso,
+      nameSnapshot: student.name,
+      courseSnapshot: student.course,
+      mobileSnapshot: student.mobile,
+      bloodGroupSnapshot: student.bloodGroup,
+      sportsQuotaSnapshot: student.sportsQuota,
+      uidSnapshot: student.uid,
+      remarks: remarks.trim() || null,
+    };
+  };
+
+  // Step 1 (on Print): create a DRAFT row — records printed_at / printed_by and
+  // uploads the composed images. Replaces any prior open draft for this student.
+  const createDraftMutation = useMutation({
     mutationFn: async () => {
       if (!student || !templateId) throw new Error("Missing student or template.");
-      if (!composedBlob) {
-        throw new Error("Capture and compose the card first.");
-      }
-      // validTill column is a Postgres date → persist ISO (yyyy-mm-dd); the
-      // dd-mm-yyyy form is what gets drawn on the card.
-      const validTillIso = validTillDisplay ? displayToIso(validTillDisplay) : null;
-      const payload = {
-        studentId: student.id,
-        templateId,
-        issueStatus,
-        rfidNumber: rfid.trim() || null,
-        validFrom: null,
-        validTill: validTillIso,
-        nameSnapshot: student.name,
-        courseSnapshot: student.course,
-        mobileSnapshot: student.mobile,
-        bloodGroupSnapshot: student.bloodGroup,
-        sportsQuotaSnapshot: student.sportsQuota,
-        uidSnapshot: student.uid,
-        remarks: remarks.trim() || null,
-      };
+      if (!composedBlob) throw new Error("Capture and compose the card first.");
+      const payload = buildIssuePayload("DRAFT");
+      if (!payload) throw new Error("Missing student or template.");
       return createIssue(payload, {
         frontImage: composedBlob,
         photoImage: photoBlob ?? undefined,
       });
     },
     onSuccess: async ({ id }: { id: number }) => {
+      setDraftIssueId(id);
+      await historyQuery.refetch();
+    },
+  });
+
+  // Step 2 (RFID dialog Save): finalize the draft — sets the real type, the rfid
+  // and saved_at. RFID must be unique (checked live + re-validated server-side).
+  const finalizeMutation = useMutation({
+    mutationFn: async () => {
+      if (!draftIssueId) throw new Error("No draft to save. Print the card first.");
+      const value = rfid.trim();
+      if (!value) throw new Error("RFID is required.");
+      const finalStatus = (issueStatus === "DRAFT" ? "ISSUED" : issueStatus) as Exclude<
+        IdCardIssueStatus,
+        "DRAFT"
+      >;
+      return finalizeIssue(draftIssueId, {
+        rfidNumber: value,
+        issueStatus: finalStatus,
+        remarks: remarks.trim() || null,
+      });
+    },
+    onSuccess: async ({ id }: { id: number }) => {
+      setShowRfidDialog(false);
+      setDraftIssueId(null);
       const refetchResult = await historyQuery.refetch();
       const savedIssue =
         refetchResult.data?.rows?.find((row) => row.id === id) ?? refetchResult.data?.rows?.[0];
       if (templateWithFields?.fields?.length && student) {
         await loadIssuePreview(id, savedIssue, templateWithFields, student, activeValidTill);
       }
-
-      try {
-        await Swal.fire({
-          icon: "success",
-          title: "Saved successfully",
-          text: "ID card has been saved successfully.",
-          confirmButtonColor: "#2563eb",
-        });
-      } finally {
-        setIsSaving(false);
-      }
+      setIsSaving(false);
+      await Swal.fire({
+        icon: "success",
+        title: "Saved successfully",
+        text: "ID card has been saved successfully.",
+        confirmButtonColor: "#2563eb",
+      });
     },
-    onError: async (e: unknown) => {
-      const msg = e instanceof Error ? e.message : "Could not save the ID card.";
-      try {
-        await Swal.fire({
-          icon: "error",
-          title: "Save failed",
-          text: msg,
-          confirmButtonColor: "#2563eb",
-        });
-      } finally {
-        setIsSaving(false);
-      }
+    onError: (e: unknown) => {
+      // Keep the dialog open (Save-only) so the operator can correct the RFID.
+      toast.error(apiErrorMessage(e, "Could not save the ID card."));
     },
   });
 
-  const saveDisabled = !composedBlob || isSaving || saveMutation.isLoading;
-
-  const handleSaveIdCard = () => {
-    if (saveDisabled) return;
-    flushSync(() => setIsSaving(true));
-    saveMutation.mutate();
-  };
+  // Live RFID uniqueness check while the finalize dialog is open (debounced).
+  useEffect(() => {
+    if (!showRfidDialog || !student) return;
+    const value = rfid.trim();
+    if (!value) {
+      setRfidConflict(null);
+      setRfidChecking(false);
+      return;
+    }
+    let cancelled = false;
+    setRfidChecking(true);
+    const handle = window.setTimeout(async () => {
+      try {
+        const res = await checkRfid(value, student.id);
+        if (!cancelled) setRfidConflict(res.available ? null : res.conflict);
+      } catch {
+        if (!cancelled) setRfidConflict(null);
+      } finally {
+        if (!cancelled) setRfidChecking(false);
+      }
+    }, 350);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(handle);
+    };
+  }, [rfid, showRfidDialog, student]);
 
   const deleteIssueMutation = useMutation({
     mutationFn: (id: number) => deleteIssue(id),
@@ -897,15 +959,25 @@ export default function IdCardIssuePage() {
     });
   };
 
-  const printComposedCard = () => {
-    if (!composedPreview || showBack) return;
+  // Open the print popup and, once it closes (print done or cancelled), open the
+  // RFID dialog so the operator can enter the chip and save. If popups are
+  // blocked we skip straight to the dialog (the draft is already created).
+  const openPrintPopup = () => {
+    if (!composedPreview) {
+      setShowRfidDialog(true);
+      return;
+    }
     // Set @page to a CR80 ID-card-sized portrait sheet (54 × 86 mm) so Chrome
     // forces portrait orientation and gives a card-sized PDF/print regardless
     // of the user's saved "Layout" preference in the print dialog. Image fills
     // the page exactly, so the card prints undistorted on CR80 stock or as a
     // small portrait PDF.
     const w = window.open("", "_blank", "width=638,height=1004");
-    if (!w) return;
+    if (!w) {
+      // Popup blocked — the draft is already created, so go straight to save.
+      setShowRfidDialog(true);
+      return;
+    }
     const html = [
       "<!doctype html>",
       "<html>",
@@ -926,6 +998,56 @@ export default function IdCardIssuePage() {
     w.document.open();
     w.document.write(html);
     w.document.close();
+
+    // The popup self-closes ~250 ms after the print dialog is dismissed (printed
+    // or cancelled). Poll for that, then open the RFID dialog. A safety timeout
+    // opens it regardless in case close-detection ever misses.
+    let opened = false;
+    const openDialogOnce = () => {
+      if (opened) return;
+      opened = true;
+      setShowRfidDialog(true);
+    };
+    const poll = window.setInterval(() => {
+      if (w.closed) {
+        window.clearInterval(poll);
+        openDialogOnce();
+      }
+    }, 300);
+    window.setTimeout(() => {
+      window.clearInterval(poll);
+      openDialogOnce();
+    }, 30000);
+  };
+
+  // Print button handler: block inactive students, create the DRAFT (records
+  // printed_at / printed_by + uploads images), then run the print → RFID-dialog flow.
+  const handlePrint = async () => {
+    if (!composedPreview || showBack || !student) return;
+    if (!student.isActive) {
+      toast.error("This student is inactive — an ID card cannot be issued.");
+      return;
+    }
+    if (!composedBlob) {
+      toast.error("Capture and compose the card first.");
+      return;
+    }
+    try {
+      // Keep the preview-reload effect quiet through the whole print→save flow.
+      setIsSaving(true);
+      setIsCreatingDraft(true);
+      await createDraftMutation.mutateAsync();
+    } catch (e) {
+      toast.error(apiErrorMessage(e, "Could not prepare the card for printing."));
+      setIsCreatingDraft(false);
+      setIsSaving(false);
+      return;
+    }
+    setIsCreatingDraft(false);
+    setPreparedAt(new Date());
+    setRfid(""); // always start the finalize dialog with a blank RFID
+    setRfidConflict(null);
+    openPrintPopup();
   };
 
   const capturedLabel = photoPreviewUrl
@@ -940,15 +1062,10 @@ export default function IdCardIssuePage() {
         icon={ScanLine}
         title="Issue / Reissue ID Card"
         subtitle="Search a student, capture the photo, compose the card and save."
-        actions={<AcademicYearSelector className="w-56" showLabel={false} />}
-      />
-
-      {/* UID search */}
-      <Card>
-        <CardContent className="p-4 space-y-3">
-          <h2 className="text-xl font-semibold tracking-tight">Enter the UID</h2>
-          <div className="flex gap-2">
+        actions={
+          <div className="flex w-full min-w-[280px] gap-2 sm:w-[420px]">
             <Input
+              autoFocus
               placeholder="Enter student UID or code number"
               value={uidQuery}
               inputMode="numeric"
@@ -965,39 +1082,92 @@ export default function IdCardIssuePage() {
               {lookupMutation.isLoading ? "Loading…" : "Load"}
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        }
+      />
 
       {student && (
-        <div className="flex flex-col lg:flex-row gap-4">
-          {/* Left column 66% — Personal Details */}
-          <Card className="bg-blue-50 rounded-xl shadow-md w-full lg:w-2/3">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div className="w-10" />
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <User className="h-5 w-5" /> Personal Details
-              </CardTitle>
-              <Sheet open={showHistorySheet} onOpenChange={setShowHistorySheet}>
-                <SheetTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-1">
-                    <HistoryIcon className="h-4 w-4" /> History
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-[420px] sm:max-w-md">
-                  <SheetHeader>
-                    <SheetTitle>ID Card Issue History</SheetTitle>
-                  </SheetHeader>
-                  <div className="mt-4 space-y-3 max-h-[80vh] overflow-y-auto">
-                    {priorIssues.length === 0 && (
-                      <p className="text-sm text-gray-500">No ID card issue history.</p>
-                    )}
-                    {priorIssues.map((it: IdCardIssue, idx: number) => (
-                      <div key={it.id} className="border rounded-md p-3 bg-white">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="text-sm font-semibold">
-                            #{priorIssues.length - idx} Type: {it.issueStatus}
+        <div className="flex flex-col gap-4">
+          {!student.isActive && (
+            <div className="flex items-start gap-2 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+              <span>
+                <strong>Inactive student.</strong>{" "}
+                {student.inactiveReason ?? "This student's account is inactive."} An ID card cannot
+                be issued for an inactive student.
+              </span>
+            </div>
+          )}
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Left column 66% — Personal Details */}
+            <Card className="bg-blue-50 rounded-xl shadow-md w-full lg:w-2/3">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div className="w-10" />
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <User className="h-5 w-5" /> Personal Details
+                </CardTitle>
+                <Sheet open={showHistorySheet} onOpenChange={setShowHistorySheet}>
+                  <SheetTrigger asChild>
+                    <Button
+                      size="sm"
+                      className="relative gap-1 bg-indigo-600 text-white hover:bg-indigo-700"
+                    >
+                      <HistoryIcon className="h-4 w-4" /> History
+                      {priorIssues.length > 0 && (
+                        <span
+                          className="absolute -right-2 -top-2 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-semibold text-white shadow"
+                          title={`${priorIssues.length} ID card${priorIssues.length === 1 ? "" : "s"} issued`}
+                        >
+                          {priorIssues.length}
+                        </span>
+                      )}
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-[420px] sm:max-w-md">
+                    <SheetHeader>
+                      <SheetTitle>ID Card Issue History</SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-4 space-y-3 max-h-[80vh] overflow-y-auto">
+                      {priorIssues.length === 0 && (
+                        <p className="text-sm text-gray-500">No ID card issue history.</p>
+                      )}
+                      {priorIssues.map((it: IdCardIssue) => (
+                        <div
+                          key={it.id}
+                          className="flex items-center justify-between gap-2 rounded-md border bg-white p-3"
+                        >
+                          <div className="min-w-0 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold tabular-nums">
+                                {it.rfidNumber ?? "—"}
+                              </span>
+                              <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-indigo-700">
+                                {it.issueStatus}
+                              </span>
+                              {it.legacyIssueId != null && (
+                                <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-700">
+                                  Legacy
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <UserAvatar
+                                user={{
+                                  name: it.issuedBy?.name || undefined,
+                                  image: it.issuedBy?.image || undefined,
+                                }}
+                                size="sm"
+                                className="h-9 w-9 text-[11px] drop-shadow-none"
+                              />
+                              <div className="flex min-w-0 flex-col leading-tight">
+                                <span className="truncate text-xs font-medium text-gray-800">
+                                  {it.issuedBy?.name ?? "—"}
+                                </span>
+                                <span className="text-[11px] text-gray-500">
+                                  {formatDbStampIst(it.savedAt ?? it.createdAt)}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex gap-1">
+                          <div className="flex shrink-0 items-center gap-1">
                             {it.photoImageKey && (
                               <Button
                                 variant="ghost"
@@ -1019,317 +1189,219 @@ export default function IdCardIssuePage() {
                             </Button>
                           </div>
                         </div>
-                        <div className="text-xs text-gray-600">Remarks: {it.remarks ?? "—"}</div>
-                        <div className="text-xs text-gray-600">
-                          Date:{" "}
-                          {it.issueDate
-                            ? (() => {
-                                // The DB column is PG `timestamp without time zone`
-                                // storing IST wall-clock (server tz). Drizzle serializes
-                                // it with a MISLEADING trailing 'Z' (e.g. "…T22:19:00Z"
-                                // actually means 22:19 IST, not UTC). So we must NOT shift
-                                // it: read the literal wall-clock by formatting in UTC.
-                                // Normalize any naive string to 'Z' first.
-                                const s = it.issueDate;
-                                const d = new Date(
-                                  s.endsWith("Z") || s.includes("+")
-                                    ? s
-                                    : s.replace(" ", "T") + "Z",
-                                );
-                                return d.toLocaleString("en-IN", {
-                                  timeZone: "UTC",
-                                  day: "2-digit",
-                                  month: "short",
-                                  year: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                  hour12: true,
-                                });
-                              })()
-                            : "—"}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </SheetContent>
-              </Sheet>
+                      ))}
+                    </div>
+                  </SheetContent>
+                </Sheet>
 
-              <Dialog
-                open={viewCardOpen}
-                onOpenChange={(o) => {
-                  setViewCardOpen(o);
-                  if (!o)
-                    setViewCardUrl((prev) => {
-                      if (prev) URL.revokeObjectURL(prev);
-                      return null;
-                    });
-                }}
-              >
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>ID Card</DialogTitle>
-                  </DialogHeader>
-                  <div className="flex items-center justify-center min-h-[260px]">
-                    {viewCardLoading ? (
-                      <p className="text-sm text-gray-500">Generating card…</p>
-                    ) : viewCardUrl ? (
-                      <img
-                        src={viewCardUrl}
-                        alt="ID Card"
-                        className="max-h-[70vh] w-auto rounded-md border"
-                      />
-                    ) : (
-                      <p className="text-sm text-gray-500">No card image available.</p>
-                    )}
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </CardHeader>
+                <Dialog
+                  open={viewCardOpen}
+                  onOpenChange={(o) => {
+                    setViewCardOpen(o);
+                    if (!o)
+                      setViewCardUrl((prev) => {
+                        if (prev) URL.revokeObjectURL(prev);
+                        return null;
+                      });
+                  }}
+                >
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>ID Card</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex items-center justify-center min-h-[260px]">
+                      {viewCardLoading ? (
+                        <p className="text-sm text-gray-500">Generating card…</p>
+                      ) : viewCardUrl ? (
+                        <img
+                          src={viewCardUrl}
+                          alt="ID Card"
+                          className="max-h-[70vh] w-auto rounded-md border"
+                        />
+                      ) : (
+                        <p className="text-sm text-gray-500">No card image available.</p>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
 
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-1 gap-2 text-sm">
-                <DetailRow label="Student Name" value={student.name ?? "-"} />
-                <DetailRow label="Course" value={student.course ?? "-"} />
-                <DetailRow label="Shift" value={student.shift ?? "-"} />
-                <DetailRow label="Blood Group" value={student.bloodGroup ?? "-"} />
-                <DetailRow
-                  label="Quota Type"
-                  value={student.quotaTypeLabel ?? student.sportsQuota ?? "-"}
-                />
-                <DetailRow
-                  label="Emergency Phone"
-                  value={
-                    student.emergencyPhone
-                      ? student.emergencyRelation
-                        ? `${student.emergencyPhone} (${student.emergencyRelation})`
-                        : student.emergencyPhone
-                      : "-"
-                  }
-                />
-              </div>
-
-              <div className="flex flex-wrap items-end gap-3 pt-2">
-                <div>
-                  <Label htmlFor="rfid" className="font-semibold">
-                    RFID:
-                  </Label>
-                  <Input
-                    id="rfid"
-                    value={rfid}
-                    onChange={(e) => setRfid(e.target.value)}
-                    placeholder="Enter RFID"
-                    className="w-48 bg-white"
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-1 gap-2 text-sm">
+                  <DetailRow label="Student Name" value={student.name ?? "-"} />
+                  <DetailRow label="Course" value={student.course ?? "-"} />
+                  <DetailRow label="Shift" value={student.shift ?? "-"} />
+                  <DetailRow label="Blood Group" value={student.bloodGroup ?? "-"} />
+                  <DetailRow
+                    label="Quota Type"
+                    value={student.quotaTypeLabel ?? student.sportsQuota ?? "-"}
+                  />
+                  <DetailRow
+                    label="Emergency Phone"
+                    value={
+                      student.emergencyPhone
+                        ? student.emergencyRelation
+                          ? `${student.emergencyPhone} (${student.emergencyRelation})`
+                          : student.emergencyPhone
+                        : "-"
+                    }
                   />
                 </div>
-                <div className="text-xs text-gray-600 self-end pb-1">
-                  Template:{" "}
-                  <span className="font-medium text-gray-800">{activeTemplate?.name ?? "—"}</span>
-                </div>
-              </div>
 
-              <div className="flex flex-wrap items-end gap-3 pt-2">
-                <div>
-                  <Label className="font-semibold">Validity</Label>
-                  <Select
-                    value={validityMode}
-                    onValueChange={(v) => setValidityMode(v as "PROGRAM" | "MANUAL")}
-                  >
-                    <SelectTrigger className="w-56 bg-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PROGRAM">Program course (auto)</SelectItem>
-                      <SelectItem value="MANUAL">Manual</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="flex flex-wrap items-end gap-3 pt-2">
+                  <div className="text-xs text-gray-600 self-end pb-1">
+                    Template:{" "}
+                    <span className="font-medium text-gray-800">{activeTemplate?.name ?? "—"}</span>
+                  </div>
                 </div>
-                {validityMode === "MANUAL" ? (
-                  <div>
-                    <Label className="font-semibold">Valid Till</Label>
-                    <Input
-                      type="date"
-                      value={manualValidTill}
-                      onChange={(e) => setManualValidTill(e.target.value)}
-                      className="w-48 bg-white"
-                    />
-                  </div>
-                ) : (
-                  <div className="text-xs text-gray-600 self-end pb-2">
-                    Valid till{" "}
-                    <span className="font-medium text-gray-800">
-                      {validityQuery.isLoading ? "…" : (programValidTill ?? "Not available")}
-                    </span>
-                  </div>
-                )}
-              </div>
 
-              {hasExistingIdCard && (
-                <div className="bg-white rounded-md p-4 mt-3 space-y-3">
+                <div className="flex flex-wrap items-end gap-3 pt-2">
                   <div>
-                    <Label className="font-semibold">Type</Label>
-                    <div className="flex gap-6 mt-1">
-                      <label className="flex items-center gap-2 text-sm">
-                        <Checkbox id="t-issued" checked={issueStatus === "ISSUED"} disabled />
-                        ISSUED
-                      </label>
-                      <label className="flex items-center gap-2 text-sm cursor-pointer">
-                        <Checkbox
-                          id="t-renewed"
-                          checked={issueStatus === "RENEWED"}
-                          onCheckedChange={(c) => c && setStatusAndRemarks("RENEWED")}
-                        />
-                        RENEWED
-                      </label>
-                      <label className="flex items-center gap-2 text-sm cursor-pointer">
-                        <Checkbox
-                          id="t-reissued"
-                          checked={issueStatus === "REISSUED"}
-                          onCheckedChange={(c) => c && setStatusAndRemarks("REISSUED")}
-                        />
-                        REISSUED
-                      </label>
+                    <Label className="font-semibold">Validity</Label>
+                    <Select
+                      value={validityMode}
+                      onValueChange={(v) => setValidityMode(v as "PROGRAM" | "MANUAL")}
+                    >
+                      <SelectTrigger className="w-56 bg-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PROGRAM">Program course (auto)</SelectItem>
+                        <SelectItem value="MANUAL">Manual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {validityMode === "MANUAL" ? (
+                    <div>
+                      <Label className="font-semibold">Valid Till</Label>
+                      <Input
+                        type="date"
+                        value={manualValidTill}
+                        onChange={(e) => setManualValidTill(e.target.value)}
+                        className="w-48 bg-white"
+                      />
                     </div>
-                  </div>
-                  <div>
-                    <Label className="font-semibold">Remarks</Label>
-                    <Textarea
-                      value={remarks}
-                      onChange={(e) => setRemarks(e.target.value)}
-                      placeholder="Enter remarks"
-                      rows={2}
-                    />
-                  </div>
-                  <div className="text-xs text-blue-800 bg-blue-50 border border-blue-200 rounded-md p-2">
-                    <strong>Note:</strong> This student already has an ID card issued. You can
-                    select "RENEWED" or "REISSUED" type and add appropriate remarks.
-                  </div>
+                  ) : (
+                    <div className="text-xs text-gray-600 self-end pb-2">
+                      Valid till{" "}
+                      <span className="font-medium text-gray-800">
+                        {validityQuery.isLoading ? "…" : (programValidTill ?? "Not available")}
+                      </span>
+                    </div>
+                  )}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Right column 34% — Generated ID Card */}
-          <Card className="rounded-xl shadow-md w-full lg:w-1/3">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg">Generated ID Card</CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowBack((v) => !v)}
-                disabled={!activeTemplate?.backsideImageKey && !activeTemplate?.backsideImageUrl}
-                title={
-                  activeTemplate?.backsideImageKey || activeTemplate?.backsideImageUrl
-                    ? undefined
-                    : "Upload a back-side image on this template first."
-                }
-              >
-                {showBack ? "Show Front" : "Show Back"}
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div
-                onClick={() => {
-                  if (showBack) {
-                    if (backImageUrl || activeTemplate?.backsideImageUrl) setShowZoomedCard(true);
-                  } else if (composedPreview || activeTemplate?.templateImageUrl) {
-                    setShowZoomedCard(true);
+            {/* Right column 34% — Generated ID Card */}
+            <Card className="rounded-xl shadow-md w-full lg:w-1/3">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-lg">Generated ID Card</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowBack((v) => !v)}
+                  disabled={!activeTemplate?.backsideImageKey && !activeTemplate?.backsideImageUrl}
+                  title={
+                    activeTemplate?.backsideImageKey || activeTemplate?.backsideImageUrl
+                      ? undefined
+                      : "Upload a back-side image on this template first."
                   }
-                }}
-                className="w-full h-[420px] bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden cursor-zoom-in p-2"
-              >
-                {showBack ? (
-                  // Back side: prefer the auth-proxy blob if loaded, fall back
-                  // to the presigned URL from the listing.
-                  backImageUrl ? (
+                >
+                  {showBack ? "Show Front" : "Show Back"}
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div
+                  onClick={() => {
+                    if (showBack) {
+                      if (backImageUrl || activeTemplate?.backsideImageUrl) setShowZoomedCard(true);
+                    } else if (composedPreview || activeTemplate?.templateImageUrl) {
+                      setShowZoomedCard(true);
+                    }
+                  }}
+                  className="w-full h-[420px] bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden cursor-zoom-in p-2"
+                >
+                  {showBack ? (
+                    // Back side: prefer the auth-proxy blob if loaded, fall back
+                    // to the presigned URL from the listing.
+                    backImageUrl ? (
+                      <img
+                        src={backImageUrl}
+                        alt="back of card"
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    ) : activeTemplate?.backsideImageUrl ? (
+                      <img
+                        src={activeTemplate.backsideImageUrl}
+                        alt="back of card"
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    ) : (
+                      <span className="text-sm text-gray-400 px-4 text-center">
+                        No back-side image uploaded for this template.
+                      </span>
+                    )
+                  ) : composedPreview ? (
                     <img
-                      src={backImageUrl}
-                      alt="back of card"
+                      src={composedPreview}
+                      alt="generated card"
                       className="max-h-full max-w-full object-contain"
                     />
-                  ) : activeTemplate?.backsideImageUrl ? (
+                  ) : priorIssues[0]?.frontImageUrl ? (
                     <img
-                      src={activeTemplate.backsideImageUrl}
-                      alt="back of card"
+                      src={priorIssues[0].frontImageUrl}
+                      alt="latest saved card"
                       className="max-h-full max-w-full object-contain"
+                    />
+                  ) : isRefreshingPreview || activeTemplateQuery.isLoading ? (
+                    <span className="text-sm text-gray-500 px-4 text-center">
+                      Refreshing card preview…
+                    </span>
+                  ) : activeTemplate?.templateImageUrl ? (
+                    <img
+                      src={activeTemplate.templateImageUrl}
+                      alt={`${activeTemplate.name} front`}
+                      className="max-h-full max-w-full object-contain opacity-90"
                     />
                   ) : (
                     <span className="text-sm text-gray-400 px-4 text-center">
-                      No back-side image uploaded for this template.
+                      No ID card template configured for this academic year yet.
                     </span>
-                  )
-                ) : composedPreview ? (
-                  <img
-                    src={composedPreview}
-                    alt="generated card"
-                    className="max-h-full max-w-full object-contain"
-                  />
-                ) : priorIssues[0]?.frontImageUrl ? (
-                  <img
-                    src={priorIssues[0].frontImageUrl}
-                    alt="latest saved card"
-                    className="max-h-full max-w-full object-contain"
-                  />
-                ) : isRefreshingPreview || activeTemplateQuery.isLoading ? (
-                  <span className="text-sm text-gray-500 px-4 text-center">
-                    Refreshing card preview…
-                  </span>
-                ) : activeTemplate?.templateImageUrl ? (
-                  <img
-                    src={activeTemplate.templateImageUrl}
-                    alt={`${activeTemplate.name} front`}
-                    className="max-h-full max-w-full object-contain opacity-90"
-                  />
-                ) : (
-                  <span className="text-sm text-gray-400 px-4 text-center">
-                    No ID card template configured for this academic year yet.
-                  </span>
-                )}
-              </div>
+                  )}
+                </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  className="bg-gray-200 text-gray-800 hover:bg-gray-300"
-                  onClick={() => setShowCamera(true)}
-                  disabled={showBack}
-                >
-                  <Camera className="h-4 w-4 mr-1" /> {capturedLabel}
-                </Button>
-                <Button
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                  onClick={printComposedCard}
-                  disabled={!composedPreview || showBack}
-                >
-                  <Printer className="h-4 w-4 mr-1" /> Print ID Card
-                </Button>
-              </div>
-
-              <Input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleUpload(f);
-                }}
-              />
-
-              <Button
-                type="button"
-                variant="outline"
-                className={cn(
-                  "w-full border-0 !text-white",
-                  saveDisabled
-                    ? "pointer-events-none cursor-not-allowed !bg-blue-400 !opacity-70 hover:!bg-blue-400"
-                    : "!bg-blue-600 hover:!bg-blue-700",
-                )}
-                disabled={saveDisabled}
-                aria-disabled={saveDisabled}
-                onClick={handleSaveIdCard}
-              >
-                {isSaving || saveMutation.isLoading ? "Saving…" : "Save ID Card"}
-              </Button>
-            </CardContent>
-          </Card>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    className="bg-gray-200 text-gray-800 hover:bg-gray-300"
+                    onClick={() => setShowCamera(true)}
+                    disabled={showBack}
+                  >
+                    <Camera className="h-4 w-4 mr-1" /> {capturedLabel}
+                  </Button>
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={handlePrint}
+                    disabled={
+                      !composedPreview ||
+                      showBack ||
+                      !student?.isActive ||
+                      isCreatingDraft ||
+                      createDraftMutation.isLoading
+                    }
+                  >
+                    <Printer className="h-4 w-4 mr-1" />{" "}
+                    {isCreatingDraft || createDraftMutation.isLoading
+                      ? "Preparing…"
+                      : "Print & Save"}
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Printing saves a draft, then asks for the RFID to finalize the card.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )}
 
@@ -1340,6 +1412,188 @@ export default function IdCardIssuePage() {
         onClose={() => setShowCamera(false)}
         onCapture={handleCapture}
       />
+
+      {/* Post-print finalize dialog — non-dismissable; the card is only saved
+          (draft → real issue) when a unique RFID is entered here. */}
+      <Dialog open={showRfidDialog} onOpenChange={() => {}}>
+        <DialogContent
+          className="h-[90vh] w-[87vw] max-w-[87vw] overflow-hidden !flex flex-row !gap-0 !p-0 [&>button]:hidden"
+          onEscapeKeyDown={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          {/* Left — RFID tap illustration, spans the FULL dialog height (footer excludes it). */}
+          <div className="relative hidden h-full w-[26%] shrink-0 bg-gradient-to-b from-indigo-50 to-slate-100 md:block">
+            <img
+              src="/rfid-scan-illustration-2.png"
+              alt="Tap the RFID card on the reader"
+              className="h-full w-full object-cover"
+            />
+            {/* subtle backdrop tint over the illustration */}
+            <div className="pointer-events-none absolute inset-0 bg-indigo-900/10" />
+          </div>
+
+          {/* Right side — the details/card grid, then the footer beneath them only. */}
+          <div className="flex min-w-0 flex-1 flex-col">
+            <div className="flex min-h-0 flex-1">
+              {/* Middle — title + all details + RFID/type table */}
+              <div className="flex min-h-0 flex-1 flex-col p-6">
+                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pr-1">
+                  <DialogHeader className="text-left">
+                    <DialogTitle>Save ID Card</DialogTitle>
+                  </DialogHeader>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Review the details, enter the RFID and choose the type to finalize the card.
+                  </p>
+                  <table className="mt-4 w-full border-collapse text-sm">
+                    <tbody>
+                      {(
+                        [
+                          ["Student", student?.name ?? "-"],
+                          ["UID", student?.uid ?? "-"],
+                          ["Course", student?.course ?? "-"],
+                          ["Shift", student?.shift ?? "-"],
+                          ["Blood Group", student?.bloodGroup ?? "-"],
+                          ["Quota Type", student?.quotaTypeLabel ?? student?.sportsQuota ?? "-"],
+                          [
+                            "Emergency Phone",
+                            student?.emergencyPhone
+                              ? student?.emergencyRelation
+                                ? `${student.emergencyPhone} (${student.emergencyRelation})`
+                                : student.emergencyPhone
+                              : "-",
+                          ],
+                          ["Valid Till", activeValidTill || "-"],
+                        ] as [string, string][]
+                      ).map(([k, v]) => (
+                        <tr key={k}>
+                          <td className="whitespace-nowrap border border-gray-300 bg-gray-50 px-3 py-2 align-middle font-semibold text-gray-600">
+                            {k}
+                          </td>
+                          <td className="border border-gray-300 px-3 py-2 align-top text-gray-900">
+                            {v}
+                          </td>
+                        </tr>
+                      ))}
+                      <tr>
+                        <td className="whitespace-nowrap border border-gray-300 bg-gray-50 px-3 py-2 align-middle font-semibold text-gray-600">
+                          RFID <span className="text-red-500">*</span>
+                        </td>
+                        <td className="border border-gray-300 px-3 py-2 align-top">
+                          <Input
+                            id="finalize-rfid"
+                            autoFocus
+                            value={rfid}
+                            onChange={(e) => setRfid(e.target.value)}
+                            placeholder="Scan or type the RFID"
+                          />
+                          {rfid.trim() ? (
+                            rfidChecking ? (
+                              <p className="mt-1 text-xs text-gray-500">Checking availability…</p>
+                            ) : rfidConflict ? (
+                              <p className="mt-1 text-xs text-red-600">
+                                Already assigned to {rfidConflict.name ?? "another student"}
+                                {rfidConflict.uid ? ` (${rfidConflict.uid})` : ""}. RFID must be
+                                unique.
+                              </p>
+                            ) : (
+                              <p className="mt-1 text-xs text-green-600">RFID is available.</p>
+                            )
+                          ) : (
+                            <p className="mt-1 text-xs text-gray-500">Enter the RFID to save.</p>
+                          )}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="whitespace-nowrap border border-gray-300 bg-gray-50 px-3 py-2 align-middle font-semibold text-gray-600">
+                          Type
+                        </td>
+                        <td className="border border-gray-300 px-3 py-2 align-top">
+                          <Select
+                            value={
+                              issueStatus === "REISSUED" || issueStatus === "RENEWED"
+                                ? issueStatus
+                                : ""
+                            }
+                            onValueChange={(v) => {
+                              const s = v as IdCardIssueStatus;
+                              setIssueStatus(s);
+                              setRemarks(STATUS_REMARKS[s as keyof typeof STATUS_REMARKS] ?? "");
+                            }}
+                          >
+                            <SelectTrigger id="finalize-type">
+                              <SelectValue placeholder="Issued (first card)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="REISSUED">Reissued</SelectItem>
+                              <SelectItem value="RENEWED">Renewed</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="whitespace-nowrap border border-gray-300 bg-gray-50 px-3 py-2 align-middle font-semibold text-gray-600">
+                          Remarks
+                        </td>
+                        <td className="border border-gray-300 px-3 py-2 align-top">
+                          <Textarea
+                            value={remarks}
+                            onChange={(e) => setRemarks(e.target.value)}
+                            placeholder="Enter remarks"
+                            rows={2}
+                          />
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Right — the ID card being saved, full height */}
+              <div className="hidden h-full w-[42%] shrink-0 items-center justify-center overflow-hidden border-l bg-muted/30 p-3 md:flex">
+                {composedPreview ? (
+                  <img
+                    src={composedPreview}
+                    alt="ID card to be saved"
+                    className="max-h-full max-w-full rounded-md border object-contain shadow-sm"
+                  />
+                ) : (
+                  <span className="text-xs text-muted-foreground">ID card preview</span>
+                )}
+              </div>
+            </div>
+
+            {/* Footer — issuer on the left, Save on the right (spans middle + right only). */}
+            <div className="flex shrink-0 items-center justify-between gap-2 border-t bg-background px-6 py-4">
+              <div className="flex items-center gap-3">
+                <UserAvatar
+                  user={{ name: user?.name || undefined, image: user?.image || undefined }}
+                  size="sm"
+                  className="h-9 w-9 drop-shadow-none"
+                />
+                <div className="flex flex-col leading-tight">
+                  <span className="text-sm font-medium text-gray-800">{user?.name ?? "—"}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {preparedAt ? formatIssuedAt(preparedAt) : "—"}
+                  </span>
+                </div>
+              </div>
+              <Button
+                className="bg-blue-600 px-8 text-white hover:bg-blue-700"
+                disabled={
+                  !draftIssueId ||
+                  !rfid.trim() ||
+                  rfidChecking ||
+                  !!rfidConflict ||
+                  finalizeMutation.isLoading
+                }
+                onClick={() => finalizeMutation.mutate()}
+              >
+                {finalizeMutation.isLoading ? "Saving…" : "Save"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showZoomedCard} onOpenChange={setShowZoomedCard}>
         <DialogContent className="max-w-3xl">
@@ -1381,10 +1635,38 @@ export default function IdCardIssuePage() {
   );
 }
 
+// dd/mm/yyyy, hh:mm AM/PM in the given timezone.
+function formatStamp(d: Date, timeZone: string): string {
+  const s = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(d);
+  return s.replace(/\b(am|pm)\b/i, (m) => m.toUpperCase());
+}
+
+// A real Date ("now") shown in IST.
+function formatIssuedAt(d: Date): string {
+  return formatStamp(d, "Asia/Kolkata");
+}
+
+// A naive DB timestamp that already holds IST wall-clock (Drizzle serializes it
+// with a misleading trailing 'Z'); read it literally by formatting in UTC.
+function formatDbStampIst(value: string): string {
+  const d = new Date(
+    value.endsWith("Z") || value.includes("+") ? value : value.replace(" ", "T") + "Z",
+  );
+  return formatStamp(d, "UTC");
+}
+
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex">
-      <span className="w-48 font-semibold text-left mr-4">{label}</span>
+      <span className="mr-4 w-48 text-left font-semibold">{label}</span>
       <span>{value}</span>
     </div>
   );
