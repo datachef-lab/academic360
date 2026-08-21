@@ -57,15 +57,7 @@ const BoardTableRow = React.memo(
       >
         {(currentPage - 1) * pageSize + index + 1}.
       </TableCell>
-      <TableCell
-        style={{
-          padding: "12px 8px",
-          borderRight: "1px solid #e5e7eb",
-          wordWrap: "break-word",
-          wordBreak: "break-word",
-          whiteSpace: "normal",
-        }}
-      >
+      <TableCell className="whitespace-normal">
         {board.name ? <div className="text-sm leading-tight">{board.name}</div> : "-"}
       </TableCell>
       <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
@@ -550,105 +542,13 @@ export default function BoardPage() {
                   style={{ background: "#f3f4f6", borderRight: "1px solid #e5e7eb" }}
                 >
                   <TableRow>
-                    <TableHead
-                      className="text-center"
-                      style={{
-                        width: "8%",
-                        background: "#f3f4f6",
-                        color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        padding: "12px 8px",
-                        borderRight: "1px solid #e5e7eb",
-                      }}
-                    >
-                      Sr. No.
-                    </TableHead>
-                    <TableHead
-                      style={{
-                        width: "25%",
-                        background: "#f3f4f6",
-                        color: "#374151",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        padding: "12px 8px",
-                        borderRight: "1px solid #e5e7eb",
-                      }}
-                    >
-                      Board Name
-                    </TableHead>
-                    <TableHead
-                      style={{
-                        width: "12%",
-                        background: "#f3f4f6",
-                        color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        padding: "12px 8px",
-                        borderRight: "1px solid #e5e7eb",
-                      }}
-                    >
-                      Code
-                    </TableHead>
-                    <TableHead
-                      className="text-center"
-                      style={{
-                        width: "12%",
-                        background: "#f3f4f6",
-                        color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        padding: "12px 8px",
-                        borderRight: "1px solid #e5e7eb",
-                      }}
-                    >
-                      Passing Marks
-                    </TableHead>
-                    <TableHead
-                      style={{
-                        width: "18%",
-                        background: "#f3f4f6",
-                        color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        padding: "12px 8px",
-                        borderRight: "1px solid #e5e7eb",
-                      }}
-                    >
-                      Degree
-                    </TableHead>
-                    <TableHead
-                      style={{
-                        width: "10%",
-                        background: "#f3f4f6",
-                        color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        padding: "12px 8px",
-                        borderRight: "1px solid #e5e7eb",
-                      }}
-                    >
-                      Status
-                    </TableHead>
-                    <TableHead
-                      style={{
-                        width: "15%",
-                        background: "#f3f4f6",
-                        color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        padding: "12px 8px",
-                      }}
-                      className="text-center"
-                    >
-                      Actions
-                    </TableHead>
+                    <TableHead className="text-center">Sr. No.</TableHead>
+                    <TableHead className=" whitespace-normal w-[400px]">Board Name</TableHead>
+                    <TableHead>Code</TableHead>
+                    <TableHead className="text-center">Passing Marks</TableHead>
+                    <TableHead className="text-center">Degree</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
