@@ -286,6 +286,72 @@ export async function downloadAuditReport(from: string, to: string, filename: st
   triggerBlobDownload(res.data, filename);
 }
 
+// ── Realtime dashboard ──────────────────────────────────────────────────────
+
+export interface IdCardDashboardFilters {
+  academicYearIds?: number[];
+  programCourseIds?: number[];
+  from?: string; // YYYY-MM-DD
+  to?: string; // YYYY-MM-DD
+}
+
+export interface IdCardNameValue {
+  name: string;
+  value: number;
+}
+export interface IdCardDayCount {
+  date: string;
+  count: number;
+}
+export interface IdCardHourCount {
+  hour: number;
+  count: number;
+}
+export interface IdCardRecentIssue {
+  id: number;
+  studentName: string | null;
+  uid: string | null;
+  course: string | null;
+  rfidNumber: string | null;
+  issueStatus: string;
+  issuedBy: string | null;
+  issuedAt: string | null;
+}
+
+export interface IdCardDashboardStats {
+  kpis: {
+    totalIssued: number;
+    issuedToday: number;
+    draftsPending: number;
+    printedNotSaved: number;
+    legacyCount: number;
+    newCount: number;
+    studentsWithCard: number;
+  };
+  byStatus: IdCardNameValue[];
+  perDay: IdCardDayCount[];
+  byHour: IdCardHourCount[];
+  byProgramCourse: IdCardNameValue[];
+  byAcademicYear: IdCardNameValue[];
+  byTemplate: IdCardNameValue[];
+  topOperators: IdCardNameValue[];
+  recent: IdCardRecentIssue[];
+  templates: { total: number; active: number; disabled: number };
+}
+
+export async function getIdCardDashboardStats(filters: IdCardDashboardFilters) {
+  const params = new URLSearchParams();
+  filters.academicYearIds?.forEach((id) => params.append("academicYearIds", String(id)));
+  filters.programCourseIds?.forEach((id) => params.append("programCourseIds", String(id)));
+  if (filters.from) params.set("from", filters.from);
+  if (filters.to) params.set("to", filters.to);
+  const qs = params.toString();
+  const res = await axiosInstance.get<ApiResponse<IdCardDashboardStats>>(
+    `${BASE}/dashboard/stats${qs ? `?${qs}` : ""}`,
+  );
+  return res.data.payload;
+}
+
 /** ZIP of each card's front image named <rfid>.png, over the OPTIONAL range. */
 export async function downloadAuditZip(from: string, to: string, filename: string) {
   const params: Record<string, string> = {};
