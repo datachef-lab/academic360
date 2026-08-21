@@ -110,9 +110,20 @@ const BoardSubjectForm = ({
     );
   }, [formData.boardId, formData.boardSubjectNameId, existingMappings, initialData?.id]);
 
+  // Passing marks can never exceed full marks (per component).
+  const theoryMarksInvalid =
+    formData.fullMarksTheory !== "" &&
+    formData.passingMarksTheory !== "" &&
+    Number(formData.passingMarksTheory) > Number(formData.fullMarksTheory);
+  const practicalMarksInvalid =
+    formData.fullMarksPractical !== "" &&
+    formData.passingMarksPractical !== "" &&
+    Number(formData.passingMarksPractical) > Number(formData.fullMarksPractical);
+  const marksInvalid = theoryMarksInvalid || practicalMarksInvalid;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (duplicateOf) return;
+    if (duplicateOf || marksInvalid) return;
     onSubmit({
       boardId: formData.boardId,
       boardSubjectNameId: formData.boardSubjectNameId,
@@ -127,108 +138,166 @@ const BoardSubjectForm = ({
     });
   };
 
+  // Selected board's passing % (from the boards master), shown beside the Board label.
+  const selectedBoardPassing =
+    formData.boardId > 0
+      ? (boardOptions.find((b) => b.id === formData.boardId)?.passingMarks ?? null)
+      : null;
+
+  // Marks inputs sit flush in table cells: no border/ring of their own (the cell
+  // borders form the grid), and no number spinners.
+  const marksInputClass =
+    "h-10 w-full rounded-none !border-0 bg-transparent px-3 shadow-none focus-visible:!ring-0 focus-visible:!ring-offset-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="boardId">Board *</Label>
-          {/*
-            Combobox, not Select: this form lives inside an AlertDialog
-            (z-[100]) and SelectContent is z-50, so its list rendered UNDERNEATH
-            the dialog. The shared Combobox popover is z-[120], already tuned to
-            sit above dialogs — and it brings typeahead, which matters with 66
-            boards.
-          */}
-          <Combobox
-            dataArr={boardOptions.map((b) => ({ value: b.id.toString(), label: b.name }))}
-            value={formData.boardId > 0 ? formData.boardId.toString() : ""}
-            onChange={(v) => setFormData({ ...formData, boardId: parseInt(v) })}
-            placeholder="Select Board"
-          />
+    <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+      {/* Scrollable body — header and footer stay pinned. */}
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="boardId">
+              Board <span className="text-red-500">*</span>
+              {selectedBoardPassing != null && (
+                <span className="ml-1 font-medium text-green-600 dark:text-green-400">
+                  (Passing: {selectedBoardPassing}%)
+                </span>
+              )}
+            </Label>
+            {/*
+              Combobox, not Select: this form lives inside an AlertDialog
+              (z-[100]) and SelectContent is z-50, so its list rendered UNDERNEATH
+              the dialog. The shared Combobox popover is z-[120], already tuned to
+              sit above dialogs — and it brings typeahead, which matters with 66
+              boards.
+            */}
+            <Combobox
+              dataArr={boardOptions.map((b) => ({ value: b.id.toString(), label: b.name }))}
+              value={formData.boardId > 0 ? formData.boardId.toString() : ""}
+              onChange={(v) => setFormData({ ...formData, boardId: parseInt(v) })}
+              placeholder="Select Board"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="boardSubjectNameId">
+              Subject Name <span className="text-red-500">*</span>
+            </Label>
+            <Combobox
+              dataArr={boardSubjectNameOptions.map((n) => ({
+                value: n.id.toString(),
+                label: n.name,
+              }))}
+              value={formData.boardSubjectNameId > 0 ? formData.boardSubjectNameId.toString() : ""}
+              onChange={(v) => setFormData({ ...formData, boardSubjectNameId: parseInt(v) })}
+              placeholder="Select Subject Name"
+            />
+          </div>
         </div>
+
+        {duplicateOf && (
+          <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            This board and subject are already mapped. Edit that row instead — a board can only map
+            a subject once.
+          </p>
+        )}
+
         <div className="space-y-2">
-          <Label htmlFor="boardSubjectNameId">Subject Name *</Label>
-          <Combobox
-            dataArr={boardSubjectNameOptions.map((n) => ({
-              value: n.id.toString(),
-              label: n.name,
-            }))}
-            value={formData.boardSubjectNameId > 0 ? formData.boardSubjectNameId.toString() : ""}
-            onChange={(v) => setFormData({ ...formData, boardSubjectNameId: parseInt(v) })}
-            placeholder="Select Subject Name"
-          />
+          <Label>Marks</Label>
+          <div className="overflow-hidden rounded-md border">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="bg-muted/50 text-left">
+                  <th className="border-b border-r px-3 py-2 font-medium">Component</th>
+                  <th className="border-b border-r px-3 py-2 font-medium">Full Marks</th>
+                  <th className="border-b px-3 py-2 font-medium">Passing Marks</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="border-b border-r px-3 py-2 font-medium">Theory</td>
+                  <td className="border-b border-r p-0">
+                    <Input
+                      id="fullMarksTheory"
+                      type="number"
+                      className={marksInputClass}
+                      value={formData.fullMarksTheory}
+                      onChange={(e) =>
+                        setFormData({ ...formData, fullMarksTheory: e.target.value })
+                      }
+                      placeholder="0"
+                    />
+                  </td>
+                  <td className="border-b p-0">
+                    <Input
+                      id="passingMarksTheory"
+                      type="number"
+                      className={marksInputClass}
+                      value={formData.passingMarksTheory}
+                      onChange={(e) =>
+                        setFormData({ ...formData, passingMarksTheory: e.target.value })
+                      }
+                      placeholder="0"
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td className="border-r px-3 py-2 font-medium">Practical</td>
+                  <td className="border-r p-0">
+                    <Input
+                      id="fullMarksPractical"
+                      type="number"
+                      className={marksInputClass}
+                      value={formData.fullMarksPractical}
+                      onChange={(e) =>
+                        setFormData({ ...formData, fullMarksPractical: e.target.value })
+                      }
+                      placeholder="0"
+                    />
+                  </td>
+                  <td className="p-0">
+                    <Input
+                      id="passingMarksPractical"
+                      type="number"
+                      className={marksInputClass}
+                      value={formData.passingMarksPractical}
+                      onChange={(e) =>
+                        setFormData({ ...formData, passingMarksPractical: e.target.value })
+                      }
+                      placeholder="0"
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          {marksInvalid && (
+            <p className="text-sm text-red-600">
+              Passing marks cannot be greater than full marks
+              {theoryMarksInvalid ? " (Theory)" : ""}
+              {theoryMarksInvalid && practicalMarksInvalid ? " and" : ""}
+              {practicalMarksInvalid ? " (Practical)" : ""}.
+            </p>
+          )}
         </div>
       </div>
 
-      {duplicateOf && (
-        <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          This board and subject are already mapped. Edit that row instead — a board can only map a
-          subject once.
-        </p>
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="fullMarksTheory">Full Marks Theory</Label>
-          <Input
-            id="fullMarksTheory"
-            type="number"
-            value={formData.fullMarksTheory}
-            onChange={(e) => setFormData({ ...formData, fullMarksTheory: e.target.value })}
-            placeholder="Enter full marks for theory"
+      {/* Pinned footer: Active toggle on the left, actions on the right. */}
+      <div className="flex shrink-0 items-center justify-between gap-2 border-t px-6 py-4">
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="isActive"
+            checked={formData.isActive}
+            onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
           />
+          <Label htmlFor="isActive">Active</Label>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="passingMarksTheory">Passing Marks Theory</Label>
-          <Input
-            id="passingMarksTheory"
-            type="number"
-            value={formData.passingMarksTheory}
-            onChange={(e) => setFormData({ ...formData, passingMarksTheory: e.target.value })}
-            placeholder="Enter passing marks for theory"
-          />
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isLoading || !!duplicateOf || marksInvalid}>
+            {isLoading ? "Saving..." : initialData ? "Update" : "Create"}
+          </Button>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="fullMarksPractical">Full Marks Practical</Label>
-          <Input
-            id="fullMarksPractical"
-            type="number"
-            value={formData.fullMarksPractical}
-            onChange={(e) => setFormData({ ...formData, fullMarksPractical: e.target.value })}
-            placeholder="Enter full marks for practical"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="passingMarksPractical">Passing Marks Practical</Label>
-          <Input
-            id="passingMarksPractical"
-            type="number"
-            value={formData.passingMarksPractical}
-            onChange={(e) => setFormData({ ...formData, passingMarksPractical: e.target.value })}
-            placeholder="Enter passing marks for practical"
-          />
-        </div>
-      </div>
-
-      <div className="flex items-center space-x-2">
-        <Switch
-          id="isActive"
-          checked={formData.isActive}
-          onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-        />
-        <Label htmlFor="isActive">Active</Label>
-      </div>
-
-      <div className="flex justify-end space-x-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isLoading || !!duplicateOf}>
-          {isLoading ? "Saving..." : initialData ? "Update" : "Create"}
-        </Button>
       </div>
     </form>
   );
@@ -253,6 +322,11 @@ export default function BoardSubjectPage() {
    */
   const boardOptions = React.useMemo(
     () => allBoards.filter((b) => b.isActive !== false),
+    [allBoards],
+  );
+  // Board-level passing % (from the boards master) keyed by board id, for the table column.
+  const boardPassingMap = React.useMemo(
+    () => new Map(allBoards.map((b) => [b.id, b.passingMarks])),
     [allBoards],
   );
   const [allBoardSubjectNames, setAllBoardSubjectNames] = React.useState<BoardSubjectNameDto[]>([]);
@@ -517,8 +591,8 @@ export default function BoardSubjectPage() {
                   <span className="sm:hidden">Add</span>
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="w-[95vw] sm:w-full max-w-4xl">
-                <AlertDialogHeader>
+              <AlertDialogContent className="w-[95vw] sm:w-full max-w-4xl max-h-[85vh] overflow-hidden !flex flex-col !gap-0 !p-0">
+                <AlertDialogHeader className="shrink-0 border-b px-6 py-4">
                   <AlertDialogTitle className="text-lg sm:text-xl">
                     {selectedBoardSubject
                       ? "Edit Board Subject Mapping"
@@ -602,18 +676,14 @@ export default function BoardSubjectPage() {
                 placeholder="Filter by Board"
               />
             </div>
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground flex-shrink-0">
-              <span className="hidden sm:inline">
-                Showing {boardSubjects.length} of {totalItems} results
-              </span>
-              <span className="sm:hidden">
-                {boardSubjects.length} / {totalItems}
-              </span>
-            </div>
           </div>
           <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md w-full min-w-max" style={{ tableLayout: "auto" }}>
+              <Table
+                containerClassName="overflow-visible"
+                className="border rounded-md w-full min-w-[720px]"
+                style={{ tableLayout: "auto" }}
+              >
                 <TableHeader
                   className="sticky top-0 z-10"
                   style={{ background: "#f3f4f6", borderRight: "1px solid #e5e7eb" }}
@@ -624,6 +694,7 @@ export default function BoardSubjectPage() {
                         background: "#f3f4f6",
                         color: "#374151",
                         whiteSpace: "nowrap",
+                        width: "56px",
                         fontSize: "14px",
                         fontWeight: "600",
                         padding: "12px 8px",
@@ -637,6 +708,7 @@ export default function BoardSubjectPage() {
                         background: "#f3f4f6",
                         color: "#374151",
                         whiteSpace: "nowrap",
+                        width: "90px",
                         fontSize: "14px",
                         fontWeight: "600",
                         padding: "12px 8px",
@@ -649,7 +721,8 @@ export default function BoardSubjectPage() {
                       style={{
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
+                        whiteSpace: "normal",
+                        width: "300px",
                         fontSize: "14px",
                         fontWeight: "600",
                         padding: "12px 8px",
@@ -662,59 +735,8 @@ export default function BoardSubjectPage() {
                       style={{
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        padding: "12px 8px",
-                        borderRight: "1px solid #e5e7eb",
-                      }}
-                    >
-                      Full Marks Theory
-                    </TableHead>
-                    <TableHead
-                      style={{
-                        background: "#f3f4f6",
-                        color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        padding: "12px 8px",
-                        borderRight: "1px solid #e5e7eb",
-                      }}
-                    >
-                      Passing Marks Theory
-                    </TableHead>
-                    <TableHead
-                      style={{
-                        background: "#f3f4f6",
-                        color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        padding: "12px 8px",
-                        borderRight: "1px solid #e5e7eb",
-                      }}
-                    >
-                      Full Marks Practical
-                    </TableHead>
-                    <TableHead
-                      style={{
-                        background: "#f3f4f6",
-                        color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        padding: "12px 8px",
-                        borderRight: "1px solid #e5e7eb",
-                      }}
-                    >
-                      Passing Marks Practical
-                    </TableHead>
-                    <TableHead
-                      style={{
-                        background: "#f3f4f6",
-                        color: "#374151",
-                        whiteSpace: "nowrap",
+                        whiteSpace: "normal",
+                        width: "160px",
                         fontSize: "14px",
                         fontWeight: "600",
                         padding: "12px 8px",
@@ -728,19 +750,53 @@ export default function BoardSubjectPage() {
                         background: "#f3f4f6",
                         color: "#374151",
                         whiteSpace: "nowrap",
+                        textAlign: "center",
+                        width: "110px",
                         fontSize: "14px",
                         fontWeight: "600",
                         padding: "12px 8px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
-                      Status
+                      Passing %
                     </TableHead>
                     <TableHead
                       style={{
                         background: "#f3f4f6",
                         color: "#374151",
                         whiteSpace: "nowrap",
+                        textAlign: "center",
+                        width: "140px",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        padding: "12px 8px",
+                        borderRight: "1px solid #e5e7eb",
+                      }}
+                    >
+                      Passing Theory
+                    </TableHead>
+                    <TableHead
+                      style={{
+                        background: "#f3f4f6",
+                        color: "#374151",
+                        whiteSpace: "nowrap",
+                        textAlign: "center",
+                        width: "140px",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        padding: "12px 8px",
+                        borderRight: "1px solid #e5e7eb",
+                      }}
+                    >
+                      Passing Practical
+                    </TableHead>
+                    <TableHead
+                      style={{
+                        background: "#f3f4f6",
+                        color: "#374151",
+                        whiteSpace: "nowrap",
+                        width: "72px",
+                        textAlign: "center",
                         fontSize: "14px",
                         fontWeight: "600",
                         padding: "12px 8px",
@@ -753,19 +809,19 @@ export default function BoardSubjectPage() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center">
+                      <TableCell colSpan={8} className="text-center">
                         Loading...
                       </TableCell>
                     </TableRow>
                   ) : error ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center text-red-500">
+                      <TableCell colSpan={8} className="text-center text-red-500">
                         {error}
                       </TableCell>
                     </TableRow>
                   ) : boardSubjects.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center">
+                      <TableCell colSpan={8} className="text-center">
                         No board subject mappings found.
                       </TableCell>
                     </TableRow>
@@ -773,7 +829,11 @@ export default function BoardSubjectPage() {
                     boardSubjects.map((bs, index) => (
                       <TableRow key={bs.id} className="group">
                         <TableCell
-                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+                          style={{
+                            padding: "12px 8px",
+                            width: "56px",
+                            borderRight: "1px solid #e5e7eb",
+                          }}
                         >
                           {index + 1}
                         </TableCell>
@@ -792,7 +852,12 @@ export default function BoardSubjectPage() {
                           )}
                         </TableCell>
                         <TableCell
-                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+                          style={{
+                            padding: "12px 8px",
+                            width: "300px",
+                            maxWidth: "300px",
+                            borderRight: "1px solid #e5e7eb",
+                          }}
                         >
                           <div
                             className="truncate"
@@ -806,6 +871,15 @@ export default function BoardSubjectPage() {
                                     ({bs.boardSubjectName.code})
                                   </span>
                                 )}
+                                {bs.isActive && (
+                                  <span
+                                    className="ml-0.5 text-red-500"
+                                    title="Active"
+                                    aria-label="Active"
+                                  >
+                                    *
+                                  </span>
+                                )}
                               </span>
                             ) : (
                               "-"
@@ -813,27 +887,11 @@ export default function BoardSubjectPage() {
                           </div>
                         </TableCell>
                         <TableCell
-                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
-                        >
-                          <span className="text-sm">{bs.fullMarksTheory ?? "-"}</span>
-                        </TableCell>
-                        <TableCell
-                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
-                        >
-                          <span className="text-sm">{bs.passingMarksTheory ?? "-"}</span>
-                        </TableCell>
-                        <TableCell
-                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
-                        >
-                          <span className="text-sm">{bs.fullMarksPractical ?? "-"}</span>
-                        </TableCell>
-                        <TableCell
-                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
-                        >
-                          <span className="text-sm">{bs.passingMarksPractical ?? "-"}</span>
-                        </TableCell>
-                        <TableCell
-                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+                          style={{
+                            padding: "12px 8px",
+                            width: "160px",
+                            borderRight: "1px solid #e5e7eb",
+                          }}
                         >
                           {bs.board.degree?.name ? (
                             <Badge
@@ -847,20 +905,47 @@ export default function BoardSubjectPage() {
                           )}
                         </TableCell>
                         <TableCell
-                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+                          style={{
+                            padding: "12px 8px",
+                            width: "110px",
+                            textAlign: "center",
+                            borderRight: "1px solid #e5e7eb",
+                          }}
                         >
-                          {bs.isActive ? (
-                            <Badge className="bg-green-500 text-white hover:bg-green-600 text-xs">
-                              Active
-                            </Badge>
+                          {boardPassingMap.get(bs.boardId) != null ? (
+                            <span className="text-sm font-medium tabular-nums text-green-600 dark:text-green-400">
+                              {boardPassingMap.get(bs.boardId)}%
+                            </span>
                           ) : (
-                            <Badge variant="secondary" className="text-xs">
-                              Inactive
-                            </Badge>
+                            <span className="text-sm">-</span>
                           )}
                         </TableCell>
-                        <TableCell style={{ padding: "12px 8px" }}>
-                          <div className="flex space-x-2">
+                        <TableCell
+                          style={{
+                            padding: "12px 8px",
+                            width: "140px",
+                            textAlign: "center",
+                            borderRight: "1px solid #e5e7eb",
+                          }}
+                        >
+                          <span className="text-sm tabular-nums">
+                            {bs.passingMarksTheory ?? "-"} / {bs.fullMarksTheory ?? "-"}
+                          </span>
+                        </TableCell>
+                        <TableCell
+                          style={{
+                            padding: "12px 8px",
+                            width: "140px",
+                            textAlign: "center",
+                            borderRight: "1px solid #e5e7eb",
+                          }}
+                        >
+                          <span className="text-sm tabular-nums">
+                            {bs.passingMarksPractical ?? "-"} / {bs.fullMarksPractical ?? "-"}
+                          </span>
+                        </TableCell>
+                        <TableCell style={{ padding: "12px 8px", width: "72px" }}>
+                          <div className="flex justify-center space-x-2">
                             <Button
                               variant="outline"
                               size="sm"
