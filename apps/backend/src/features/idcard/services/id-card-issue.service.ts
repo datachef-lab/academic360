@@ -1,4 +1,4 @@
-import { and, count, desc, eq, ilike, ne, or, SQL } from "drizzle-orm";
+import { and, count, desc, eq, ilike, ne, or, sql, SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import { db } from "@/db/index.js";
@@ -214,9 +214,12 @@ const normalizeIssue = (input: CreateIssueInput) => ({
  * The same student re-using their own chip is allowed. Returns the conflicting
  * student's uid/name for a clear message, or null when the rfid is free.
  */
+// RFID must be globally unique across ALL students and cards — including the
+// same student's own prior RFID. An RFID identifies one physical card, so a
+// reissue always gets a fresh number; re-entering any number already in use
+// (on `students.rfid_number` or a non-draft issue) is a conflict.
 export async function findRfidConflict(
   rfid: string,
-  studentId: number,
 ): Promise<{ uid: string | null; name: string | null } | null> {
   const value = rfid.trim();
   if (!value) return null;
@@ -225,9 +228,7 @@ export async function findRfidConflict(
     .select({ uid: studentModel.uid, name: userModel.name })
     .from(studentModel)
     .leftJoin(userModel, eq(studentModel.userId, userModel.id))
-    .where(
-      and(eq(studentModel.rfidNumber, value), ne(studentModel.id, studentId)),
-    )
+    .where(eq(studentModel.rfidNumber, value))
     .limit(1);
   if (byStudent)
     return { uid: byStudent.uid ?? null, name: byStudent.name ?? null };
@@ -240,7 +241,6 @@ export async function findRfidConflict(
     .where(
       and(
         eq(idCardIssueModel.rfidNumber, value),
-        ne(idCardIssueModel.studentId, studentId),
         ne(idCardIssueModel.issueStatus, "DRAFT"),
       ),
     )
@@ -296,57 +296,65 @@ export async function createIssue(
           eq(idCardIssueModel.issueStatus, "DRAFT"),
         ),
       );
-    for (const d of openDrafts) {
-      await db.delete(idCardIssueModel).where(eq(idCardIssueModel.id, d.id));
-      if (d.frontImageKey)
-        await deleteFromS3(d.frontImageKey).catch(() => undefined);
-      if (d.photoImageKey)
-        await deleteFromS3(d.photoImageKey).catch(() => undefined);
-    }
+    await Promise.all(
+      openDrafts.map(async (d) => {
+        await db.delete(idCardIssueModel).where(eq(idCardIssueModel.id, d.id));
+        await Promise.all([
+          d.frontImageKey
+            ? deleteFromS3(d.frontImageKey).catch(() => undefined)
+            : undefined,
+          d.photoImageKey
+            ? deleteFromS3(d.photoImageKey).catch(() => undefined)
+            : undefined,
+        ]);
+      }),
+    );
   }
 
   const [created] = await db
     .insert(idCardIssueModel)
-    .values({ ...values, printedAt: isDraft ? new Date() : null })
+    // Use DB-side now() (the pool session is Asia/Kolkata) so printed_at stores
+    // IST wall-clock, consistent with issue_date/created_at. A JS `new Date()`
+    // would be serialized as UTC into this `timestamp without time zone` column
+    // and read back 5:30 behind by the IST-assuming display formatters.
+    .values({ ...values, printedAt: isDraft ? sql`now()` : null })
     .returning({ id: idCardIssueModel.id });
   const issueId = created.id;
 
   let frontImageKey: string | null = null;
   let photoImageKey: string | null = null;
 
+  const ALLOWED_IMAGE_MIME = [
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+    "image/webp",
+  ];
   try {
-    if (files.frontImage) {
-      const ext = files.frontImage.originalname.split(".").pop() || "png";
-      const uploaded = await uploadToS3(files.frontImage, {
-        folder: `${IDCARD_ISSUES_FOLDER}/${issueId}`,
-        customFileName: `front.${ext}`,
-        contentType: files.frontImage.mimetype,
-        maxFileSizeMB: 10,
-        allowedMimeTypes: [
-          "image/png",
-          "image/jpeg",
-          "image/jpg",
-          "image/webp",
-        ],
-      });
-      frontImageKey = uploaded.key;
-    }
-    if (files.photoImage) {
-      const ext = files.photoImage.originalname.split(".").pop() || "png";
-      const uploaded = await uploadToS3(files.photoImage, {
-        folder: `${IDCARD_ISSUES_FOLDER}/${issueId}`,
-        customFileName: `photo.${ext}`,
-        contentType: files.photoImage.mimetype,
-        maxFileSizeMB: 10,
-        allowedMimeTypes: [
-          "image/png",
-          "image/jpeg",
-          "image/jpg",
-          "image/webp",
-        ],
-      });
-      photoImageKey = uploaded.key;
-    }
+    // Upload both images in parallel — they're independent objects and each can
+    // be up to 10MB, so serial uploads doubled the print latency for no reason.
+    const [frontUploaded, photoUploaded] = await Promise.all([
+      files.frontImage
+        ? uploadToS3(files.frontImage, {
+            folder: `${IDCARD_ISSUES_FOLDER}/${issueId}`,
+            customFileName: `front.${files.frontImage.originalname.split(".").pop() || "png"}`,
+            contentType: files.frontImage.mimetype,
+            maxFileSizeMB: 10,
+            allowedMimeTypes: ALLOWED_IMAGE_MIME,
+          })
+        : Promise.resolve(null),
+      files.photoImage
+        ? uploadToS3(files.photoImage, {
+            folder: `${IDCARD_ISSUES_FOLDER}/${issueId}`,
+            customFileName: `photo.${files.photoImage.originalname.split(".").pop() || "png"}`,
+            contentType: files.photoImage.mimetype,
+            maxFileSizeMB: 10,
+            allowedMimeTypes: ALLOWED_IMAGE_MIME,
+          })
+        : Promise.resolve(null),
+    ]);
+    frontImageKey = frontUploaded?.key ?? null;
+    photoImageKey = photoUploaded?.key ?? null;
   } catch (err) {
     await db.delete(idCardIssueModel).where(eq(idCardIssueModel.id, issueId));
     throw err;
@@ -402,7 +410,7 @@ export async function finalizeIssue(
   if (issue.issueStatus !== "DRAFT")
     throw new ApiError(409, "This ID card has already been saved.");
 
-  const conflict = await findRfidConflict(rfid, issue.studentId);
+  const conflict = await findRfidConflict(rfid);
   if (conflict) {
     const who = conflict.uid
       ? `${conflict.name ?? "another student"} (${conflict.uid})`
@@ -423,8 +431,10 @@ export async function finalizeIssue(
         input.renewedFromIssueId ?? issue.renewedFromIssueId ?? null,
       // Issuer is stamped here (on save), not at print/draft time.
       issuedByUserId: input.issuedByUserId ?? issue.issuedByUserId ?? null,
-      savedAt: new Date(),
-      updatedAt: new Date(),
+      // DB-side now() → IST wall-clock (pool session tz), consistent with the
+      // other stored timestamps and the IST-assuming display formatters.
+      savedAt: sql`now()`,
+      updatedAt: sql`now()`,
     })
     .where(eq(idCardIssueModel.id, issueId));
 

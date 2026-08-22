@@ -213,9 +213,9 @@ export const checkRfidController = async (
 ) => {
   try {
     const rfid = typeof req.query.rfid === "string" ? req.query.rfid : "";
-    const studentId = optInt(req.query.studentId) ?? 0;
     if (!rfid.trim()) throw new ApiError(400, "rfid is required.");
-    const conflict = await findRfidConflict(rfid, studentId);
+    // RFID is globally unique; the caller's studentId no longer narrows the check.
+    const conflict = await findRfidConflict(rfid);
     res
       .status(200)
       .json(
