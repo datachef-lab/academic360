@@ -143,10 +143,18 @@ export async function getIdCardDashboardStats(
         SELECT COALESCE(json_agg(json_build_object('hour', gs.h, 'count', COALESCE(c.cnt, 0)) ORDER BY gs.h), '[]'::json) AS data
         FROM generate_series(0, 23) gs(h)
         LEFT JOIN (
-          SELECT EXTRACT(HOUR FROM issue_date)::int AS hh, count(*) cnt
+          -- Legacy-imported cards store issue_date in UTC, but new cards store
+          -- IST wall-clock (the pool session tz). This is the only chart that
+          -- aggregates across all history (per_day/today only hold new rows),
+          -- so shift legacy rows +5:30 to IST — otherwise their afternoon
+          -- issuances land in an impossible 2-7am bucket.
+          SELECT EXTRACT(HOUR FROM
+                   CASE WHEN legacy_issue_id IS NOT NULL
+                        THEN issue_date + INTERVAL '5 hours 30 minutes'
+                        ELSE issue_date END
+                 )::int AS hh, count(*) cnt
           FROM iss WHERE issue_status <> 'DRAFT'
           GROUP BY 1
-        ) c ON c.hh = gs.h
       ),
       by_course AS (
         SELECT COALESCE(json_agg(json_build_object('name', name, 'value', c) ORDER BY c DESC), '[]'::json) AS data
