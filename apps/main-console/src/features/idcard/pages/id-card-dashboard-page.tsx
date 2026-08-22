@@ -213,7 +213,6 @@ export default function IdCardDashboardPage() {
     color: STATUS_COLORS[s.name] ?? "#64748b",
   }));
   const totalStatus = statusSlices.reduce((a, s) => a + s.value, 0);
-  const emptyLabel = loading ? "Loading…" : "No data for this range.";
 
   return (
     <div className="min-h-full min-w-0 bg-[#eaeaea]">

@@ -155,6 +155,7 @@ export async function getIdCardDashboardStats(
                  )::int AS hh, count(*) cnt
           FROM iss WHERE issue_status <> 'DRAFT'
           GROUP BY 1
+        ) c ON c.hh = gs.h
       ),
       by_course AS (
         SELECT COALESCE(json_agg(json_build_object('name', name, 'value', c) ORDER BY c DESC), '[]'::json) AS data
