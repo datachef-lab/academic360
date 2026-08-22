@@ -209,15 +209,12 @@ const normalizeIssue = (input: CreateIssueInput) => ({
 });
 
 /**
- * True if `rfid` is already held by a DIFFERENT student — either as their
- * current `students.rfid_number` or on any of their non-draft ID card issues.
- * The same student re-using their own chip is allowed. Returns the conflicting
- * student's uid/name for a clear message, or null when the rfid is free.
+ * RFID must be globally unique across ALL students and cards — including the
+ * same student's own prior RFID. An RFID identifies one physical card, so a
+ * reissue always gets a fresh number; re-entering any number already in use
+ * (on `students.rfid_number` or a non-draft issue) is a conflict. Returns the
+ * conflicting student's uid/name for a clear message, or null when it's free.
  */
-// RFID must be globally unique across ALL students and cards — including the
-// same student's own prior RFID. An RFID identifies one physical card, so a
-// reissue always gets a fresh number; re-entering any number already in use
-// (on `students.rfid_number` or a non-draft issue) is a conflict.
 export async function findRfidConflict(
   rfid: string,
 ): Promise<{ uid: string | null; name: string | null } | null> {
