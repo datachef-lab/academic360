@@ -230,7 +230,15 @@ export default function EntryExitPage() {
   const { user } = useAuth();
   const userId = user?.id?.toString();
   const { socket, isConnected } = useSocket({ userId });
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  // IST calendar date (YYYY-MM-DD). The library runs on IST; a UTC slice rolls
+  // over at 5:30am IST, so a morning scan would look up the *previous* day's
+  // entries and could reuse yesterday's still-open row instead of starting a
+  // fresh entry for today. en-CA formats as YYYY-MM-DD.
+  const today = useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date()),
+    [],
+  );
   const [candidateSearchTerm, setCandidateSearchTerm] = useState("");
   const [searchTriggered, setSearchTriggered] = useState(false);
   const [candidateSearchLoading, setCandidateSearchLoading] = useState(false);

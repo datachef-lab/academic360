@@ -31,7 +31,10 @@ const dtFormatter = new Intl.DateTimeFormat(LOCALE, {
   year: "numeric",
   hour: "2-digit",
   minute: "2-digit",
-  hour12: true,
+  // Force the 1–12 clock explicitly. Plain `hour12: true` maps to hourCycle
+  // "h11" under some ICU builds, which renders the 12 o'clock hour as "00"
+  // (e.g. noon → "00:32 PM"). "h12" always yields 12 for that hour.
+  hourCycle: "h12",
 });
 
 const dFormatter = new Intl.DateTimeFormat(LOCALE, {

@@ -29,6 +29,17 @@ const ROW_CAP = 30_000;
 
 const fmtDT = formatIstDateTime;
 
+// Columns dropped from THIS report only (Roll number / Email / Patron category /
+// Community). USER_COLUMN_DEFS is shared by every library report, so we filter
+// here instead of editing the shared helper. Row objects may still carry these
+// keys — ExcelJS ignores any key without a matching column.
+const FOOTFALL_OMIT_COLUMNS = new Set([
+  "Roll number",
+  "Email",
+  "Patron category",
+  "Community",
+]);
+
 export async function exportEntryExitExcel(
   f: LibraryReportFilters,
 ): Promise<Buffer> {
@@ -197,7 +208,7 @@ export async function exportEntryExitExcel(
         { header: "Entry time", key: "Entry time", width: 22 },
         { header: "Exit time", key: "Exit time", width: 22 },
         { header: "Current status", key: "Current status", width: 14 },
-        ...USER_COLUMN_DEFS,
+        ...USER_COLUMN_DEFS.filter((c) => !FOOTFALL_OMIT_COLUMNS.has(c.key)),
         { header: "Entry/Exit ID", key: "Entry/Exit ID", width: 14 },
       ],
       rows: sheet1Rows,

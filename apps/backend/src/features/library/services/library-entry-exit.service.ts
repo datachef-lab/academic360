@@ -19,7 +19,6 @@ import {
   count,
   desc,
   eq,
-  gte,
   ilike,
   inArray,
   lt,
@@ -177,13 +176,14 @@ const buildFilterConditions = (
   }
 
   if (filters.date) {
-    const start = new Date(`${filters.date}T00:00:00.000Z`);
-    if (!Number.isNaN(start.getTime())) {
-      const next = new Date(start);
-      next.setUTCDate(next.getUTCDate() + 1);
-      conditions.push(gte(libraryEntryExitModel.entryTimestamp, start));
-      conditions.push(lt(libraryEntryExitModel.entryTimestamp, next));
-    }
+    // Match by IST calendar day. entry_timestamp is stored as IST wall-clock
+    // (the pool session tz is Asia/Kolkata), so an ::date cast in that session
+    // yields the IST date directly. The previous UTC-midnight boundaries were
+    // 5:30 off, which mis-scoped "today" near the day boundary — an early-IST
+    // scan could match the previous calendar day and reuse a stale open entry.
+    conditions.push(
+      sql`${libraryEntryExitModel.entryTimestamp}::date = ${filters.date}::date`,
+    );
   }
 
   return conditions;
