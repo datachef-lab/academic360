@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { boardService, type BoardDto } from "@/services/board.service";
@@ -58,41 +59,52 @@ const BoardTableRow = React.memo(
         {(currentPage - 1) * pageSize + index + 1}.
       </TableCell>
       <TableCell
-        style={{
-          padding: "12px 8px",
-          borderRight: "1px solid #e5e7eb",
-          wordWrap: "break-word",
-          wordBreak: "break-word",
-          whiteSpace: "normal",
-        }}
+        className="whitespace-normal"
+        style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
       >
-        {board.name ? <div className="text-sm leading-tight">{board.name}</div> : "-"}
-      </TableCell>
-      <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
-        {board.code ?? "-"}
+        {board.name ? (
+          <div className="flex flex-col gap-0.5">
+            <div className="text-sm font-medium leading-tight">
+              {board.name}
+              {board.isActive && (
+                <span className="ml-0.5 text-red-500" title="Active" aria-label="Active">
+                  *
+                </span>
+              )}
+            </div>
+            {board.code && (
+              <div className="text-xs italic text-muted-foreground leading-tight">{board.code}</div>
+            )}
+          </div>
+        ) : (
+          "-"
+        )}
       </TableCell>
       <TableCell
         className="text-center"
         style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
       >
-        {board.passingMarks ?? "-"}
-      </TableCell>
-      <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
-        {board.degree?.name ? (
-          <Badge variant="outline" className="text-xs">
-            {board.degree.name}
-          </Badge>
+        {board.passingMarks != null ? (
+          <span className="font-medium tabular-nums text-green-600 dark:text-green-400">
+            {board.passingMarks}%
+          </span>
         ) : (
           "-"
         )}
       </TableCell>
-      <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
-        {board.isActive ? (
-          <Badge className="bg-green-500 text-white hover:bg-green-600 text-xs">Active</Badge>
-        ) : (
-          <Badge variant="secondary" className="text-xs">
-            Inactive
+      <TableCell
+        className="text-center"
+        style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+      >
+        {board.degree?.name ? (
+          <Badge
+            variant="outline"
+            className="text-xs border-red-500 text-red-700 bg-red-50 hover:bg-red-100 dark:border-red-500/60 dark:bg-red-500/10 dark:text-red-300"
+          >
+            {board.degree.name}
           </Badge>
+        ) : (
+          "-"
         )}
       </TableCell>
       <TableCell style={{ padding: "12px 8px" }}>
@@ -153,112 +165,123 @@ const BoardForm = React.memo(
       });
     };
 
+    // The address table has genuine duplicate rows (same addressLine, different id),
+    // so the raw list shows the same address several times. Collapse duplicates by
+    // normalized text for the dropdown, keeping the first occurrence.
+    const dedupedAddresses = React.useMemo(() => {
+      const seen = new Set<string>();
+      return addressOptions.filter((a) => {
+        const key = (a.addressLine ?? `#${a.id}`).trim().toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }, [addressOptions]);
+
+    // Look up the selected label against the FULL list so a currently-selected
+    // duplicate (that got filtered out above) still shows correctly in the trigger.
+    const selectedAddressLabel = React.useMemo(() => {
+      if (formData.addressId === 0) return "No Address";
+      const a = addressOptions.find((x) => x.id === formData.addressId);
+      return a ? (a.addressLine ?? `Address #${a.id}`) : undefined;
+    }, [addressOptions, formData.addressId]);
+
     return (
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Board Name *</Label>
-            <Input
-              id="name"
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Enter board name"
-              required
-            />
+      <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+        {/* Scrollable body — header and footer stay pinned. */}
+        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <Label htmlFor="name">Board Name *</Label>
+              <Input
+                id="name"
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Enter board name"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="code">Board Code</Label>
+              <Input
+                id="code"
+                type="text"
+                value={formData.code}
+                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                placeholder="Enter board code"
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="code">Board Code</Label>
-            <Input
-              id="code"
-              type="text"
-              value={formData.code}
-              onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-              placeholder="Enter board code"
-            />
-          </div>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="passingMarks">Passing Marks</Label>
-            <Input
-              id="passingMarks"
-              type="number"
-              value={formData.passingMarks}
-              onChange={(e) => setFormData({ ...formData, passingMarks: e.target.value })}
-              placeholder="Enter passing marks"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <Label htmlFor="degreeId">Degree</Label>
+              {/*
+                Combobox, not Select: this form lives inside an AlertDialog (z-[100])
+                and SelectContent is z-50, so a Select list renders UNDERNEATH the
+                dialog. The shared Combobox popover is z-[120] (above dialogs) and
+                adds typeahead. Mirrors board-subject-page.
+              */}
+              <Combobox
+                dataArr={[
+                  { value: "0", label: "No Degree" },
+                  ...degreeOptions.map((d) => ({ value: d.id.toString(), label: d.name })),
+                ]}
+                value={formData.degreeId.toString()}
+                onChange={(v) => setFormData({ ...formData, degreeId: parseInt(v) })}
+                placeholder="Select Degree"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="passingMarks">Passing %</Label>
+              <Input
+                id="passingMarks"
+                type="number"
+                className="font-medium text-green-600 dark:text-green-400"
+                value={formData.passingMarks}
+                onChange={(e) => setFormData({ ...formData, passingMarks: e.target.value })}
+                placeholder="Enter passing percentage"
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="sequence">Sequence</Label>
-            <Input
-              id="sequence"
-              type="number"
-              value={formData.sequence}
-              onChange={(e) => setFormData({ ...formData, sequence: e.target.value })}
-              placeholder="Enter sequence"
-            />
-          </div>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="degreeId">Degree</Label>
-            <Select
-              value={formData.degreeId.toString()}
-              onValueChange={(v) => setFormData({ ...formData, degreeId: parseInt(v) })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Degree" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">No Degree</SelectItem>
-                {degreeOptions.map((d) => (
-                  <SelectItem key={d.id} value={d.id.toString()}>
-                    {d.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
+          <div className="space-y-2 pb-2">
             <Label htmlFor="addressId">Address</Label>
-            <Select
+            <Combobox
+              dataArr={[
+                { value: "0", label: "No Address" },
+                ...dedupedAddresses.map((a) => ({
+                  value: a.id.toString(),
+                  label: a.addressLine ?? `Address #${a.id}`,
+                })),
+              ]}
               value={formData.addressId.toString()}
-              onValueChange={(v) => setFormData({ ...formData, addressId: parseInt(v) })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Address" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">No Address</SelectItem>
-                {addressOptions.map((a) => (
-                  <SelectItem key={a.id} value={a.id.toString()}>
-                    {a.addressLine ?? `Address #${a.id}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              selectedLabel={selectedAddressLabel}
+              onChange={(v) => setFormData({ ...formData, addressId: parseInt(v) })}
+              placeholder="Select Address"
+            />
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="isActive"
-            checked={formData.isActive}
-            onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-          />
-          <Label htmlFor="isActive">Active</Label>
-        </div>
-
-        <div className="flex justify-end space-x-2">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Saving..." : initialData ? "Update" : "Create"}
-          </Button>
+        {/* Pinned footer: Active toggle on the left, actions on the right. */}
+        <div className="flex shrink-0 items-center justify-between gap-2 border-t px-6 py-4">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="isActive"
+              checked={formData.isActive}
+              onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+            />
+            <Label htmlFor="isActive">Active</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Saving..." : initialData ? "Update" : "Create"}
+            </Button>
+          </div>
         </div>
       </form>
     );
@@ -479,8 +502,8 @@ export default function BoardPage() {
                   <span className="sm:hidden">Add</span>
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="w-[95vw] sm:w-full max-w-2xl">
-                <AlertDialogHeader>
+              <AlertDialogContent className="w-[95vw] sm:w-full max-w-2xl max-h-[85vh] overflow-hidden !flex flex-col !gap-0 !p-0">
+                <AlertDialogHeader className="shrink-0 border-b px-6 py-4">
                   <AlertDialogTitle>
                     {selectedBoard ? "Edit Board" : "Add New Board"}
                   </AlertDialogTitle>
@@ -533,134 +556,36 @@ export default function BoardPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground flex-shrink-0">
-              <span className="hidden sm:inline">
-                Showing {memoizedBoards.length} of {totalItems} results
-              </span>
-              <span className="sm:hidden">
-                {memoizedBoards.length} / {totalItems}
-              </span>
-            </div>
           </div>
           <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md w-full min-w-max" style={{ tableLayout: "auto" }}>
+              <Table
+                containerClassName="overflow-visible"
+                className="border rounded-md w-full min-w-max"
+                style={{ tableLayout: "auto" }}
+              >
                 <TableHeader
                   className="sticky top-0 z-10"
                   style={{ background: "#f3f4f6", borderRight: "1px solid #e5e7eb" }}
                 >
                   <TableRow>
-                    <TableHead
-                      className="text-center"
-                      style={{
-                        width: "8%",
-                        background: "#f3f4f6",
-                        color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        padding: "12px 8px",
-                        borderRight: "1px solid #e5e7eb",
-                      }}
-                    >
-                      Sr. No.
-                    </TableHead>
-                    <TableHead
-                      style={{
-                        width: "25%",
-                        background: "#f3f4f6",
-                        color: "#374151",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        padding: "12px 8px",
-                        borderRight: "1px solid #e5e7eb",
-                      }}
-                    >
-                      Board Name
-                    </TableHead>
-                    <TableHead
-                      style={{
-                        width: "12%",
-                        background: "#f3f4f6",
-                        color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        padding: "12px 8px",
-                        borderRight: "1px solid #e5e7eb",
-                      }}
-                    >
-                      Code
-                    </TableHead>
-                    <TableHead
-                      className="text-center"
-                      style={{
-                        width: "12%",
-                        background: "#f3f4f6",
-                        color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        padding: "12px 8px",
-                        borderRight: "1px solid #e5e7eb",
-                      }}
-                    >
-                      Passing Marks
-                    </TableHead>
-                    <TableHead
-                      style={{
-                        width: "18%",
-                        background: "#f3f4f6",
-                        color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        padding: "12px 8px",
-                        borderRight: "1px solid #e5e7eb",
-                      }}
-                    >
-                      Degree
-                    </TableHead>
-                    <TableHead
-                      style={{
-                        width: "10%",
-                        background: "#f3f4f6",
-                        color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        padding: "12px 8px",
-                        borderRight: "1px solid #e5e7eb",
-                      }}
-                    >
-                      Status
-                    </TableHead>
-                    <TableHead
-                      style={{
-                        width: "15%",
-                        background: "#f3f4f6",
-                        color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        padding: "12px 8px",
-                      }}
-                      className="text-center"
-                    >
-                      Actions
-                    </TableHead>
+                    <TableHead className="text-center">Sr. No.</TableHead>
+                    <TableHead className=" whitespace-normal w-[400px]">Board Name</TableHead>
+                    <TableHead className="text-center">Passing %</TableHead>
+                    <TableHead className="text-center">Degree</TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center">
+                      <TableCell colSpan={5} className="text-center">
                         Loading...
                       </TableCell>
                     </TableRow>
                   ) : error ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-red-500">
+                      <TableCell colSpan={5} className="text-center text-red-500">
                         <div className="flex flex-col items-center gap-2">
                           <span>{error}</span>
                           <Button
@@ -679,7 +604,7 @@ export default function BoardPage() {
                     </TableRow>
                   ) : memoizedBoards.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center">
+                      <TableCell colSpan={5} className="text-center">
                         No boards found.
                       </TableCell>
                     </TableRow>
