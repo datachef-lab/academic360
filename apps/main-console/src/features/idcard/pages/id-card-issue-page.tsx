@@ -855,9 +855,11 @@ export default function IdCardIssuePage() {
         photoImage: photoBlob ?? undefined,
       });
     },
-    onSuccess: async ({ id }: { id: number }) => {
+    onSuccess: ({ id }: { id: number }) => {
       setDraftIssueId(id);
-      await historyQuery.refetch();
+      // The draft id is all the finalize step needs; refresh the history list in
+      // the background so opening the print → RFID dialog isn't blocked on it.
+      void historyQuery.refetch();
     },
   });
 
@@ -878,22 +880,34 @@ export default function IdCardIssuePage() {
         remarks: remarks.trim() || null,
       });
     },
-    onSuccess: async ({ id }: { id: number }) => {
+    onSuccess: ({ id }: { id: number }) => {
       setShowRfidDialog(false);
       setDraftIssueId(null);
-      const refetchResult = await historyQuery.refetch();
-      const savedIssue =
-        refetchResult.data?.rows?.find((row) => row.id === id) ?? refetchResult.data?.rows?.[0];
-      if (templateWithFields?.fields?.length && student) {
-        await loadIssuePreview(id, savedIssue, templateWithFields, student, activeValidTill);
-      }
-      setIsSaving(false);
-      await Swal.fire({
+      // Show success instantly. The card is already persisted server-side; the
+      // history-list refresh and the on-screen preview recomposite are cosmetic,
+      // so run them in the background instead of blocking the success dialog.
+      // isSaving stays true until that background refresh finishes, so the
+      // preview-reload effect doesn't fire a duplicate recomposite meanwhile.
+      void Swal.fire({
         icon: "success",
         title: "Saved successfully",
         text: "ID card has been saved successfully.",
         confirmButtonColor: "#2563eb",
       });
+      void (async () => {
+        try {
+          const refetchResult = await historyQuery.refetch();
+          const savedIssue =
+            refetchResult.data?.rows?.find((row) => row.id === id) ?? refetchResult.data?.rows?.[0];
+          if (templateWithFields?.fields?.length && student) {
+            await loadIssuePreview(id, savedIssue, templateWithFields, student, activeValidTill);
+          }
+        } catch {
+          /* preview refresh is best-effort; the save already succeeded */
+        } finally {
+          setIsSaving(false);
+        }
+      })();
     },
     onError: (e: unknown) => {
       // Keep the dialog open (Save-only) so the operator can correct the RFID.
@@ -1486,21 +1500,28 @@ export default function IdCardIssuePage() {
                             onChange={(e) => setRfid(e.target.value)}
                             placeholder="Scan or type the RFID"
                           />
-                          {rfid.trim() ? (
-                            rfidChecking ? (
-                              <p className="mt-1 text-xs text-gray-500">Checking availability…</p>
-                            ) : rfidConflict ? (
-                              <p className="mt-1 text-xs text-red-600">
-                                Already assigned to {rfidConflict.name ?? "another student"}
-                                {rfidConflict.uid ? ` (${rfidConflict.uid})` : ""}. RFID must be
-                                unique.
-                              </p>
-                            ) : (
-                              <p className="mt-1 text-xs text-green-600">RFID is available.</p>
-                            )
-                          ) : (
-                            <p className="mt-1 text-xs text-gray-500">Enter the RFID to save.</p>
-                          )}
+                          {/* Absolutely-positioned message: reserves a fixed-height slot but
+                              is out of layout flow, so its text length never changes the
+                              column width or row height (no layout shift). */}
+                          <div className="relative mt-1 h-4">
+                            <span
+                              className={`absolute inset-x-0 top-0 truncate text-xs leading-4 ${
+                                !rfid.trim() || rfidChecking
+                                  ? "text-gray-500"
+                                  : rfidConflict
+                                    ? "text-red-600"
+                                    : "text-green-600"
+                              }`}
+                            >
+                              {!rfid.trim()
+                                ? "Enter the RFID to save."
+                                : rfidChecking
+                                  ? "Checking availability…"
+                                  : rfidConflict
+                                    ? `RFID already assigned${rfidConflict.uid ? ` (${rfidConflict.uid})` : ""}.`
+                                    : "RFID is available."}
+                            </span>
+                          </div>
                         </td>
                       </tr>
                       <tr>

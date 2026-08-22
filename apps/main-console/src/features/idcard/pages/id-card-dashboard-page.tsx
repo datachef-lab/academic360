@@ -36,7 +36,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import DialogMultiSelect from "@/components/ui/DialogMultiSelect";
 import { useAppSelector } from "@/store/hooks";
 import { selectAvailableAcademicYears } from "@/store/slices/academicYearSlice";
 import { getProgramCourses, type SimpleOption } from "@/services/admission-program-course.service";
@@ -166,40 +166,6 @@ function MiniTooltip({
   );
 }
 
-function ChipMultiSelect({
-  options,
-  selected,
-  onToggle,
-}: {
-  options: { id: number; label: string }[];
-  selected: number[];
-  onToggle: (id: number) => void;
-}) {
-  if (!options.length)
-    return <p className="text-xs text-muted-foreground">No options available.</p>;
-  return (
-    <div className="flex max-h-40 flex-wrap gap-2 overflow-y-auto">
-      {options.map((o) => {
-        const on = selected.includes(o.id);
-        return (
-          <button
-            key={o.id}
-            type="button"
-            onClick={() => onToggle(o.id)}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-              on
-                ? "border-indigo-600 bg-indigo-600 text-white"
-                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-            }`}
-          >
-            {o.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 export default function IdCardDashboardPage() {
   const [applied, setApplied] = useState<Applied>(EMPTY);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -288,10 +254,8 @@ export default function IdCardDashboardPage() {
                 </DialogHeader>
 
                 <div className="flex-1 space-y-4 overflow-y-auto py-1 pr-1">
-                  <div>
-                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Quick range
-                    </label>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-slate-800">Quick range</label>
                     <div className="flex flex-wrap gap-2">
                       {PRESETS.map((p) => {
                         const on = activePreset === p.key;
@@ -305,7 +269,7 @@ export default function IdCardDashboardPage() {
                             }}
                             className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                               on
-                                ? "border-slate-800 bg-slate-800 text-white"
+                                ? "border-indigo-600 bg-indigo-600 text-white"
                                 : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
                             }`}
                           >
@@ -317,8 +281,8 @@ export default function IdCardDashboardPage() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-gray-700">From</label>
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-slate-800">From</label>
                       <Input
                         type="date"
                         value={draft.from}
@@ -326,8 +290,8 @@ export default function IdCardDashboardPage() {
                         onChange={(e) => setDraft((d) => ({ ...d, from: e.target.value }))}
                       />
                     </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-gray-700">To</label>
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-slate-800">To</label>
                       <Input
                         type="date"
                         value={draft.to}
@@ -337,41 +301,29 @@ export default function IdCardDashboardPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Academic year
-                    </label>
-                    <ChipMultiSelect
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-slate-800">Academic year</label>
+                    <DialogMultiSelect
+                      placeholder="All academic years"
                       options={availableYears.map((y) => ({
-                        id: y.id as number,
                         label: String(y.year),
+                        value: String(y.id),
                       }))}
-                      selected={draft.academicYearIds}
-                      onToggle={(id) =>
-                        setDraft((d) => ({
-                          ...d,
-                          academicYearIds: d.academicYearIds.includes(id)
-                            ? d.academicYearIds.filter((x) => x !== id)
-                            : [...d.academicYearIds, id],
-                        }))
+                      selectedOptions={draft.academicYearIds.map(String)}
+                      onChange={(vals) =>
+                        setDraft((d) => ({ ...d, academicYearIds: vals.map(Number) }))
                       }
                     />
                   </div>
 
-                  <div>
-                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Program course
-                    </label>
-                    <ChipMultiSelect
-                      options={programCourses.map((p) => ({ id: p.id, label: p.name }))}
-                      selected={draft.programCourseIds}
-                      onToggle={(id) =>
-                        setDraft((d) => ({
-                          ...d,
-                          programCourseIds: d.programCourseIds.includes(id)
-                            ? d.programCourseIds.filter((x) => x !== id)
-                            : [...d.programCourseIds, id],
-                        }))
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-slate-800">Program course</label>
+                    <DialogMultiSelect
+                      placeholder="All program courses"
+                      options={programCourses.map((p) => ({ label: p.name, value: String(p.id) }))}
+                      selectedOptions={draft.programCourseIds.map(String)}
+                      onChange={(vals) =>
+                        setDraft((d) => ({ ...d, programCourseIds: vals.map(Number) }))
                       }
                     />
                   </div>
