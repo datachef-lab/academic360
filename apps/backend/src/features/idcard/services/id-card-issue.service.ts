@@ -1,4 +1,5 @@
-import { and, count, desc, eq, ilike, or, SQL } from "drizzle-orm";
+import { and, count, desc, eq, ilike, ne, or, sql, SQL } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 
 import { db } from "@/db/index.js";
 import { ApiError } from "@/utils/ApiError.js";
@@ -19,13 +20,17 @@ import {
 } from "@repo/db/schemas/index.js";
 import { asc } from "drizzle-orm";
 
+export type IdCardIssueStatus = "ISSUED" | "RENEWED" | "REISSUED" | "DRAFT";
+/** The real (finalized) statuses — DRAFT is a transient pre-save state. */
+export type IdCardFinalStatus = "ISSUED" | "RENEWED" | "REISSUED";
+
 export type IssueListFilters = {
   page: number;
   limit: number;
   search?: string;
   studentId?: number;
   academicYearId?: number;
-  issueStatus?: "ISSUED" | "RENEWED" | "REISSUED";
+  issueStatus?: IdCardIssueStatus;
   fromDate?: string;
   toDate?: string;
 };
@@ -33,7 +38,7 @@ export type IssueListFilters = {
 export type CreateIssueInput = {
   studentId: number;
   templateId: number;
-  issueStatus?: "ISSUED" | "RENEWED" | "REISSUED";
+  issueStatus?: IdCardIssueStatus;
   renewedFromIssueId?: number | null;
   rfidNumber?: string | null;
   validFrom?: string | null;
@@ -45,6 +50,16 @@ export type CreateIssueInput = {
   sportsQuotaSnapshot?: string | null;
   uidSnapshot?: string | null;
   remarks?: string | null;
+  issuedByUserId?: number | null;
+  printedByUserId?: number | null;
+};
+
+export type FinalizeIssueInput = {
+  rfidNumber: string;
+  issueStatus: IdCardFinalStatus;
+  remarks?: string | null;
+  renewedFromIssueId?: number | null;
+  // The person who saved (finalized) the card becomes the issuer.
   issuedByUserId?: number | null;
 };
 
@@ -84,12 +99,15 @@ export async function listIssuesPaginated(filters: IssueListFilters) {
     .from(idCardIssueModel)
     .where(where);
 
+  const issuerUser = alias(userModel, "issuer_user");
   const rows = await db
     .select({
       issue: idCardIssueModel,
       template: idCardTemplateModel,
       student: studentModel,
       user: userModel,
+      issuerName: issuerUser.name,
+      issuerImage: issuerUser.image,
     })
     .from(idCardIssueModel)
     .leftJoin(
@@ -98,8 +116,9 @@ export async function listIssuesPaginated(filters: IssueListFilters) {
     )
     .leftJoin(studentModel, eq(studentModel.id, idCardIssueModel.studentId))
     .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+    .leftJoin(issuerUser, eq(issuerUser.id, idCardIssueModel.issuedByUserId))
     .where(where)
-    .orderBy(desc(idCardIssueModel.issueDate))
+    .orderBy(desc(idCardIssueModel.createdAt))
     .limit(limit)
     .offset(offset);
 
@@ -109,6 +128,7 @@ export async function listIssuesPaginated(filters: IssueListFilters) {
       frontImageUrl: await presignKey(r.issue.frontImageKey),
       photoImageUrl: await presignKey(r.issue.photoImageKey),
       template: r.template,
+      issuedBy: { name: r.issuerName ?? null, image: r.issuerImage ?? null },
       student: r.student
         ? {
             id: r.student.id,
@@ -185,7 +205,47 @@ const normalizeIssue = (input: CreateIssueInput) => ({
   uidSnapshot: input.uidSnapshot?.trim() || null,
   remarks: input.remarks?.trim() || null,
   issuedByUserId: input.issuedByUserId ?? null,
+  printedByUserId: input.printedByUserId ?? null,
 });
+
+/**
+ * RFID must be globally unique across ALL students and cards — including the
+ * same student's own prior RFID. An RFID identifies one physical card, so a
+ * reissue always gets a fresh number; re-entering any number already in use
+ * (on `students.rfid_number` or a non-draft issue) is a conflict. Returns the
+ * conflicting student's uid/name for a clear message, or null when it's free.
+ */
+export async function findRfidConflict(
+  rfid: string,
+): Promise<{ uid: string | null; name: string | null } | null> {
+  const value = rfid.trim();
+  if (!value) return null;
+
+  const [byStudent] = await db
+    .select({ uid: studentModel.uid, name: userModel.name })
+    .from(studentModel)
+    .leftJoin(userModel, eq(studentModel.userId, userModel.id))
+    .where(eq(studentModel.rfidNumber, value))
+    .limit(1);
+  if (byStudent)
+    return { uid: byStudent.uid ?? null, name: byStudent.name ?? null };
+
+  const [byIssue] = await db
+    .select({ uid: studentModel.uid, name: userModel.name })
+    .from(idCardIssueModel)
+    .innerJoin(studentModel, eq(idCardIssueModel.studentId, studentModel.id))
+    .leftJoin(userModel, eq(studentModel.userId, userModel.id))
+    .where(
+      and(
+        eq(idCardIssueModel.rfidNumber, value),
+        ne(idCardIssueModel.issueStatus, "DRAFT"),
+      ),
+    )
+    .limit(1);
+  if (byIssue) return { uid: byIssue.uid ?? null, name: byIssue.name ?? null };
+
+  return null;
+}
 
 export async function createIssue(
   input: CreateIssueInput,
@@ -210,48 +270,88 @@ export async function createIssue(
 
   if (!values.uidSnapshot) values.uidSnapshot = student.uid;
 
+  const isDraft = values.issueStatus === "DRAFT";
+
+  // The issuer is recorded only when the card is SAVED (finalized), never at
+  // print/draft time — a printed-but-unsaved draft has no issuer yet. (The
+  // printer is tracked separately via printedByUserId.)
+  if (isDraft) values.issuedByUserId = null;
+
+  // A student has at most ONE open draft at a time: re-printing replaces the
+  // previous unsaved draft (and cleans up its S3 objects) so drafts don't pile up.
+  if (isDraft) {
+    const openDrafts = await db
+      .select({
+        id: idCardIssueModel.id,
+        frontImageKey: idCardIssueModel.frontImageKey,
+        photoImageKey: idCardIssueModel.photoImageKey,
+      })
+      .from(idCardIssueModel)
+      .where(
+        and(
+          eq(idCardIssueModel.studentId, input.studentId),
+          eq(idCardIssueModel.issueStatus, "DRAFT"),
+        ),
+      );
+    await Promise.all(
+      openDrafts.map(async (d) => {
+        await db.delete(idCardIssueModel).where(eq(idCardIssueModel.id, d.id));
+        await Promise.all([
+          d.frontImageKey
+            ? deleteFromS3(d.frontImageKey).catch(() => undefined)
+            : undefined,
+          d.photoImageKey
+            ? deleteFromS3(d.photoImageKey).catch(() => undefined)
+            : undefined,
+        ]);
+      }),
+    );
+  }
+
   const [created] = await db
     .insert(idCardIssueModel)
-    .values(values)
+    // Use DB-side now() (the pool session is Asia/Kolkata) so printed_at stores
+    // IST wall-clock, consistent with issue_date/created_at. A JS `new Date()`
+    // would be serialized as UTC into this `timestamp without time zone` column
+    // and read back 5:30 behind by the IST-assuming display formatters.
+    .values({ ...values, printedAt: isDraft ? sql`now()` : null })
     .returning({ id: idCardIssueModel.id });
   const issueId = created.id;
 
   let frontImageKey: string | null = null;
   let photoImageKey: string | null = null;
 
+  const ALLOWED_IMAGE_MIME = [
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+    "image/webp",
+  ];
   try {
-    if (files.frontImage) {
-      const ext = files.frontImage.originalname.split(".").pop() || "png";
-      const uploaded = await uploadToS3(files.frontImage, {
-        folder: `${IDCARD_ISSUES_FOLDER}/${issueId}`,
-        customFileName: `front.${ext}`,
-        contentType: files.frontImage.mimetype,
-        maxFileSizeMB: 10,
-        allowedMimeTypes: [
-          "image/png",
-          "image/jpeg",
-          "image/jpg",
-          "image/webp",
-        ],
-      });
-      frontImageKey = uploaded.key;
-    }
-    if (files.photoImage) {
-      const ext = files.photoImage.originalname.split(".").pop() || "png";
-      const uploaded = await uploadToS3(files.photoImage, {
-        folder: `${IDCARD_ISSUES_FOLDER}/${issueId}`,
-        customFileName: `photo.${ext}`,
-        contentType: files.photoImage.mimetype,
-        maxFileSizeMB: 10,
-        allowedMimeTypes: [
-          "image/png",
-          "image/jpeg",
-          "image/jpg",
-          "image/webp",
-        ],
-      });
-      photoImageKey = uploaded.key;
-    }
+    // Upload both images in parallel — they're independent objects and each can
+    // be up to 10MB, so serial uploads doubled the print latency for no reason.
+    const [frontUploaded, photoUploaded] = await Promise.all([
+      files.frontImage
+        ? uploadToS3(files.frontImage, {
+            folder: `${IDCARD_ISSUES_FOLDER}/${issueId}`,
+            customFileName: `front.${files.frontImage.originalname.split(".").pop() || "png"}`,
+            contentType: files.frontImage.mimetype,
+            maxFileSizeMB: 10,
+            allowedMimeTypes: ALLOWED_IMAGE_MIME,
+          })
+        : Promise.resolve(null),
+      files.photoImage
+        ? uploadToS3(files.photoImage, {
+            folder: `${IDCARD_ISSUES_FOLDER}/${issueId}`,
+            customFileName: `photo.${files.photoImage.originalname.split(".").pop() || "png"}`,
+            contentType: files.photoImage.mimetype,
+            maxFileSizeMB: 10,
+            allowedMimeTypes: ALLOWED_IMAGE_MIME,
+          })
+        : Promise.resolve(null),
+    ]);
+    frontImageKey = frontUploaded?.key ?? null;
+    photoImageKey = photoUploaded?.key ?? null;
   } catch (err) {
     await db.delete(idCardIssueModel).where(eq(idCardIssueModel.id, issueId));
     throw err;
@@ -268,14 +368,86 @@ export async function createIssue(
       .where(eq(idCardIssueModel.id, issueId));
   }
 
-  if (values.rfidNumber && values.rfidNumber !== student.rfidNumber) {
+  // Drafts carry no rfid yet (it's entered at finalize); only sync + broadcast
+  // for real issues so DRAFT rows never touch student.rfid or the tracker counts.
+  if (
+    !isDraft &&
+    values.rfidNumber &&
+    values.rfidNumber !== student.rfidNumber
+  ) {
     await db
       .update(studentModel)
       .set({ rfidNumber: values.rfidNumber, updatedAt: new Date() })
       .where(eq(studentModel.id, student.id));
   }
 
-  void broadcastIdCardTrackerUpdate(student.id);
+  if (!isDraft) void broadcastIdCardTrackerUpdate(student.id);
+
+  return issueId;
+}
+
+/**
+ * Finalize a DRAFT into a real issue: validates RFID uniqueness (must not belong
+ * to another student), then sets the real type, the rfid, saved_at and remarks,
+ * syncs students.rfid_number, and broadcasts the tracker update.
+ */
+export async function finalizeIssue(
+  issueId: number,
+  input: FinalizeIssueInput,
+): Promise<number> {
+  const rfid = input.rfidNumber?.trim() || "";
+  if (!rfid) throw new ApiError(400, "RFID is required to save the ID card.");
+
+  const [issue] = await db
+    .select()
+    .from(idCardIssueModel)
+    .where(eq(idCardIssueModel.id, issueId))
+    .limit(1);
+  if (!issue) throw new ApiError(404, "Draft ID card not found.");
+  if (issue.issueStatus !== "DRAFT")
+    throw new ApiError(409, "This ID card has already been saved.");
+
+  const conflict = await findRfidConflict(rfid);
+  if (conflict) {
+    const who = conflict.uid
+      ? `${conflict.name ?? "another student"} (${conflict.uid})`
+      : (conflict.name ?? "another student");
+    throw new ApiError(
+      409,
+      `RFID ${rfid} is already assigned to ${who}. Each RFID must be unique.`,
+    );
+  }
+
+  await db
+    .update(idCardIssueModel)
+    .set({
+      issueStatus: input.issueStatus,
+      rfidNumber: rfid,
+      remarks: input.remarks?.trim() || issue.remarks || null,
+      renewedFromIssueId:
+        input.renewedFromIssueId ?? issue.renewedFromIssueId ?? null,
+      // Issuer is stamped here (on save), not at print/draft time.
+      issuedByUserId: input.issuedByUserId ?? issue.issuedByUserId ?? null,
+      // DB-side now() → IST wall-clock (pool session tz), consistent with the
+      // other stored timestamps and the IST-assuming display formatters.
+      savedAt: sql`now()`,
+      updatedAt: sql`now()`,
+    })
+    .where(eq(idCardIssueModel.id, issueId));
+
+  const [student] = await db
+    .select({ id: studentModel.id, rfidNumber: studentModel.rfidNumber })
+    .from(studentModel)
+    .where(eq(studentModel.id, issue.studentId))
+    .limit(1);
+  if (student && rfid !== student.rfidNumber) {
+    await db
+      .update(studentModel)
+      .set({ rfidNumber: rfid, updatedAt: new Date() })
+      .where(eq(studentModel.id, student.id));
+  }
+
+  void broadcastIdCardTrackerUpdate(issue.studentId);
 
   return issueId;
 }

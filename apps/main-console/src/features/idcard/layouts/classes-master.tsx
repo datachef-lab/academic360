@@ -1,19 +1,35 @@
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
 import { Outlet, useLocation } from "react-router-dom";
-import { BarChart3, IdCard, Layers, ScanLine, Sun } from "lucide-react";
+import { BarChart3, IdCard, Layers, LayoutDashboard, ScanLine, Sun } from "lucide-react";
 import { isIdCardGuestUser, useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 
-const pageLinks = [
+// Staff see the Dashboard (index) + operational pages.
+const staffPageLinks = [
+  {
+    title: "Home",
+    url: "/dashboard/tools/id-cards",
+    icon: LayoutDashboard,
+  },
   {
     title: "Issue / Reissue ID Card",
-    url: "/dashboard/tools/id-cards",
+    url: "/dashboard/tools/id-cards/issue",
     icon: ScanLine,
   },
   {
     title: "Reports",
     url: "/dashboard/tools/id-cards/reports",
     icon: BarChart3,
+  },
+];
+
+// ID-card guests are locked to the issue page, which lives at the tool index
+// (the restricted-users hook only allows them on that exact path).
+const guestPageLinks = [
+  {
+    title: "Issue / Reissue ID Card",
+    url: "/dashboard/tools/id-cards",
+    icon: ScanLine,
   },
 ];
 
@@ -35,12 +51,19 @@ const masterLinks = [
   },
 ];
 
+const issueNote = {
+  title: "Issue / Reissue ID Card",
+  description:
+    "Search a student by UID or RFID, capture their photo, compose the card from the active template, write/update RFID, and save the issued card to AWS S3 with a permanent audit record.",
+};
+
 const pageNotes: Record<string, { title: string; description: string }> = {
   "/dashboard/tools/id-cards": {
-    title: "Issue / Reissue ID Card",
+    title: "Home",
     description:
-      "Search a student by UID or RFID, capture their photo, compose the card from the active template, write/update RFID, and save the issued card to AWS S3 with a permanent audit record.",
+      "Live issuance overview — cards issued, drafts pending, print-not-saved backlog, and breakdowns by course, academic year, template and operator. Updates in realtime as cards are issued.",
   },
+  "/dashboard/tools/id-cards/issue": issueNote,
   "/dashboard/tools/id-cards/reports": {
     title: "Reports",
     description:
@@ -74,16 +97,16 @@ export default function ClassesMaster() {
   const { user } = useAuth();
   const currentPath = location.pathname;
 
-  // Guests are limited to the issue/reissue page: hide Reports and all Masters.
+  // Guests are limited to the issue/reissue page (which they reach at the tool
+  // index): show only that link, hide the Dashboard, Reports and all Masters.
   const idCardGuest = isIdCardGuestUser(user?.email);
-  const visiblePageLinks = idCardGuest
-    ? pageLinks.filter((l) => l.url === "/dashboard/tools/id-cards")
-    : pageLinks;
+  const visiblePageLinks = idCardGuest ? guestPageLinks : staffPageLinks;
 
   const matchedKey = Object.keys(pageNotes)
     .sort((a, b) => b.length - a.length)
     .find((p) => currentPath === p || currentPath.startsWith(`${p}/`));
-  const currentPageNote = matchedKey ? pageNotes[matchedKey] : undefined;
+  // A guest on the index sees the Issue page (via the home gate), so show its note.
+  const currentPageNote = idCardGuest ? issueNote : matchedKey ? pageNotes[matchedKey] : undefined;
 
   const rightBarContent = (
     <div className="flex flex-col gap-3 py-3 px-1 h-full">

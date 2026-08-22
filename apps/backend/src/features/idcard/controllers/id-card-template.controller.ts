@@ -170,8 +170,21 @@ async function streamSide(
       .limit(1);
     const key = side === "front" ? row?.front : row?.back;
     if (!key) throw new ApiError(404, `Template ${side} image not found.`);
-    const buffer = await getBufferFromS3(key);
-    if (!buffer) throw new ApiError(502, "Could not fetch template image.");
+    let buffer: Buffer | null = null;
+    try {
+      buffer = await getBufferFromS3(key);
+    } catch (err) {
+      // Missing S3 object (e.g. a template whose image lives under a different
+      // root folder in this env) → 404, not 500, so the client shows an empty slot.
+      const code =
+        (err as { name?: string; Code?: string })?.name ??
+        (err as { Code?: string })?.Code;
+      if (code === "NoSuchKey" || code === "NotFound") {
+        throw new ApiError(404, `Template ${side} image not found.`);
+      }
+      throw err;
+    }
+    if (!buffer) throw new ApiError(404, `Template ${side} image not found.`);
     const ext = key.split(".").pop()?.toLowerCase();
     const contentType =
       ext === "png"
