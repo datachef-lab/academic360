@@ -486,6 +486,7 @@ export const idCardIssueStatusEnum = pgEnum("id_card_issue_status", [
     "ISSUED",
     "RENEWED",
     "REISSUED",
+    "DRAFT",
 ]);
 
 export const documentDomainEnum = pgEnum("document_domain", [

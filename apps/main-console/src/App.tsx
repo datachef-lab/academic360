@@ -316,7 +316,10 @@ const router = createBrowserRouter(
               path: "id-cards",
               element: <idCardModule.ClassesMaster />,
               children: [
-                { path: "", element: <idCardModule.IdCardIssuePage /> },
+                // Index: Dashboard for staff, Issue page for ID-card guests
+                // (guests are locked to this exact path by the restricted hook).
+                { path: "", element: <idCardModule.IdCardHomeGate /> },
+                { path: "issue", element: <idCardModule.IdCardIssuePage /> },
                 { path: "reports", element: <idCardModule.IdCardReportsPage /> },
                 { path: "templates", element: <idCardModule.IdCardTemplatesPage /> },
                 {

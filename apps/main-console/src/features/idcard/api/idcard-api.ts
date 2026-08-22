@@ -41,17 +41,26 @@ export async function listTemplates(params: {
   return res.data.payload;
 }
 
+// Image blobs may 404/500 when the S3 object is missing (e.g. an old card whose
+// image lives under a different root folder, or a not-yet-uploaded asset). These
+// are optional/previews — skip the global error toast; callers show an empty slot.
+type BlobGetConfig = Parameters<typeof axiosInstance.get>[1] & {
+  _skipGlobalErrorHandler?: boolean;
+};
+
 export async function fetchTemplateImageBlob(id: number): Promise<Blob> {
   const res = await axiosInstance.get(`${BASE}/templates/${id}/image`, {
     responseType: "blob",
-  });
+    _skipGlobalErrorHandler: true,
+  } as BlobGetConfig);
   return res.data as Blob;
 }
 
 export async function fetchTemplateBacksideBlob(id: number): Promise<Blob> {
   const res = await axiosInstance.get(`${BASE}/templates/${id}/backside`, {
     responseType: "blob",
-  });
+    _skipGlobalErrorHandler: true,
+  } as BlobGetConfig);
   return res.data as Blob;
 }
 
@@ -65,14 +74,16 @@ const assertImageBlob = (blob: Blob, label: string): Blob => {
 export async function fetchIssuePhotoBlob(issueId: number): Promise<Blob> {
   const res = await axiosInstance.get(`${BASE}/issues/${issueId}/photo`, {
     responseType: "blob",
-  });
+    _skipGlobalErrorHandler: true,
+  } as BlobGetConfig);
   return assertImageBlob(res.data as Blob, "photo");
 }
 
 export async function fetchIssueFrontBlob(issueId: number): Promise<Blob> {
   const res = await axiosInstance.get(`${BASE}/issues/${issueId}/front`, {
     responseType: "blob",
-  });
+    _skipGlobalErrorHandler: true,
+  } as BlobGetConfig);
   return assertImageBlob(res.data as Blob, "front");
 }
 
@@ -202,6 +213,35 @@ export async function deleteIssue(id: number) {
   await axiosInstance.delete(`${BASE}/issues/${id}`);
 }
 
+export interface RfidConflict {
+  uid: string | null;
+  name: string | null;
+}
+
+/** Live RFID uniqueness check for the finalize dialog. */
+export async function checkRfid(rfid: string, studentId: number) {
+  const res = await axiosInstance.get<
+    ApiResponse<{ available: boolean; conflict: RfidConflict | null }>
+  >(`${BASE}/rfid/check`, { params: { rfid, studentId } });
+  return res.data.payload;
+}
+
+export interface FinalizeIssuePayload {
+  rfidNumber: string;
+  issueStatus: Exclude<IdCardIssueStatus, "DRAFT">;
+  remarks?: string | null;
+  renewedFromIssueId?: number | null;
+}
+
+/** Finalize a DRAFT issue (set type, rfid, saved_at). */
+export async function finalizeIssue(issueId: number, payload: FinalizeIssuePayload) {
+  const res = await axiosInstance.patch<ApiResponse<{ id: number }>>(
+    `${BASE}/issues/${issueId}/finalize`,
+    payload,
+  );
+  return res.data.payload;
+}
+
 export async function listReportDates() {
   const res = await axiosInstance.get<ApiResponse<{ dates: string[] }>>(`${BASE}/reports/dates`);
   return res.data.payload.dates;
@@ -215,13 +255,8 @@ export function reportZipUrl(date: string) {
   return `${BASE}/reports/zip?date=${encodeURIComponent(date)}`;
 }
 
-export async function downloadReport(kind: "excel" | "zip", date: string, filename: string) {
-  const res = await axiosInstance.get(`${BASE}/reports/${kind}`, {
-    params: { date },
-    responseType: "blob",
-  });
-  const blob = new Blob([res.data]);
-  const url = URL.createObjectURL(blob);
+function triggerBlobDownload(data: BlobPart, filename: string) {
+  const url = URL.createObjectURL(new Blob([data]));
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
@@ -229,4 +264,102 @@ export async function downloadReport(kind: "excel" | "zip", date: string, filena
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+export async function downloadReport(kind: "excel" | "zip", date: string, filename: string) {
+  const res = await axiosInstance.get(`${BASE}/reports/${kind}`, {
+    params: { date },
+    responseType: "blob",
+  });
+  triggerBlobDownload(res.data, filename);
+}
+
+/** Audit report over an OPTIONAL issue-date range (omit both = all cards). */
+export async function downloadAuditReport(from: string, to: string, filename: string) {
+  const params: Record<string, string> = {};
+  if (from) params.from = from;
+  if (to) params.to = to;
+  const res = await axiosInstance.get(`${BASE}/reports/audit`, {
+    params,
+    responseType: "blob",
+  });
+  triggerBlobDownload(res.data, filename);
+}
+
+// ── Realtime dashboard ──────────────────────────────────────────────────────
+
+export interface IdCardDashboardFilters {
+  academicYearIds?: number[];
+  programCourseIds?: number[];
+  from?: string; // YYYY-MM-DD
+  to?: string; // YYYY-MM-DD
+}
+
+export interface IdCardNameValue {
+  name: string;
+  value: number;
+}
+export interface IdCardDayCount {
+  date: string;
+  count: number;
+}
+export interface IdCardHourCount {
+  hour: number;
+  count: number;
+}
+export interface IdCardRecentIssue {
+  id: number;
+  studentName: string | null;
+  uid: string | null;
+  course: string | null;
+  rfidNumber: string | null;
+  issueStatus: string;
+  issuedBy: string | null;
+  issuedAt: string | null;
+}
+
+export interface IdCardDashboardStats {
+  kpis: {
+    totalIssued: number;
+    issuedToday: number;
+    draftsPending: number;
+    printedNotSaved: number;
+    legacyCount: number;
+    newCount: number;
+    studentsWithCard: number;
+  };
+  byStatus: IdCardNameValue[];
+  perDay: IdCardDayCount[];
+  byHour: IdCardHourCount[];
+  byProgramCourse: IdCardNameValue[];
+  byAcademicYear: IdCardNameValue[];
+  byTemplate: IdCardNameValue[];
+  topOperators: IdCardNameValue[];
+  recent: IdCardRecentIssue[];
+  templates: { total: number; active: number; disabled: number };
+}
+
+export async function getIdCardDashboardStats(filters: IdCardDashboardFilters) {
+  const params = new URLSearchParams();
+  filters.academicYearIds?.forEach((id) => params.append("academicYearIds", String(id)));
+  filters.programCourseIds?.forEach((id) => params.append("programCourseIds", String(id)));
+  if (filters.from) params.set("from", filters.from);
+  if (filters.to) params.set("to", filters.to);
+  const qs = params.toString();
+  const res = await axiosInstance.get<ApiResponse<IdCardDashboardStats>>(
+    `${BASE}/dashboard/stats${qs ? `?${qs}` : ""}`,
+  );
+  return res.data.payload;
+}
+
+/** ZIP of each card's front image named <rfid>.png, over the OPTIONAL range. */
+export async function downloadAuditZip(from: string, to: string, filename: string) {
+  const params: Record<string, string> = {};
+  if (from) params.from = from;
+  if (to) params.to = to;
+  const res = await axiosInstance.get(`${BASE}/reports/audit-zip`, {
+    params,
+    responseType: "blob",
+  });
+  triggerBlobDownload(res.data, filename);
 }
