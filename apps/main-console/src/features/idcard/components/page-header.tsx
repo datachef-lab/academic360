@@ -13,7 +13,7 @@ export type IdCardPageHeaderProps = {
 export function IdCardPageHeader({ icon: Icon, title, subtitle, actions }: IdCardPageHeaderProps) {
   return (
     <div className="mb-3 rounded-md border bg-background p-3 sm:p-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="flex items-center text-lg font-semibold sm:text-xl">
             <Icon className="mr-2 h-8 w-8 rounded-md border p-1" />

@@ -59,6 +59,11 @@ export const idCardIssueModel = pgTable(
         uidSnapshot: varchar({ length: 255 }),
         remarks: text(),
         issuedByUserId: integer("issued_by_user_id_fk").references(() => userModel.id),
+        // Set when the operator prints the card (a DRAFT row is created at print time).
+        printedByUserId: integer("printed_by_user_id_fk").references(() => userModel.id),
+        printedAt: timestamp(),
+        // Set when the DRAFT is finalized (RFID entered, type chosen) via the save dialog.
+        savedAt: timestamp(),
         createdAt: timestamp().notNull().defaultNow(),
         updatedAt: timestamp()
             .notNull()
@@ -94,6 +99,11 @@ export const idCardIssueRelations = relations(idCardIssueModel, ({ one }) => ({
     documentLedger: one(documentLedgerModel, {
         fields: [idCardIssueModel.documentLedgerId],
         references: [documentLedgerModel.id],
+    }),
+    printedBy: one(userModel, {
+        fields: [idCardIssueModel.printedByUserId],
+        references: [userModel.id],
+        relationName: "id_card_issue_printed_by",
     }),
 }));
 

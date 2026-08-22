@@ -10,7 +10,9 @@ export type IdCardFieldKey =
   | "PHOTO"
   | "SHIFT";
 
-export type IdCardIssueStatus = "ISSUED" | "RENEWED" | "REISSUED";
+export type IdCardIssueStatus = "ISSUED" | "RENEWED" | "REISSUED" | "DRAFT";
+/** The real (finalized) statuses the operator can pick — DRAFT is transient. */
+export type IdCardFinalStatus = "ISSUED" | "RENEWED" | "REISSUED";
 
 export type IdCardFieldAlign = "LEFT" | "CENTER" | "RIGHT";
 
@@ -57,6 +59,7 @@ export interface IdCardIssue {
   templateId: number | null;
   issueStatus: IdCardIssueStatus;
   renewedFromIssueId: number | null;
+  legacyIssueId: number | null;
   issueDate: string;
   validFrom: string | null;
   validTill: string | null;
@@ -75,7 +78,9 @@ export interface IdCardIssue {
   issuedByUserId: number | null;
   createdAt: string;
   updatedAt: string;
+  savedAt?: string | null;
   template?: IdCardTemplate | null;
+  issuedBy?: { name: string | null; image: string | null } | null;
   student?: {
     id: number;
     uid: string;
